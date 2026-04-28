@@ -2,11 +2,16 @@ from pathlib import Path
 import math
 import datetime
 import os
+import json
+import time
+import re
 from typing import List
 
 import numpy as np
 import pandas as pd
 import yfinance as yf
+import feedparser
+import anthropic
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -572,6 +577,218 @@ def get_portfolio(req: PortfolioRequest):
         "chart": chart_data,
     }
     return deep_clean(response)
+
+
+# ---------------------------------------------------------------------------
+# News endpoint
+# ---------------------------------------------------------------------------
+
+RSS_FEEDS = [
+    ("Reuters Business", "https://feeds.reuters.com/reuters/businessNews"),
+    ("Reuters Top News", "https://feeds.reuters.com/reuters/topNews"),
+    ("Financial Times",  "https://rss.ft.com/rss/home/us"),
+    ("BBC Business",     "https://feeds.bbci.co.uk/news/business/rss.xml"),
+    ("AP Finance",       "https://rss.app/feeds/AP-finance.xml"),
+]
+
+_news_cache: dict = {"ts": 0.0, "data": None}
+NEWS_CACHE_TTL = 15 * 60  # 15 minutes
+
+
+def _parse_feed_date(entry):
+    for attr in ("published_parsed", "updated_parsed"):
+        t = getattr(entry, attr, None)
+        if t:
+            try:
+                return datetime.datetime(*t[:6], tzinfo=datetime.timezone.utc)
+            except Exception:
+                pass
+    return None
+
+
+def _strip_html(text: str) -> str:
+    return re.sub(r"<[^>]+>", "", text or "").strip()
+
+
+def _title_key(title: str) -> str:
+    return re.sub(r"\W+", " ", title.lower()).strip()
+
+
+def _fetch_articles() -> list[dict]:
+    cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=48)
+    seen_keys: set[str] = set()
+    articles = []
+
+    for source_name, url in RSS_FEEDS:
+        try:
+            feed = feedparser.parse(url)
+            for entry in feed.entries:
+                pub = _parse_feed_date(entry)
+                if pub and pub < cutoff:
+                    continue
+                title = _strip_html(getattr(entry, "title", "") or "")
+                if not title:
+                    continue
+                key = _title_key(title)
+                if key in seen_keys:
+                    continue
+                seen_keys.add(key)
+                summary = _strip_html(getattr(entry, "summary", "") or
+                                      getattr(entry, "description", "") or "")
+                link = getattr(entry, "link", "") or ""
+                articles.append({
+                    "title":        title,
+                    "summary":      summary[:500],
+                    "source":       source_name,
+                    "url":          link,
+                    "published_at": pub.isoformat() if pub else None,
+                })
+        except Exception:
+            continue
+
+    return articles
+
+
+_MACRO_KEYWORDS = [
+    "fed", "federal reserve", "interest rate", "inflation", "cpi", "pce", "gdp",
+    "central bank", "ecb", "boe", "boj", "rate hike", "rate cut", "quantitative",
+    "sanctions", "tariff", "trade war", "geopolit", "war", "conflict", "military",
+    "oil", "opec", "gas", "energy", "supply chain", "strait", "hormuz",
+    "ai ", "artificial intelligence", "regulation", "antitrust",
+    "recession", "unemployment", "jobs", "nonfarm", "payroll",
+    "treasury", "yield", "bond", "debt", "deficit", "fiscal",
+    "election", "political", "government", "congress", "senate",
+    "bank", "financial", "market", "stock", "equity", "currency", "dollar", "euro",
+]
+_EXCLUDE_KEYWORDS = [
+    "sport", "soccer", "football", "nfl", "nba", "nhl", "cricket",
+    "celebrity", "fashion", "lifestyle", "recipe", "travel", "weather",
+    "movie", "film", "music", "entertainment",
+]
+
+_CAT_KEYWORDS = {
+    "Fed/Monetary Policy": ["fed", "federal reserve", "interest rate", "rate hike", "rate cut", "central bank", "ecb", "boe", "boj", "quantitative", "monetary", "inflation", "cpi", "pce"],
+    "Geopolitics":         ["war", "conflict", "military", "sanction", "geopolit", "nato", "ukraine", "russia", "china", "iran", "middle east", "taiwan", "north korea"],
+    "Commodities":         ["oil", "opec", "gas", "energy", "crude", "commodity", "gold", "silver", "wheat", "supply chain", "hormuz"],
+    "Tech/AI":             ["ai ", "artificial intelligence", "openai", "nvidia", "chip", "semiconductor", "regulation", "antitrust", "tech"],
+    "Markets":             ["market", "stock", "equity", "rally", "selloff", "crash", "volatility", "treasury", "yield", "bond", "dollar", "currency"],
+    "Macro Economy":       ["gdp", "recession", "unemployment", "jobs", "payroll", "fiscal", "deficit", "debt", "trade", "tariff", "growth"],
+}
+
+
+def _keyword_filter(articles: list[dict]) -> list[dict]:
+    """Fallback filter used when ANTHROPIC_API_KEY is not set."""
+    results = []
+    for i, a in enumerate(articles):
+        text = (a["title"] + " " + a["summary"]).lower()
+        if any(kw in text for kw in _EXCLUDE_KEYWORDS):
+            continue
+        hit_count = sum(1 for kw in _MACRO_KEYWORDS if kw in text)
+        if hit_count < 2:
+            continue
+
+        category = "Macro Economy"
+        for cat, kws in _CAT_KEYWORDS.items():
+            if any(kw in text for kw in kws):
+                category = cat
+                break
+
+        score = min(7 + min(hit_count - 2, 2), 9)
+        results.append({
+            **a,
+            "importance_score": score,
+            "category": category,
+            "market_impact": "",
+            "sentiment": "Neutral",
+        })
+
+    results.sort(key=lambda x: x["importance_score"], reverse=True)
+    return results[:20]
+
+
+def _claude_filter(articles: list[dict]) -> list[dict]:
+    if not articles:
+        return []
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return _keyword_filter(articles)
+
+    batch_text = "\n".join(
+        f'[{i}] TITLE: {a["title"]}\nSUMMARY: {a["summary"]}'
+        for i, a in enumerate(articles)
+    )
+
+    system = (
+        "You are a financial news filter for a professional trading terminal.\n"
+        "Your job is to identify only macro-relevant, market-moving news.\n\n"
+        "INCLUDE: Fed decisions, interest rates, inflation data, central bank policy, "
+        "geopolitical conflicts, oil/gas supply disruptions, Strait of Hormuz, wars, "
+        "sanctions, major AI breakthroughs or regulation, systemic financial risk, "
+        "large sovereign events, natural disasters with economic impact, "
+        "major political elections or instability.\n\n"
+        "EXCLUDE: individual company earnings (unless systemic), crypto minor moves, "
+        "sports, lifestyle, celebrity, regional politics with no macro impact, "
+        "routine economic data releases with no surprise.\n\n"
+        "For each article that passes the filter, return a JSON array with:\n"
+        "- id (original index)\n"
+        "- importance_score (1-10, where 10 = market-moving event)\n"
+        "- category: one of [Fed/Monetary Policy, Geopolitics, Commodities, Tech/AI, Markets, Macro Economy]\n"
+        "- market_impact: 2-sentence explanation of potential market impact written for a trader\n"
+        "- sentiment: Positive / Negative / Neutral (relative to risk assets)\n\n"
+        "Only include articles with importance_score >= 7.\n"
+        "Return only valid JSON array, no markdown, no preamble."
+    )
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=4096,
+            system=system,
+            messages=[{"role": "user", "content": batch_text}],
+        )
+        raw = msg.content[0].text.strip()
+        scored = json.loads(raw)
+    except Exception:
+        return []
+
+    enriched = []
+    for item in scored:
+        idx = item.get("id")
+        if idx is None or not isinstance(idx, int) or idx >= len(articles):
+            continue
+        score = item.get("importance_score", 0)
+        if score < 7:
+            continue
+        art = dict(articles[idx])
+        art["importance_score"] = score
+        art["category"]        = item.get("category", "Markets")
+        art["market_impact"]   = item.get("market_impact", "")
+        art["sentiment"]       = item.get("sentiment", "Neutral")
+        enriched.append(art)
+
+    enriched.sort(key=lambda x: x["importance_score"], reverse=True)
+    return enriched[:20]
+
+
+@app.get("/api/news")
+def get_news():
+    now = time.time()
+    if _news_cache["data"] is not None and (now - _news_cache["ts"]) < NEWS_CACHE_TTL:
+        return _news_cache["data"]
+
+    articles = _fetch_articles()
+    filtered = _claude_filter(articles)
+
+    result = {
+        "articles": filtered,
+        "total_fetched": len(articles),
+        "cached_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    }
+    _news_cache["ts"]   = now
+    _news_cache["data"] = result
+    return result
 
 
 if __name__ == "__main__":

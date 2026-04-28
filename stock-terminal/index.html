@@ -198,6 +198,100 @@
   .nav-tab:hover { color: var(--text); }
   .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
+  /* ---- News page ---- */
+  #news-page { padding: 12px 16px; display: none; }
+  .news-layout { display: grid; grid-template-columns: 1fr 280px; gap: 12px; align-items: start; }
+  @media (max-width: 900px) { .news-layout { grid-template-columns: 1fr; } }
+
+  /* Article cards */
+  .news-feed { display: flex; flex-direction: column; gap: 8px; }
+  .news-card {
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 14px 16px; cursor: default;
+    animation: fadeInCard 0.3s ease forwards; opacity: 0;
+    transition: border-color 0.15s;
+  }
+  .news-card:hover { border-color: #2e2e2e; }
+  .news-card.critical { border-left: 3px solid var(--red); }
+  @keyframes fadeInCard { to { opacity: 1; } }
+
+  .card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .cat-badge {
+    font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 20px; white-space: nowrap;
+  }
+  .cat-fed       { background: rgba(255,183,77,0.15);  color: var(--yellow); }
+  .cat-geo       { background: rgba(255,59,59,0.15);   color: var(--red); }
+  .cat-comm      { background: rgba(255,140,0,0.15);   color: #ff8c00; }
+  .cat-tech      { background: rgba(79,195,247,0.15);  color: var(--blue); }
+  .cat-markets   { background: rgba(0,255,136,0.12);   color: var(--green); }
+  .cat-macro     { background: rgba(100,130,255,0.15); color: #7986ff; }
+
+  .score-dots { display: flex; gap: 3px; align-items: center; }
+  .score-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .dot-gray   { background: #444; }
+  .dot-yellow { background: var(--yellow); }
+  .dot-orange { background: #ff8c00; }
+  .dot-red    { background: var(--red); }
+
+  .critical-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 2px; color: var(--red);
+    text-transform: uppercase;
+  }
+  .sentiment-tag { font-size: 10px; margin-left: auto; white-space: nowrap; }
+
+  .card-headline {
+    font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.4;
+    text-decoration: none; display: block; margin-bottom: 6px;
+  }
+  .card-headline:hover { color: var(--accent); }
+
+  .card-meta { font-size: 10px; color: #444; margin-bottom: 8px; letter-spacing: 0.5px; }
+  .card-meta .src { color: #666; }
+
+  .card-impact {
+    font-size: 11px; color: #888; line-height: 1.55;
+    border-left: 2px solid #1e1e1e; padding-left: 10px; margin-top: 6px;
+  }
+
+  /* Skeleton cards */
+  .news-sk { height: 120px; background: #1c1c1c; border-radius: 0; animation: pulse 1.6s ease-in-out infinite; margin-bottom: 8px; }
+
+  /* Sidebar */
+  .news-sidebar { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 12px; }
+
+  .filter-panel { background: var(--panel); border: 1px solid var(--border); padding: 12px 14px; }
+  .filter-title { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--label); margin-bottom: 10px; }
+  .filter-btns { display: flex; flex-direction: column; gap: 4px; }
+  .filter-btn {
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    font-family: inherit; font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    padding: 5px 10px; cursor: pointer; text-align: left; transition: all 0.12s;
+  }
+  .filter-btn:hover { border-color: #333; color: var(--text); }
+  .filter-btn.active { border-color: var(--accent); color: var(--accent); }
+
+  .sentiment-panel { background: var(--panel); border: 1px solid var(--border); padding: 12px 14px; }
+  .sent-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 11px; }
+  .sent-row:last-child { margin-bottom: 0; }
+  .sent-bar-wrap { width: 60px; height: 4px; background: #1e1e1e; border-radius: 2px; }
+  .sent-bar { height: 100%; border-radius: 2px; transition: width 0.3s; }
+
+  .news-refresh-panel { background: var(--panel); border: 1px solid var(--border); padding: 12px 14px; }
+  #news-last-updated { font-size: 10px; color: #444; margin-bottom: 8px; }
+  #news-refresh-btn {
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    font-family: inherit; font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    padding: 5px 12px; cursor: pointer; width: 100%;
+  }
+  #news-refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .news-empty {
+    text-align: center; padding: 60px 20px;
+    background: var(--panel); border: 1px solid var(--border);
+    color: var(--muted); font-size: 12px; letter-spacing: 1px;
+  }
+
   /* ---- Portfolio page ---- */
   #portfolio-page { padding: 12px 16px; display: none; }
   #portfolio-page.visible { display: block; }
@@ -309,6 +403,7 @@
   <div class="nav-logo">&#9632; TERMINAL</div>
   <button class="nav-tab active" data-page="terminal">Terminal</button>
   <button class="nav-tab" data-page="portfolio">Portfolio</button>
+  <button class="nav-tab" data-page="news">News</button>
 </div>
 
 <!-- Terminal Page -->
@@ -651,6 +746,66 @@
   </div>
 
 </div><!-- end #portfolio-page -->
+
+<!-- News Page -->
+<div id="news-page">
+  <div class="news-layout">
+
+    <!-- Left: article feed -->
+    <div>
+      <div id="news-skeleton">
+        <div class="news-sk"></div>
+        <div class="news-sk"></div>
+        <div class="news-sk"></div>
+        <div class="news-sk"></div>
+      </div>
+      <div id="news-feed" class="news-feed hidden"></div>
+      <div id="news-empty" class="news-empty hidden">No major macro events in the last 48 hours.</div>
+    </div>
+
+    <!-- Right: sidebar -->
+    <div class="news-sidebar">
+
+      <div class="filter-panel">
+        <div class="filter-title">Category Filter</div>
+        <div class="filter-btns">
+          <button class="filter-btn active" data-cat="All">All</button>
+          <button class="filter-btn" data-cat="Fed/Monetary Policy">Fed / Monetary</button>
+          <button class="filter-btn" data-cat="Geopolitics">Geopolitics</button>
+          <button class="filter-btn" data-cat="Commodities">Commodities</button>
+          <button class="filter-btn" data-cat="Tech/AI">Tech / AI</button>
+          <button class="filter-btn" data-cat="Markets">Markets</button>
+          <button class="filter-btn" data-cat="Macro Economy">Macro Economy</button>
+        </div>
+      </div>
+
+      <div class="sentiment-panel">
+        <div class="filter-title">Macro Sentiment</div>
+        <div class="sent-row">
+          <span style="color:var(--green)">🟢 Positive</span>
+          <div class="sent-bar-wrap"><div class="sent-bar" id="sent-pos-bar" style="background:var(--green);width:0%"></div></div>
+          <span id="sent-pos-count" style="color:var(--muted);font-size:11px">0</span>
+        </div>
+        <div class="sent-row">
+          <span style="color:var(--red)">🔴 Negative</span>
+          <div class="sent-bar-wrap"><div class="sent-bar" id="sent-neg-bar" style="background:var(--red);width:0%"></div></div>
+          <span id="sent-neg-count" style="color:var(--muted);font-size:11px">0</span>
+        </div>
+        <div class="sent-row">
+          <span style="color:var(--muted)">⚪ Neutral</span>
+          <div class="sent-bar-wrap"><div class="sent-bar" id="sent-neu-bar" style="background:#444;width:0%"></div></div>
+          <span id="sent-neu-count" style="color:var(--muted);font-size:11px">0</span>
+        </div>
+      </div>
+
+      <div class="news-refresh-panel">
+        <div id="news-last-updated">Not loaded</div>
+        <button id="news-refresh-btn">↻ Refresh</button>
+      </div>
+
+    </div>
+  </div>
+</div><!-- end #news-page -->
 
 <!-- Error -->
 <div id="error-panel">
@@ -1115,13 +1270,17 @@ document.getElementById('skeleton').classList.add('hidden');
 // ---------------------------------------------------------------------------
 // Nav tab switching
 // ---------------------------------------------------------------------------
+const PAGES = ['terminal', 'portfolio', 'news'];
 document.querySelectorAll('.nav-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     const page = tab.dataset.page;
-    document.getElementById('terminal-page').style.display = page === 'terminal' ? '' : 'none';
+    document.getElementById('terminal-page').style.display  = page === 'terminal'  ? '' : 'none';
     document.getElementById('portfolio-page').style.display = page === 'portfolio' ? 'block' : 'none';
+    document.getElementById('news-page').style.display      = page === 'news'      ? 'block' : 'none';
+    if (page === 'portfolio' && pfPositions.length > 0 && !pfData) loadPortfolio();
+    if (page === 'news' && !newsLoaded) loadNews();
   });
 });
 
@@ -1488,8 +1647,9 @@ function deletePosition(i) {
 function jumpToTerminal(ticker) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.querySelector('.nav-tab[data-page="terminal"]').classList.add('active');
-  document.getElementById('terminal-page').style.display = '';
+  document.getElementById('terminal-page').style.display  = '';
   document.getElementById('portfolio-page').style.display = 'none';
+  document.getElementById('news-page').style.display      = 'none';
   document.getElementById('ticker-input').value = ticker;
   loadTicker(ticker);
 }
@@ -1502,6 +1662,154 @@ document.getElementById('pf-cost').addEventListener('keydown', e => { if (e.key 
 
 // Render saved positions on load
 renderPfTable(null);
+
+// ---------------------------------------------------------------------------
+// News
+// ---------------------------------------------------------------------------
+let newsLoaded = false;
+let newsArticles = [];
+let newsActiveFilter = 'All';
+let newsRefreshTimer = null;
+
+const CAT_CLASS = {
+  'Fed/Monetary Policy': 'cat-fed',
+  'Geopolitics':         'cat-geo',
+  'Commodities':         'cat-comm',
+  'Tech/AI':             'cat-tech',
+  'Markets':             'cat-markets',
+  'Macro Economy':       'cat-macro',
+};
+
+function scoreDots(score) {
+  if (score >= 10) {
+    return Array(5).fill('<span class="score-dot dot-red"></span>').join('');
+  } else if (score >= 8) {
+    const dots = Array(4).fill('<span class="score-dot dot-orange"></span>').join('');
+    return dots;
+  } else {
+    return Array(3).fill('<span class="score-dot dot-gray"></span>').join('');
+  }
+}
+
+function timeAgo(isoStr) {
+  if (!isoStr) return '';
+  try {
+    const diff = (Date.now() - new Date(isoStr).getTime()) / 1000;
+    if (diff < 3600)  return Math.round(diff / 60)  + 'm ago';
+    if (diff < 86400) return Math.round(diff / 3600) + 'h ago';
+    return Math.round(diff / 86400) + 'd ago';
+  } catch(e) { return ''; }
+}
+
+function sentimentTag(s) {
+  if (s === 'Positive') return '<span class="sentiment-tag">🟢 Positive</span>';
+  if (s === 'Negative') return '<span class="sentiment-tag">🔴 Negative</span>';
+  return '<span class="sentiment-tag" style="color:#555">⚪ Neutral</span>';
+}
+
+function renderNewsCards(articles) {
+  const feed = document.getElementById('news-feed');
+  const empty = document.getElementById('news-empty');
+
+  const filtered = newsActiveFilter === 'All'
+    ? articles
+    : articles.filter(a => a.category === newsActiveFilter);
+
+  if (filtered.length === 0) {
+    feed.classList.add('hidden');
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+  feed.classList.remove('hidden');
+
+  feed.innerHTML = filtered.map((a, i) => {
+    const catCls  = CAT_CLASS[a.category] || 'cat-macro';
+    const isCrit  = a.importance_score >= 10;
+    const delay   = Math.min(i * 60, 400);
+    return `
+      <div class="news-card${isCrit ? ' critical' : ''}" style="animation-delay:${delay}ms">
+        <div class="card-top">
+          <span class="cat-badge ${catCls}">${a.category}</span>
+          <span class="score-dots">${scoreDots(a.importance_score)}</span>
+          ${isCrit ? '<span class="critical-label">CRITICAL</span>' : ''}
+          ${sentimentTag(a.sentiment)}
+        </div>
+        <a class="card-headline" href="${a.url || '#'}" target="_blank" rel="noopener">${a.title}</a>
+        <div class="card-meta">
+          <span class="src">${a.source}</span>
+          ${a.published_at ? ' &middot; ' + timeAgo(a.published_at) : ''}
+        </div>
+        ${a.market_impact ? `<div class="card-impact">${a.market_impact}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+
+  updateSentimentPanel(filtered);
+}
+
+function updateSentimentPanel(articles) {
+  const pos = articles.filter(a => a.sentiment === 'Positive').length;
+  const neg = articles.filter(a => a.sentiment === 'Negative').length;
+  const neu = articles.filter(a => a.sentiment === 'Neutral').length;
+  const total = articles.length || 1;
+
+  document.getElementById('sent-pos-count').textContent = pos;
+  document.getElementById('sent-neg-count').textContent = neg;
+  document.getElementById('sent-neu-count').textContent = neu;
+  document.getElementById('sent-pos-bar').style.width = (pos / total * 100) + '%';
+  document.getElementById('sent-neg-bar').style.width = (neg / total * 100) + '%';
+  document.getElementById('sent-neu-bar').style.width = (neu / total * 100) + '%';
+}
+
+async function loadNews(force = false) {
+  const skeleton = document.getElementById('news-skeleton');
+  const feed     = document.getElementById('news-feed');
+  const empty    = document.getElementById('news-empty');
+
+  skeleton.style.display = '';
+  feed.classList.add('hidden');
+  empty.classList.add('hidden');
+
+  try {
+    const res = await fetch('/api/news');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    newsArticles = data.articles || [];
+    newsLoaded = true;
+
+    skeleton.style.display = 'none';
+    renderNewsCards(newsArticles);
+
+    const ts = data.cached_at ? new Date(data.cached_at) : new Date();
+    document.getElementById('news-last-updated').textContent =
+      'Updated ' + ts.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+    // auto-refresh every 15 min
+    if (newsRefreshTimer) clearTimeout(newsRefreshTimer);
+    newsRefreshTimer = setTimeout(() => { newsLoaded = false; if (document.getElementById('news-page').style.display !== 'none') loadNews(); }, 15 * 60 * 1000);
+
+  } catch(e) {
+    skeleton.style.display = 'none';
+    empty.textContent = 'Failed to load news: ' + e.message;
+    empty.classList.remove('hidden');
+  }
+}
+
+// Category filter
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    newsActiveFilter = btn.dataset.cat;
+    renderNewsCards(newsArticles);
+  });
+});
+
+document.getElementById('news-refresh-btn').addEventListener('click', () => {
+  newsLoaded = false;
+  loadNews(true);
+});
 </script>
 </body>
 </html>
