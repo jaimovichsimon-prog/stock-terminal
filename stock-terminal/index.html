@@ -178,13 +178,144 @@
   #retry-btn:hover { background: #3a1111; }
 
   .hidden { display: none !important; }
+
+  /* ---- Top Nav ---- */
+  #top-nav {
+    display: flex; align-items: center; gap: 0;
+    border-bottom: 1px solid var(--border);
+    background: #0d0d0d;
+  }
+  #top-nav .nav-logo {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    letter-spacing: 2px; padding: 0 20px; border-right: 1px solid var(--border);
+    height: 44px; display: flex; align-items: center;
+  }
+  .nav-tab {
+    font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; background: transparent; border: none; border-bottom: 2px solid transparent;
+    color: var(--muted); padding: 0 20px; height: 44px; cursor: pointer; transition: color 0.15s;
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ---- Portfolio page ---- */
+  #portfolio-page { padding: 12px 16px; display: none; }
+  #portfolio-page.visible { display: block; }
+
+  .pf-add-form {
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 14px 16px; margin-bottom: 8px;
+    display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;
+  }
+  .pf-field { display: flex; flex-direction: column; gap: 4px; }
+  .pf-field label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  .pf-input {
+    background: var(--panel2); border: 1px solid var(--border); color: var(--text);
+    font-family: inherit; font-size: 13px; padding: 6px 10px; outline: none; width: 120px;
+  }
+  .pf-input:focus { border-color: var(--accent); }
+  .pf-input.wide { width: 100px; }
+  #pf-add-btn {
+    background: var(--accent); color: #000; border: none;
+    font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    padding: 7px 18px; cursor: pointer; height: 32px; align-self: flex-end;
+  }
+  #pf-add-btn:hover { background: #00cc6e; }
+  #pf-load-btn {
+    background: transparent; color: var(--accent); border: 1px solid var(--accent);
+    font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    padding: 6px 16px; cursor: pointer; height: 32px; align-self: flex-end;
+  }
+  #pf-load-btn:hover { background: rgba(0,255,136,0.08); }
+
+  /* Positions table */
+  .pf-table-wrap { overflow-x: auto; margin-bottom: 8px; }
+  .pf-table {
+    width: 100%; border-collapse: collapse;
+    background: var(--panel); border: 1px solid var(--border);
+  }
+  .pf-table th {
+    font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--label); padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .pf-table th:first-child { text-align: left; }
+  .pf-table td {
+    font-size: 12px; padding: 7px 10px; text-align: right;
+    border-bottom: 1px solid #181818; white-space: nowrap;
+  }
+  .pf-table td:first-child { text-align: left; }
+  .pf-table tr:last-child td { border-bottom: none; }
+  .pf-table tr:hover td { background: #161616; }
+  .pf-table tfoot td {
+    font-weight: 700; color: var(--text); border-top: 1px solid var(--border);
+    border-bottom: none; background: #141414;
+  }
+  .pf-del-btn {
+    background: transparent; border: none; color: #444; cursor: pointer;
+    font-family: inherit; font-size: 13px; padding: 0 4px;
+  }
+  .pf-del-btn:hover { color: var(--red); }
+  .pf-ticker-lnk { color: var(--accent); font-weight: 700; cursor: pointer; font-size: 12px; }
+  .pf-ticker-lnk:hover { text-decoration: underline; }
+  .pf-name { font-size: 10px; color: var(--muted); display: block; }
+  .pf-concentration { color: var(--yellow); }
+
+  /* Metrics grid */
+  .pf-metrics-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px;
+  }
+  .pf-metric-card {
+    background: var(--panel); border: 1px solid var(--border); padding: 12px 14px;
+  }
+  .pf-metric-card .lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); display: block; margin-bottom: 4px; }
+  .pf-metric-card .big { font-size: 22px; font-weight: 700; color: var(--text); }
+  .pf-metric-card .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .pf-metric-card .flag { font-size: 10px; margin-top: 4px; }
+
+  /* Bottom 2-col grid */
+  .pf-bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+
+  /* Sector chart */
+  #sector-chart-wrap { height: 180px; position: relative; }
+
+  /* Correlation heatmap */
+  .corr-wrap { overflow: auto; }
+  .corr-table { border-collapse: collapse; font-size: 11px; }
+  .corr-table th { font-size: 9px; color: var(--muted); padding: 4px 6px; text-align: center; font-weight: 400; }
+  .corr-table td { width: 44px; height: 36px; text-align: center; font-size: 10px; font-weight: 500; }
+
+  /* Portfolio chart */
+  #pf-chart-panel { margin-bottom: 8px; }
+  #pf-chart-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  #pf-chart-wrap { position: relative; height: 280px; }
+
+  /* Empty state */
+  #pf-empty {
+    text-align: center; padding: 60px 20px;
+    background: var(--panel); border: 1px solid var(--border); margin-bottom: 8px;
+  }
+  #pf-empty .em-title { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+  #pf-empty .em-sub { font-size: 10px; color: #333; letter-spacing: 1px; }
+
+  /* Concentration warning list */
+  #conc-list { font-size: 11px; color: var(--yellow); margin-top: 4px; }
 </style>
 </head>
 <body>
 
+<!-- Top Nav -->
+<div id="top-nav">
+  <div class="nav-logo">&#9632; TERMINAL</div>
+  <button class="nav-tab active" data-page="terminal">Terminal</button>
+  <button class="nav-tab" data-page="portfolio">Portfolio</button>
+</div>
+
+<!-- Terminal Page -->
+<div id="terminal-page">
+
 <!-- Search -->
 <div id="search-bar">
-  <span class="logo">&#9632; Terminal</span>
   <input id="ticker-input" type="text" placeholder="Enter ticker symbol..." maxlength="10" autocomplete="off" spellcheck="false">
   <button id="search-btn">Search</button>
 </div>
@@ -383,6 +514,143 @@
   </div>
 
 </div>
+
+</div><!-- end #terminal-page -->
+
+<!-- Portfolio Page -->
+<div id="portfolio-page">
+
+  <!-- Add Position Form -->
+  <div class="pf-add-form">
+    <div class="pf-field">
+      <label>Ticker</label>
+      <input id="pf-ticker" class="pf-input" type="text" placeholder="AAPL" maxlength="10" autocomplete="off" spellcheck="false" style="text-transform:uppercase;width:90px">
+    </div>
+    <div class="pf-field">
+      <label>Shares</label>
+      <input id="pf-shares" class="pf-input wide" type="number" placeholder="10" min="0" step="any">
+    </div>
+    <div class="pf-field">
+      <label>Avg Cost ($)</label>
+      <input id="pf-cost" class="pf-input wide" type="number" placeholder="150.00" min="0" step="any">
+    </div>
+    <button id="pf-add-btn">+ Add Position</button>
+    <button id="pf-load-btn">Refresh Prices</button>
+  </div>
+
+  <!-- Empty state -->
+  <div id="pf-empty">
+    <div class="em-title">No positions yet</div>
+    <div class="em-sub">ADD A POSITION ABOVE TO GET STARTED</div>
+  </div>
+
+  <!-- Positions Table -->
+  <div id="pf-table-section" class="hidden">
+    <div class="pf-table-wrap">
+      <table class="pf-table">
+        <thead>
+          <tr>
+            <th style="text-align:left">Ticker / Name</th>
+            <th>Shares</th>
+            <th>Avg Cost</th>
+            <th>Cur Price</th>
+            <th>Mkt Value</th>
+            <th>Cost Basis</th>
+            <th>P&amp;L $</th>
+            <th>P&amp;L %</th>
+            <th>Day Chg $</th>
+            <th>Day Chg %</th>
+            <th>Weight</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="pf-tbody"></tbody>
+        <tfoot>
+          <tr id="pf-totals-row">
+            <td colspan="4" style="text-align:left;color:var(--muted);font-size:10px;letter-spacing:1px">TOTAL PORTFOLIO</td>
+            <td id="tot-mv"></td>
+            <td id="tot-cb"></td>
+            <td id="tot-pnl"></td>
+            <td id="tot-pnl-pct"></td>
+            <td id="tot-day"></td>
+            <td id="tot-day-pct"></td>
+            <td>100%</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Metrics Cards -->
+    <div class="pf-metrics-grid">
+      <div class="pf-metric-card">
+        <span class="lbl">Portfolio Value</span>
+        <div class="big" id="m-total-value">—</div>
+        <div class="sub" id="m-positions-count"></div>
+      </div>
+      <div class="pf-metric-card">
+        <span class="lbl">Total P&amp;L</span>
+        <div class="big" id="m-pnl-dollar">—</div>
+        <div class="sub" id="m-pnl-pct"></div>
+      </div>
+      <div class="pf-metric-card">
+        <span class="lbl">Day P&amp;L</span>
+        <div class="big" id="m-day-dollar">—</div>
+        <div class="sub" id="m-day-pct"></div>
+      </div>
+      <div class="pf-metric-card">
+        <span class="lbl">Portfolio Beta</span>
+        <div class="big" id="m-beta">—</div>
+        <div class="sub">vs SPY</div>
+      </div>
+      <div class="pf-metric-card">
+        <span class="lbl">Hist Vol 30d (Ann.)</span>
+        <div class="big" id="m-hv">—</div>
+        <div class="sub">annualized</div>
+      </div>
+      <div class="pf-metric-card">
+        <span class="lbl">Sharpe Ratio</span>
+        <div class="big" id="m-sharpe">—</div>
+        <div class="sub">rf = 5%</div>
+      </div>
+      <div class="pf-metric-card">
+        <span class="lbl">Max Drawdown (1y)</span>
+        <div class="big" id="m-drawdown">—</div>
+        <div class="sub">peak-to-trough</div>
+      </div>
+      <div class="pf-metric-card">
+        <span class="lbl">Concentration Risk</span>
+        <div class="big" id="m-conc-count">—</div>
+        <div id="conc-list"></div>
+      </div>
+    </div>
+
+    <!-- Bottom: Sector + Correlation -->
+    <div class="pf-bottom-grid">
+      <div class="panel">
+        <div class="panel-title">Sector Breakdown</div>
+        <div id="sector-chart-wrap"><canvas id="sector-chart"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Correlation Matrix</div>
+        <div class="corr-wrap" id="corr-container">
+          <div style="color:var(--muted);font-size:11px">Load prices to compute correlations.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Portfolio Chart -->
+    <div id="pf-chart-panel" class="panel">
+      <div class="panel-title" style="margin-bottom:8px">Portfolio Performance — 1 Year (What-If)</div>
+      <div id="pf-chart-controls">
+        <span class="ctrl-lbl">Overlay:</span>
+        <button class="sma-toggle active" id="spy-toggle">SPY</button>
+      </div>
+      <div id="pf-chart-wrap"><canvas id="pf-chart"></canvas></div>
+    </div>
+  </div>
+
+</div><!-- end #portfolio-page -->
 
 <!-- Error -->
 <div id="error-panel">
@@ -843,6 +1111,397 @@ document.getElementById('retry-btn').addEventListener('click', () => {
 
 // Hide skeleton on initial page load
 document.getElementById('skeleton').classList.add('hidden');
+
+// ---------------------------------------------------------------------------
+// Nav tab switching
+// ---------------------------------------------------------------------------
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const page = tab.dataset.page;
+    document.getElementById('terminal-page').style.display = page === 'terminal' ? '' : 'none';
+    document.getElementById('portfolio-page').style.display = page === 'portfolio' ? 'block' : 'none';
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Portfolio state
+// ---------------------------------------------------------------------------
+let pfPositions = JSON.parse(localStorage.getItem('pf_positions') || '[]');
+let pfChart = null;
+let sectorChart = null;
+let pfData = null;
+
+function savePfPositions() {
+  localStorage.setItem('pf_positions', JSON.stringify(pfPositions));
+}
+
+// ---------------------------------------------------------------------------
+// Portfolio formatting helpers
+// ---------------------------------------------------------------------------
+function pfFmtMoney(v) {
+  if (v == null || isNaN(v)) return '—';
+  return '$' + parseFloat(v).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function pfFmtPct(v) {
+  if (v == null || isNaN(v)) return '—';
+  const f = parseFloat(v);
+  return (f >= 0 ? '+' : '') + f.toFixed(2) + '%';
+}
+function pfColor(v) {
+  if (v == null || isNaN(v)) return '';
+  return parseFloat(v) >= 0 ? 'var(--green)' : 'var(--red)';
+}
+
+// ---------------------------------------------------------------------------
+// Render positions table (local data only, no prices yet)
+// ---------------------------------------------------------------------------
+function renderPfTable(data) {
+  const hasData = data && data.positions && data.positions.length > 0;
+  const localOnly = !data;
+
+  document.getElementById('pf-empty').style.display = pfPositions.length === 0 ? '' : 'none';
+  document.getElementById('pf-table-section').classList.toggle('hidden', pfPositions.length === 0);
+
+  const tbody = document.getElementById('pf-tbody');
+  tbody.innerHTML = '';
+
+  const rows = data ? data.positions : pfPositions.map(p => ({
+    ticker: p.ticker, company_name: p.ticker, sector: null,
+    shares: p.shares, avg_cost: p.avg_cost,
+    current_price: null, market_value: null, cost_basis: p.shares * p.avg_cost,
+    pnl_dollar: null, pnl_pct: null, day_change_dollar: null, day_change_pct: null, weight: null,
+  }));
+
+  rows.forEach((pos, i) => {
+    const tr = document.createElement('tr');
+    const weightFlag = pos.weight && pos.weight > 20 ? ' pf-concentration' : '';
+    tr.innerHTML = `
+      <td>
+        <span class="pf-ticker-lnk" onclick="jumpToTerminal('${pos.ticker}')">${pos.ticker}</span>
+        <span class="pf-name">${pos.company_name || ''}</span>
+      </td>
+      <td>${pos.shares}</td>
+      <td>${pfFmtMoney(pos.avg_cost)}</td>
+      <td>${pos.current_price != null ? pfFmtMoney(pos.current_price) : '—'}</td>
+      <td>${pos.market_value != null ? pfFmtMoney(pos.market_value) : '—'}</td>
+      <td>${pfFmtMoney(pos.cost_basis)}</td>
+      <td style="color:${pfColor(pos.pnl_dollar)}">${pfFmtMoney(pos.pnl_dollar)}</td>
+      <td style="color:${pfColor(pos.pnl_pct)}">${pfFmtPct(pos.pnl_pct)}</td>
+      <td style="color:${pfColor(pos.day_change_dollar)}">${pos.day_change_dollar != null ? pfFmtMoney(pos.day_change_dollar) : '—'}</td>
+      <td style="color:${pfColor(pos.day_change_pct)}">${pfFmtPct(pos.day_change_pct)}</td>
+      <td class="${weightFlag}">${pos.weight != null ? pos.weight.toFixed(1) + '%' : '—'}</td>
+      <td><button class="pf-del-btn" onclick="deletePosition(${i})">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Totals row
+  if (data) {
+    const t = data.totals;
+    document.getElementById('tot-mv').textContent = pfFmtMoney(t.market_value);
+    document.getElementById('tot-cb').textContent = pfFmtMoney(t.cost_basis);
+    const pnlEl = document.getElementById('tot-pnl');
+    pnlEl.textContent = pfFmtMoney(t.pnl_dollar);
+    pnlEl.style.color = pfColor(t.pnl_dollar);
+    const pnlPctEl = document.getElementById('tot-pnl-pct');
+    pnlPctEl.textContent = pfFmtPct(t.pnl_pct);
+    pnlPctEl.style.color = pfColor(t.pnl_pct);
+    const dayEl = document.getElementById('tot-day');
+    dayEl.textContent = t.day_change_dollar != null ? pfFmtMoney(t.day_change_dollar) : '—';
+    dayEl.style.color = pfColor(t.day_change_dollar);
+    const dayPctEl = document.getElementById('tot-day-pct');
+    dayPctEl.textContent = pfFmtPct(t.day_change_pct);
+    dayPctEl.style.color = pfColor(t.day_change_pct);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Render metrics panel
+// ---------------------------------------------------------------------------
+function renderMetrics(data) {
+  const m = data.metrics;
+  const t = data.totals;
+
+  const tvEl = document.getElementById('m-total-value');
+  tvEl.textContent = pfFmtMoney(m.total_value);
+
+  document.getElementById('m-positions-count').textContent = m.num_positions + ' position' + (m.num_positions !== 1 ? 's' : '');
+
+  const pnlEl = document.getElementById('m-pnl-dollar');
+  pnlEl.textContent = pfFmtMoney(t.pnl_dollar);
+  pnlEl.style.color = pfColor(t.pnl_dollar);
+  const pnlPctEl = document.getElementById('m-pnl-pct');
+  pnlPctEl.textContent = pfFmtPct(t.pnl_pct);
+  pnlPctEl.style.color = pfColor(t.pnl_pct);
+
+  const dayEl = document.getElementById('m-day-dollar');
+  dayEl.textContent = t.day_change_dollar != null ? pfFmtMoney(t.day_change_dollar) : '—';
+  dayEl.style.color = pfColor(t.day_change_dollar);
+  const dayPctEl = document.getElementById('m-day-pct');
+  dayPctEl.textContent = pfFmtPct(t.day_change_pct);
+  dayPctEl.style.color = pfColor(t.day_change_pct);
+
+  const betaEl = document.getElementById('m-beta');
+  betaEl.textContent = m.beta != null ? m.beta.toFixed(2) : '—';
+  betaEl.style.color = m.beta != null && m.beta > 1.5 ? 'var(--yellow)' : '';
+
+  const hvEl = document.getElementById('m-hv');
+  hvEl.textContent = m.hv30d != null ? m.hv30d.toFixed(1) + '%' : '—';
+
+  const sharpeEl = document.getElementById('m-sharpe');
+  sharpeEl.textContent = m.sharpe != null ? m.sharpe.toFixed(2) : '—';
+  sharpeEl.style.color = m.sharpe != null && m.sharpe < 0 ? 'var(--red)' : '';
+
+  const ddEl = document.getElementById('m-drawdown');
+  ddEl.textContent = m.max_drawdown != null ? m.max_drawdown.toFixed(1) + '%' : '—';
+  ddEl.style.color = m.max_drawdown != null ? 'var(--red)' : '';
+
+  const concEl = document.getElementById('m-conc-count');
+  const flags = m.concentration_flags || [];
+  if (flags.length === 0) {
+    concEl.textContent = 'None';
+    concEl.style.color = 'var(--green)';
+    document.getElementById('conc-list').textContent = '';
+  } else {
+    concEl.textContent = flags.length + ' position' + (flags.length > 1 ? 's' : '');
+    concEl.style.color = 'var(--yellow)';
+    document.getElementById('conc-list').textContent = flags.join(', ') + ' > 20%';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Render sector chart
+// ---------------------------------------------------------------------------
+function renderSectorChart(sectors) {
+  const labels = Object.keys(sectors);
+  const values = Object.values(sectors);
+  const ctx = document.getElementById('sector-chart').getContext('2d');
+  if (sectorChart) { sectorChart.destroy(); sectorChart = null; }
+
+  const colors = ['#4fc3f7','#00ff88','#ffb74d','#f48fb1','#ce93d8','#80cbc4','#a5d6a7','#fff176','#ffcc80','#ef9a9a'];
+
+  sectorChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: colors.slice(0, labels.length),
+        borderWidth: 0,
+        borderRadius: 1,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1a1a', borderColor: '#2a2a2a', borderWidth: 1,
+          callbacks: { label: ctx => ' ' + ctx.parsed.x.toFixed(1) + '%' }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#1a1a1a' },
+          ticks: { color: '#555', font: { family: 'JetBrains Mono', size: 10 }, callback: v => v.toFixed(0) + '%' },
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: '#888', font: { family: 'JetBrains Mono', size: 10 } },
+        }
+      }
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Render correlation heatmap
+// ---------------------------------------------------------------------------
+function renderCorrelation(corr) {
+  const container = document.getElementById('corr-container');
+  if (!corr || !corr.tickers || corr.tickers.length < 2) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:11px">Need ≥2 positions for correlation.</div>';
+    return;
+  }
+  const tickers = corr.tickers;
+  const values  = corr.values;
+
+  function corrColor(v) {
+    if (v == null) return '#222';
+    // -1 → red, 0 → #333, +1 → green
+    if (v >= 0) {
+      const t = v;
+      const r = Math.round(0 + t * 0);
+      const g = Math.round(80 + t * (255 - 80));
+      const b = Math.round(60 + t * (60 - 60));
+      return `rgb(${Math.round(40*(1-t))},${g},${Math.round(60*(1-t))})`;
+    } else {
+      const t = -v;
+      return `rgb(${Math.round(80 + t*175)},${Math.round(40*(1-t))},${Math.round(40*(1-t))})`;
+    }
+  }
+
+  function textColor(v) {
+    if (v == null) return '#555';
+    return Math.abs(v) > 0.4 ? '#000' : '#aaa';
+  }
+
+  let html = '<table class="corr-table"><thead><tr><th></th>';
+  tickers.forEach(t => { html += `<th>${t}</th>`; });
+  html += '</tr></thead><tbody>';
+  tickers.forEach((rowT, r) => {
+    html += `<tr><th style="text-align:right;padding-right:8px">${rowT}</th>`;
+    tickers.forEach((colT, c) => {
+      const v = values[r][c];
+      const bg = corrColor(v);
+      const fg = textColor(v);
+      html += `<td style="background:${bg};color:${fg}">${v != null ? v.toFixed(2) : '—'}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+// ---------------------------------------------------------------------------
+// Render portfolio chart
+// ---------------------------------------------------------------------------
+function renderPfChart(chartData) {
+  if (!chartData) return;
+  const ctx = document.getElementById('pf-chart').getContext('2d');
+  if (pfChart) { pfChart.destroy(); pfChart = null; }
+
+  const datasets = [
+    {
+      label: 'Portfolio',
+      data: chartData.portfolio,
+      borderColor: '#00ff88', borderWidth: 2,
+      pointRadius: 0, tension: 0.1, fill: false, order: 0,
+    }
+  ];
+  if (chartData.spy) {
+    datasets.push({
+      label: 'SPY',
+      data: chartData.spy,
+      borderColor: '#4fc3f7', borderWidth: 1,
+      pointRadius: 0, tension: 0, fill: false, order: 1,
+    });
+  }
+
+  pfChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: chartData.dates, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1a1a', borderColor: '#2a2a2a', borderWidth: 1,
+          titleColor: '#666', bodyColor: '#e0e0e0', padding: 10,
+          callbacks: { label: ctx => { const v = ctx.parsed.y; return v != null ? ' ' + ctx.dataset.label + ': $' + v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : null; } }
+        }
+      },
+      scales: {
+        x: { grid: { color: '#1a1a1a' }, ticks: { color: '#555', maxTicksLimit: 8, font: { family: 'JetBrains Mono', size: 10 } } },
+        y: { position: 'right', grid: { color: '#1a1a1a' }, ticks: { color: '#555', font: { family: 'JetBrains Mono', size: 10 }, callback: v => '$' + v.toLocaleString('en-US',{maximumFractionDigits:0}) } }
+      }
+    }
+  });
+
+  // SPY toggle
+  document.getElementById('spy-toggle').addEventListener('click', function() {
+    if (!pfChart || pfChart.data.datasets.length < 2) return;
+    const ds = pfChart.data.datasets[1];
+    ds.hidden = !ds.hidden;
+    this.classList.toggle('active', !ds.hidden);
+    pfChart.update();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Load portfolio from API
+// ---------------------------------------------------------------------------
+async function loadPortfolio() {
+  if (pfPositions.length === 0) { renderPfTable(null); return; }
+  const btn = document.getElementById('pf-load-btn');
+  btn.textContent = 'Loading...';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/portfolio', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ positions: pfPositions }),
+    });
+    if (!res.ok) {
+      let d = 'Failed'; try { d = (await res.json()).detail; } catch(e) {}
+      alert('Portfolio error: ' + d); return;
+    }
+    pfData = await res.json();
+    renderPfTable(pfData);
+    renderMetrics(pfData);
+    if (pfData.sectors) renderSectorChart(pfData.sectors);
+    if (pfData.correlation) renderCorrelation(pfData.correlation);
+    if (pfData.chart) renderPfChart(pfData.chart);
+  } catch(e) {
+    alert('Network error: ' + e.message);
+  } finally {
+    btn.textContent = 'Refresh Prices';
+    btn.disabled = false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Add / delete positions
+// ---------------------------------------------------------------------------
+function addPosition() {
+  const ticker = document.getElementById('pf-ticker').value.trim().toUpperCase();
+  const shares  = parseFloat(document.getElementById('pf-shares').value);
+  const cost    = parseFloat(document.getElementById('pf-cost').value);
+  if (!ticker || isNaN(shares) || shares <= 0 || isNaN(cost) || cost <= 0) {
+    alert('Enter a valid ticker, shares, and avg cost.'); return;
+  }
+  const existing = pfPositions.findIndex(p => p.ticker === ticker);
+  if (existing >= 0) {
+    pfPositions[existing] = { ticker, shares, avg_cost: cost };
+  } else {
+    pfPositions.push({ ticker, shares, avg_cost: cost });
+  }
+  savePfPositions();
+  document.getElementById('pf-ticker').value = '';
+  document.getElementById('pf-shares').value = '';
+  document.getElementById('pf-cost').value = '';
+  renderPfTable(null);
+}
+
+function deletePosition(i) {
+  pfPositions.splice(i, 1);
+  savePfPositions();
+  pfData = null;
+  renderPfTable(null);
+  document.getElementById('corr-container').innerHTML = '<div style="color:var(--muted);font-size:11px">Load prices to compute correlations.</div>';
+}
+
+function jumpToTerminal(ticker) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.nav-tab[data-page="terminal"]').classList.add('active');
+  document.getElementById('terminal-page').style.display = '';
+  document.getElementById('portfolio-page').style.display = 'none';
+  document.getElementById('ticker-input').value = ticker;
+  loadTicker(ticker);
+}
+
+document.getElementById('pf-add-btn').addEventListener('click', addPosition);
+document.getElementById('pf-load-btn').addEventListener('click', loadPortfolio);
+document.getElementById('pf-ticker').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('pf-shares').focus(); });
+document.getElementById('pf-shares').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('pf-cost').focus(); });
+document.getElementById('pf-cost').addEventListener('keydown', e => { if (e.key === 'Enter') addPosition(); });
+
+// Render saved positions on load
+renderPfTable(null);
 </script>
 </body>
 </html>
