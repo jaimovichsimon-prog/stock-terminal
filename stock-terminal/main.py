@@ -584,11 +584,11 @@ def get_portfolio(req: PortfolioRequest):
 # ---------------------------------------------------------------------------
 
 RSS_FEEDS = [
-    ("Reuters Business", "https://feeds.reuters.com/reuters/businessNews"),
-    ("Reuters Top News", "https://feeds.reuters.com/reuters/topNews"),
-    ("Financial Times",  "https://rss.ft.com/rss/home/us"),
     ("BBC Business",     "https://feeds.bbci.co.uk/news/business/rss.xml"),
-    ("AP Finance",       "https://rss.app/feeds/AP-finance.xml"),
+    ("CNBC Markets",     "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"),
+    ("Yahoo Finance",    "https://finance.yahoo.com/news/rssindex"),
+    ("MarketWatch",      "https://feeds.marketwatch.com/marketwatch/topstories/"),
+    ("The Guardian",     "https://www.theguardian.com/business/rss"),
 ]
 
 _news_cache: dict = {"ts": 0.0, "data": None}
@@ -649,57 +649,125 @@ def _fetch_articles() -> list[dict]:
     return articles
 
 
-_MACRO_KEYWORDS = [
-    "fed", "federal reserve", "interest rate", "inflation", "cpi", "pce", "gdp",
-    "central bank", "ecb", "boe", "boj", "rate hike", "rate cut", "quantitative",
-    "sanctions", "tariff", "trade war", "geopolit", "war", "conflict", "military",
-    "oil", "opec", "gas", "energy", "supply chain", "strait", "hormuz",
-    "ai ", "artificial intelligence", "regulation", "antitrust",
-    "recession", "unemployment", "jobs", "nonfarm", "payroll",
-    "treasury", "yield", "bond", "debt", "deficit", "fiscal",
-    "election", "political", "government", "congress", "senate",
-    "bank", "financial", "market", "stock", "equity", "currency", "dollar", "euro",
-]
 _EXCLUDE_KEYWORDS = [
-    "sport", "soccer", "football", "nfl", "nba", "nhl", "cricket",
-    "celebrity", "fashion", "lifestyle", "recipe", "travel", "weather",
-    "movie", "film", "music", "entertainment",
+    "nfl", "nba", "nhl", "mlb", "soccer", "cricket", "rugby", "tennis", "golf",
+    "celebrity", "fashion", "lifestyle", "recipe", "travel", "tourism",
+    "movie", "film", "music", "entertainment", "oscars", "grammy",
+    "horoscope", "crossword", "puzzle",
 ]
 
 _CAT_KEYWORDS = {
-    "Fed/Monetary Policy": ["fed", "federal reserve", "interest rate", "rate hike", "rate cut", "central bank", "ecb", "boe", "boj", "quantitative", "monetary", "inflation", "cpi", "pce"],
-    "Geopolitics":         ["war", "conflict", "military", "sanction", "geopolit", "nato", "ukraine", "russia", "china", "iran", "middle east", "taiwan", "north korea"],
-    "Commodities":         ["oil", "opec", "gas", "energy", "crude", "commodity", "gold", "silver", "wheat", "supply chain", "hormuz"],
-    "Tech/AI":             ["ai ", "artificial intelligence", "openai", "nvidia", "chip", "semiconductor", "regulation", "antitrust", "tech"],
-    "Markets":             ["market", "stock", "equity", "rally", "selloff", "crash", "volatility", "treasury", "yield", "bond", "dollar", "currency"],
-    "Macro Economy":       ["gdp", "recession", "unemployment", "jobs", "payroll", "fiscal", "deficit", "debt", "trade", "tariff", "growth"],
+    "Fed/Monetary Policy": [
+        "federal reserve", "fed ", "fomc", "interest rate", "rate hike", "rate cut",
+        "central bank", "ecb", "bank of england", "boe", "boj", "bank of japan",
+        "quantitative easing", "quantitative tightening", "monetary policy",
+        "inflation", "cpi", "pce", "price stability", "jerome powell", "lagarde",
+    ],
+    "Geopolitics": [
+        "war", "conflict", "military", "sanctions", "sanction", "geopolit",
+        "nato", "ukraine", "russia", "iran", "middle east", "taiwan",
+        "north korea", "missile", "troops", "invasion", "ceasefire", "treaty",
+        "diplomat", "embassy", "nuclear",
+    ],
+    "Commodities": [
+        "oil price", "crude oil", "opec", "natural gas", "energy price",
+        "commodity", "gold price", "silver", "wheat", "corn", "supply chain",
+        "strait of hormuz", "brent", "wti", "lng",
+    ],
+    "Tech/AI": [
+        "artificial intelligence", " ai ", "openai", "nvidia", "chip shortage",
+        "semiconductor", "antitrust", "big tech", "regulation tech",
+        "chatgpt", "machine learning", "data center", "cloud computing",
+    ],
+    "Markets": [
+        "stock market", "wall street", "s&p 500", "nasdaq", "dow jones",
+        "treasury yield", "bond yield", "credit market", "hedge fund",
+        "market rally", "market selloff", "market crash", "volatility",
+        "dollar index", "currency", "forex", "ipo",
+    ],
+    "Macro Economy": [
+        "gdp", "recession", "unemployment", "jobs report", "nonfarm payroll",
+        "trade deficit", "trade war", "tariff", "fiscal policy", "budget deficit",
+        "national debt", "economic growth", "consumer confidence",
+        "manufacturing", "pmi", "retail sales",
+    ],
 }
+
+# Any article containing at least one of these gets through automatically
+_HIGH_IMPORTANCE = [
+    "federal reserve", "fomc", "rate decision", "rate hike", "rate cut",
+    "inflation data", "cpi report", "jobs report", "nonfarm payroll",
+    "gdp growth", "gdp contraction", "recession",
+    "war ", "invasion", "military strike", "nuclear",
+    "sanctions", "opec", "oil supply", "oil price",
+    "market crash", "stock market crash", "financial crisis",
+    "bank collapse", "bank failure", "systemic",
+    "tariff", "trade war",
+    "artificial intelligence regulation", "ai regulation",
+]
+
+_POSITIVE_WORDS = [
+    "rally", "surge", "gain", "rise", "jump", "soar", "boom", "recovery",
+    "growth", "strong", "beat", "exceed", "better than expected", "optimism",
+    "record high", "bullish", "rebound", "improve",
+]
+_NEGATIVE_WORDS = [
+    "crash", "collapse", "plunge", "fall", "drop", "decline", "slump", "fear",
+    "crisis", "recession", "contraction", "worse than expected", "miss",
+    "risk", "concern", "warning", "layoff", "deficit", "loss", "bearish",
+    "slowdown", "cut", "shrink", "downturn",
+]
+
+
+def _classify_category(text: str) -> str:
+    scores = {cat: sum(1 for kw in kws if kw in text) for cat, kws in _CAT_KEYWORDS.items()}
+    best = max(scores, key=scores.get)
+    return best if scores[best] > 0 else "Macro Economy"
+
+
+def _classify_sentiment(text: str) -> str:
+    pos = sum(1 for w in _POSITIVE_WORDS if w in text)
+    neg = sum(1 for w in _NEGATIVE_WORDS if w in text)
+    if pos > neg:
+        return "Positive"
+    if neg > pos:
+        return "Negative"
+    return "Neutral"
 
 
 def _keyword_filter(articles: list[dict]) -> list[dict]:
     """Fallback filter used when ANTHROPIC_API_KEY is not set."""
     results = []
-    for i, a in enumerate(articles):
+    for a in articles:
         text = (a["title"] + " " + a["summary"]).lower()
+
         if any(kw in text for kw in _EXCLUDE_KEYWORDS):
             continue
-        hit_count = sum(1 for kw in _MACRO_KEYWORDS if kw in text)
-        if hit_count < 2:
+
+        # High-importance trigger — always include, score 8-9
+        high_hits = sum(1 for kw in _HIGH_IMPORTANCE if kw in text)
+
+        # Category keyword hits for scoring
+        cat_hits = sum(1 for kws in _CAT_KEYWORDS.values() for kw in kws if kw in text)
+
+        if high_hits == 0 and cat_hits < 2:
             continue
 
-        category = "Macro Economy"
-        for cat, kws in _CAT_KEYWORDS.items():
-            if any(kw in text for kw in kws):
-                category = cat
-                break
+        score = 7
+        if high_hits >= 2 or cat_hits >= 5:
+            score = 9
+        elif high_hits == 1 or cat_hits >= 3:
+            score = 8
 
-        score = min(7 + min(hit_count - 2, 2), 9)
+        category  = _classify_category(text)
+        sentiment = _classify_sentiment(text)
+
         results.append({
             **a,
             "importance_score": score,
-            "category": category,
-            "market_impact": "",
-            "sentiment": "Neutral",
+            "category":         category,
+            "market_impact":    "",
+            "sentiment":        sentiment,
         })
 
     results.sort(key=lambda x: x["importance_score"], reverse=True)
