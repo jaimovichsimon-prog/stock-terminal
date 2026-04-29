@@ -5,17 +5,35 @@ import os
 import json
 import time
 import re
-from typing import List
+from typing import List, Optional, AsyncGenerator
+
+# Load .env file if present (local dev)
+_env_file = Path(__file__).parent / ".env"
+if _env_file.exists():
+    for _line in _env_file.read_text().splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith("#") and "=" in _line:
+            _k, _v = _line.split("=", 1)
+            os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
+
+import hashlib
+import secrets
+import base64
 
 import numpy as np
 import pandas as pd
 import yfinance as yf
 import feedparser
 import anthropic
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
+
+# Auth deps
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, func
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
+from jose import JWTError, jwt
 
 app = FastAPI(title="Stock Terminal")
 
@@ -27,6 +45,116 @@ app.add_middleware(
 )
 
 INDEX_HTML = Path(__file__).parent / "index.html"
+
+# ---------------------------------------------------------------------------
+# Database setup
+# ---------------------------------------------------------------------------
+DB_PATH = Path(__file__).parent / "terminal.db"
+engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = "users"
+    id         = Column(Integer, primary_key=True, index=True)
+    email      = Column(String, unique=True, index=True, nullable=False)
+    hashed_pw  = Column(String, nullable=False)
+    created_at = Column(DateTime, default=func.now())
+
+Base.metadata.create_all(bind=engine)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# ---------------------------------------------------------------------------
+# Auth utilities
+# ---------------------------------------------------------------------------
+JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-in-production-please")
+JWT_ALG    = "HS256"
+JWT_EXPIRE = 60 * 24 * 30  # 30 days in minutes
+
+_PBKDF2_ITERS = 260_000
+
+def hash_password(pw: str) -> str:
+    salt = secrets.token_hex(16)
+    dk   = hashlib.pbkdf2_hmac("sha256", pw.encode(), salt.encode(), _PBKDF2_ITERS)
+    return f"{salt}${base64.b64encode(dk).decode()}"
+
+def verify_password(pw: str, hashed: str) -> bool:
+    try:
+        salt, stored = hashed.split("$", 1)
+        dk = hashlib.pbkdf2_hmac("sha256", pw.encode(), salt.encode(), _PBKDF2_ITERS)
+        return base64.b64encode(dk).decode() == stored
+    except Exception:
+        return False
+
+def create_token(user_id: int, email: str) -> str:
+    expire = datetime.datetime.utcnow() + datetime.timedelta(minutes=JWT_EXPIRE)
+    return jwt.encode({"sub": str(user_id), "email": email, "exp": expire}, JWT_SECRET, algorithm=JWT_ALG)
+
+def decode_token(token: str) -> dict:
+    return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
+
+def get_current_user(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)) -> User:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        payload = decode_token(authorization.split(" ", 1)[1])
+        user_id = int(payload["sub"])
+    except (JWTError, KeyError, ValueError):
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+# ---------------------------------------------------------------------------
+# Auth Pydantic models
+# ---------------------------------------------------------------------------
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class AuthResponse(BaseModel):
+    token: str
+    email: str
+    user_id: int
+
+# ---------------------------------------------------------------------------
+# Auth endpoints
+# ---------------------------------------------------------------------------
+@app.post("/api/auth/register", response_model=AuthResponse)
+def register(body: RegisterRequest, db: Session = Depends(get_db)):
+    body.email = body.email.strip().lower()
+    if len(body.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    if db.query(User).filter(User.email == body.email).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
+    user = User(email=body.email, hashed_pw=hash_password(body.password))
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return AuthResponse(token=create_token(user.id, user.email), email=user.email, user_id=user.id)
+
+@app.post("/api/auth/login", response_model=AuthResponse)
+def login(body: LoginRequest, db: Session = Depends(get_db)):
+    body.email = body.email.strip().lower()
+    user = db.query(User).filter(User.email == body.email).first()
+    if not user or not verify_password(body.password, user.hashed_pw):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    return AuthResponse(token=create_token(user.id, user.email), email=user.email, user_id=user.id)
+
+@app.get("/api/auth/me")
+def me(current_user: User = Depends(get_current_user)):
+    return {"user_id": current_user.id, "email": current_user.email}
 
 
 @app.get("/")
@@ -1307,6 +1435,157 @@ def get_options(symbol: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Options fetch failed: {str(e)}")
+
+
+# ---------------------------------------------------------------------------
+# AI Analysis — streaming SSE endpoint
+# ---------------------------------------------------------------------------
+@app.get("/api/analyze/{symbol}")
+async def analyze_ticker(symbol: str, authorization: Optional[str] = Header(None)):
+    """Stream a Claude AI analysis of the ticker. Auth required."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Sign in to use AI Analysis")
+    try:
+        decode_token(authorization.split(" ", 1)[1])
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    symbol = symbol.upper().strip()
+
+    # ── Gather data ──────────────────────────────────────────────────────────
+    try:
+        tk   = yf.Ticker(symbol)
+        info = tk.info or {}
+
+        price        = clean_float(info.get("currentPrice") or info.get("regularMarketPrice"))
+        prev_close   = clean_float(info.get("previousClose"))
+        change_pct   = round((price - prev_close) / prev_close * 100, 2) if price and prev_close else None
+        mkt_cap      = info.get("marketCap")
+        pe           = clean_float(info.get("trailingPE"))
+        fwd_pe       = clean_float(info.get("forwardPE"))
+        eps          = clean_float(info.get("trailingEps"))
+        rev_growth   = clean_float(info.get("revenueGrowth"))
+        earn_growth  = clean_float(info.get("earningsGrowth"))
+        gross_margin = clean_float(info.get("grossMargins"))
+        profit_margin= clean_float(info.get("profitMargins"))
+        debt_equity  = clean_float(info.get("debtToEquity"))
+        roe          = clean_float(info.get("returnOnEquity"))
+        beta         = clean_float(info.get("beta"))
+        target_price = clean_float(info.get("targetMeanPrice"))
+        rec          = info.get("recommendationKey", "")
+        sector       = info.get("sector", "")
+        industry     = info.get("industry", "")
+        company_name = info.get("longName", symbol)
+
+        # 90-day price history for technicals
+        hist = tk.history(period="90d", interval="1d")
+        rsi_val = None
+        sma50   = None
+        sma200  = None
+        wk52_hi = clean_float(info.get("fiftyTwoWeekHigh"))
+        wk52_lo = clean_float(info.get("fiftyTwoWeekLow"))
+
+        if not hist.empty and len(hist) > 14:
+            close = hist["Close"]
+            rsi_series = calc_rsi(close)
+            rsi_val = round(float(rsi_series.iloc[-1]), 1) if not pd.isna(rsi_series.iloc[-1]) else None
+            if len(close) >= 50:
+                sma50 = round(float(close.rolling(50).mean().iloc[-1]), 2)
+            if len(close) >= 200:
+                sma200 = round(float(close.rolling(200).mean().iloc[-1]), 2)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch data: {e}")
+
+    # ── Build prompt ─────────────────────────────────────────────────────────
+    def fmt(v, prefix="", suffix="", decimals=2):
+        if v is None: return "N/A"
+        return f"{prefix}{v:,.{decimals}f}{suffix}"
+
+    def fmt_pct(v):
+        if v is None: return "N/A"
+        return f"{'+' if v >= 0 else ''}{v:.1f}%"
+
+    def fmt_cap(v):
+        if v is None: return "N/A"
+        if v >= 1e12: return f"${v/1e12:.2f}T"
+        if v >= 1e9:  return f"${v/1e9:.1f}B"
+        return f"${v/1e6:.0f}M"
+
+    prompt = f"""You are a sharp, concise equity analyst. Analyze {company_name} ({symbol}) based on the following real-time data and give a structured assessment. Be direct, specific, and insightful — no generic disclaimers.
+
+## Market Data (live)
+- Price: {fmt(price, '$')}  |  Change today: {fmt_pct(change_pct)}
+- Market Cap: {fmt_cap(mkt_cap)}
+- Beta: {fmt(beta, decimals=2)}
+- 52-Week Range: {fmt(wk52_lo, '$')} – {fmt(wk52_hi, '$')}
+- Sector: {sector}  |  Industry: {industry}
+
+## Valuation
+- Trailing P/E: {fmt(pe, decimals=1)}x
+- Forward P/E: {fmt(fwd_pe, decimals=1)}x
+- EPS (TTM): {fmt(eps, '$')}
+- Analyst Target Price: {fmt(target_price, '$')}  |  Consensus: {rec.upper() if rec else 'N/A'}
+
+## Fundamentals
+- Revenue Growth (YoY): {fmt_pct(rev_growth * 100) if rev_growth else 'N/A'}
+- Earnings Growth (YoY): {fmt_pct(earn_growth * 100) if earn_growth else 'N/A'}
+- Gross Margin: {fmt_pct(gross_margin * 100) if gross_margin else 'N/A'}
+- Net Profit Margin: {fmt_pct(profit_margin * 100) if profit_margin else 'N/A'}
+- Return on Equity: {fmt_pct(roe * 100) if roe else 'N/A'}
+- Debt/Equity: {fmt(debt_equity, decimals=1)}x
+
+## Technical Picture
+- RSI (14d): {fmt(rsi_val, decimals=1)}
+- 50-Day SMA: {fmt(sma50, '$')}  |  Price vs 50d: {f"{'+' if price and sma50 and price > sma50 else '-'}{abs(price - sma50) / sma50 * 100:.1f}%" if price and sma50 else 'N/A'}
+- 200-Day SMA: {fmt(sma200, '$')}  |  Price vs 200d: {f"{'+' if price and sma200 and price > sma200 else '-'}{abs(price - sma200) / sma200 * 100:.1f}%" if price and sma200 else 'N/A'}
+
+## Your Analysis
+
+Write a structured analysis with exactly these four sections. Use markdown headers (##). Be specific and reference the actual numbers above:
+
+## Snapshot
+2-3 sentences on what this company does and where it stands right now. Mention price action and sentiment.
+
+## Bull Case
+3 specific reasons to be bullish, grounded in the data above. Reference actual metrics.
+
+## Bear Case
+3 specific risks or red flags from the data. Be honest about weaknesses.
+
+## Verdict
+A clear, opinionated 2-3 sentence summary. Include: current bias (bullish/bearish/neutral), key level to watch, and one actionable insight. End with a price target range if data supports it.
+
+Keep the total response under 400 words. No disclaimers."""
+
+    # ── Stream from Claude ───────────────────────────────────────────────────
+    async def event_stream() -> AsyncGenerator[str, None]:
+        try:
+            api_key = os.environ.get("ANTHROPIC_API_KEY")
+            if not api_key:
+                yield f"data: {json.dumps({'error': 'ANTHROPIC_API_KEY not configured. Add it to your .env file or Railway environment variables.'})}\n\n"
+                return
+            ai_client = anthropic.Anthropic(api_key=api_key)
+            with ai_client.messages.stream(
+                model="claude-haiku-4-5",
+                max_tokens=600,
+                messages=[{"role": "user", "content": prompt}],
+            ) as stream:
+                for text in stream.text_stream:
+                    chunk = json.dumps({"text": text})
+                    yield f"data: {chunk}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 if __name__ == "__main__":
