@@ -637,6 +637,247 @@
     flex: 1; height: 6px; border-radius: 3px;
     background: linear-gradient(to right, #142864, #3c3c3c, #c82828);
   }
+
+  /* ── Earnings Calendar ───────────────────────────────────────────────────── */
+  #earnings-cal-page { padding: 16px 18px; display: none; }
+
+  .ec-filters {
+    display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .ec-flt {
+    padding: 7px 18px; border: 1px solid var(--border); border-radius: 999px;
+    background: transparent; color: var(--muted); cursor: pointer;
+    font-size: 11px; letter-spacing: .1em; font-weight: 600; font-family: 'Inter', sans-serif;
+    transition: all .15s;
+  }
+  .ec-flt:hover { color: var(--text); border-color: var(--border2); }
+  .ec-flt.active {
+    color: var(--accent); border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .ec-week-head {
+    font-size: 11px; letter-spacing: .14em; color: var(--label);
+    text-transform: uppercase; font-weight: 600;
+    margin: 24px 0 10px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .ec-week-head .ec-wcount {
+    font-weight: 400; color: var(--muted); font-size: 10px;
+  }
+  .ec-week-head.ec-reported-head {
+    color: var(--muted);
+  }
+
+  .ec-card {
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--panel); margin-bottom: 8px; overflow: hidden;
+    transition: border-color .2s, background .2s;
+    position: relative;
+  }
+  .ec-card:hover { border-color: var(--border2); background: var(--panel2); }
+  .ec-card.ec-open { border-color: var(--accent); }
+  .ec-card.ec-owned::before {
+    content: ""; position: absolute; top: 0; left: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, #ffd166, #f5a524);
+    border-radius: 8px 0 0 8px;
+  }
+  .ec-card.ec-watching::before {
+    content: ""; position: absolute; top: 0; left: 0; bottom: 0; width: 3px;
+    background: linear-gradient(180deg, var(--blue), #3b82f6);
+    border-radius: 8px 0 0 8px;
+  }
+  .ec-card.ec-owned.ec-watching::before {
+    background: linear-gradient(180deg, #ffd166 0%, #ffd166 50%, var(--blue) 50%, var(--blue) 100%);
+  }
+
+  .ec-card-head {
+    display: grid; grid-template-columns: 48px 1fr auto auto;
+    gap: 14px; align-items: center; padding: 14px 16px; cursor: pointer;
+  }
+  .ec-logo {
+    width: 40px; height: 40px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 12px; color: #fff; flex-shrink: 0;
+    letter-spacing: .02em;
+  }
+  .ec-co-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .ec-co-tk {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--accent); letter-spacing: .12em;
+    margin-top: 2px; cursor: pointer; display: inline-block;
+  }
+  .ec-co-tk:hover { text-decoration: underline; }
+  .ec-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 4px; }
+  .ec-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 8px; border-radius: 999px; font-size: 9px;
+    font-weight: 600; letter-spacing: .1em;
+  }
+  .ec-b-confirmed { color: var(--accent); background: rgba(0,217,126,.08); border: 1px solid rgba(0,217,126,.25); }
+  .ec-b-tentative { color: var(--yellow); background: rgba(240,180,41,.08); border: 1px solid rgba(240,180,41,.25); }
+  .ec-b-reported  { color: var(--muted);  background: rgba(154,165,177,.08); border: 1px solid rgba(154,165,177,.25); }
+  .ec-b-owned     { color: #ffd166; background: rgba(255,209,102,.08); border: 1px solid rgba(255,209,102,.3); }
+  .ec-b-watch     { color: var(--blue);   background: rgba(88,166,255,.08); border: 1px solid rgba(88,166,255,.3); }
+  .ec-badge .ec-dot { width: 5px; height: 5px; border-radius: 50%; }
+  .ec-b-confirmed .ec-dot { background: var(--accent); }
+  .ec-b-tentative .ec-dot { background: var(--yellow); }
+  .ec-b-reported  .ec-dot { background: var(--muted); }
+
+  .ec-date-col { text-align: right; line-height: 1.3; }
+  .ec-date-col .ec-dt {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px; font-weight: 700; color: var(--text);
+  }
+  .ec-date-col .ec-mo {
+    font-size: 10px; color: var(--muted); letter-spacing: .16em; text-transform: uppercase;
+  }
+  .ec-date-col .ec-wh { font-size: 9px; color: var(--label); margin-top: 2px; }
+
+  .ec-chev {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 1px solid var(--border2); display: flex; align-items: center;
+    justify-content: center; transition: .2s; color: var(--label);
+    font-size: 10px;
+  }
+  .ec-card.ec-open .ec-chev {
+    background: var(--accent); color: #07090b;
+    border-color: var(--accent); transform: rotate(180deg);
+  }
+
+  .ec-body { max-height: 0; overflow: hidden; transition: max-height .35s ease; }
+  .ec-card.ec-open .ec-body { max-height: 1800px; }
+  .ec-body-inner {
+    padding: 6px 16px 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .ec-mini-timer { display: flex; gap: 6px; margin: 10px 0 14px; }
+  .ec-mt {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 6px; text-align: center;
+  }
+  .ec-mt .ec-n {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px; font-weight: 700; color: var(--accent);
+  }
+  .ec-mt .ec-l { font-size: 9px; color: var(--muted); letter-spacing: .14em; text-transform: uppercase; }
+
+  .ec-stats {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 8px; margin: 14px 0;
+  }
+  .ec-stat {
+    padding: 10px 12px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 6px;
+  }
+  .ec-stat .ec-lbl {
+    font-size: 9px; color: var(--muted); letter-spacing: .12em;
+    text-transform: uppercase; margin-bottom: 4px;
+  }
+  .ec-stat .ec-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px; font-weight: 700; color: var(--text);
+  }
+  .ec-stat .ec-sub { font-size: 10px; color: var(--label); margin-top: 2px; }
+  .ec-stat .ec-val.ec-up  { color: var(--green); }
+  .ec-stat .ec-val.ec-dn  { color: var(--red); }
+  .ec-stat-actual .ec-lbl { color: var(--accent); }
+
+  .ec-wtw { margin-top: 14px; }
+  .ec-wtw h4 {
+    font-size: 10px; letter-spacing: .14em; color: var(--label);
+    text-transform: uppercase; margin: 0 0 10px; font-weight: 600;
+  }
+  .ec-wtw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ec-wtw-col {
+    padding: 12px 14px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg);
+  }
+  .ec-wtw-col h5 {
+    margin: 0 0 8px; font-size: 10px; letter-spacing: .1em;
+    text-transform: uppercase; display: flex; align-items: center; gap: 6px;
+  }
+  .ec-wtw-col.ec-cat h5 { color: var(--accent); }
+  .ec-wtw-col.ec-risk h5 { color: var(--yellow); }
+  .ec-wtw-col ul { margin: 0; padding: 0; list-style: none; }
+  .ec-wtw-col li {
+    font-size: 12px; color: var(--text); line-height: 1.5;
+    padding: 6px 0 6px 18px; position: relative;
+    border-bottom: 1px dashed var(--border);
+  }
+  .ec-wtw-col li:last-child { border-bottom: none; }
+  .ec-wtw-col li::before {
+    content: ""; position: absolute; left: 4px; top: 13px;
+    width: 5px; height: 5px; border-radius: 50%;
+  }
+  .ec-wtw-col.ec-cat  li::before { background: var(--accent); }
+  .ec-wtw-col.ec-risk li::before { background: var(--yellow); }
+
+  .ec-quote {
+    margin-top: 12px; padding: 12px 14px;
+    border-left: 2px solid var(--accent);
+    background: var(--accent-dim); border-radius: 0 6px 6px 0;
+    font-size: 12px; color: var(--muted); font-style: italic; line-height: 1.55;
+  }
+  .ec-next-report {
+    margin-top: 8px; padding: 8px 12px;
+    background: rgba(88,166,255,.04); border: 1px dashed rgba(88,166,255,.25);
+    border-radius: 6px; font-size: 11px; color: var(--muted);
+  }
+  .ec-next-report strong { color: var(--blue); }
+  .ec-reaction {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 6px; border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 700;
+  }
+  .ec-reaction.ec-up  { background: rgba(0,217,126,.1);  color: var(--green); }
+  .ec-reaction.ec-dn  { background: rgba(248,81,73,.1);   color: var(--red); }
+
+  .ec-empty {
+    text-align: center; padding: 40px; color: var(--muted); font-size: 13px;
+  }
+  .ec-countdowns {
+    display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap;
+  }
+  .ec-cd {
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; text-align: center; background: var(--panel);
+    min-width: 80px; transition: .2s;
+  }
+  .ec-cd:hover { border-color: var(--border2); }
+  .ec-cd .ec-cd-tk {
+    font-size: 9px; letter-spacing: .18em; color: var(--muted);
+    font-weight: 600; text-transform: uppercase;
+  }
+  .ec-cd .ec-cd-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px; font-weight: 700; color: var(--accent);
+    margin: 4px 0 2px;
+  }
+  .ec-cd .ec-cd-lbl {
+    font-size: 9px; color: var(--muted); letter-spacing: .14em; text-transform: uppercase;
+  }
+  .ec-cd.ec-past .ec-cd-num { color: var(--label); }
+
+  .ec-page-title {
+    font-size: 11px; letter-spacing: .16em; color: var(--label);
+    text-transform: uppercase; font-weight: 600; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .ec-page-title .ec-dot-live {
+    width: 6px; height: 6px; background: var(--accent);
+    border-radius: 50%; box-shadow: 0 0 8px var(--accent);
+  }
+
+  @media (max-width: 768px) {
+    .ec-stats { grid-template-columns: repeat(2, 1fr); }
+    .ec-wtw-grid { grid-template-columns: 1fr; }
+    .ec-card-head { grid-template-columns: 40px 1fr auto; }
+    .ec-chev { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -648,6 +889,7 @@
   <button class="nav-tab" data-page="portfolio">Portfolio</button>
   <button class="nav-tab" data-page="news">News</button>
   <button class="nav-tab" data-page="watchlist">Watchlist</button>
+  <button class="nav-tab" data-page="earnings">Earnings</button>
 </div>
 
 <!-- Terminal Page -->
@@ -1156,6 +1398,24 @@
 
 </div><!-- end #watchlist-page -->
 
+<!-- Earnings Calendar Page -->
+<div id="earnings-cal-page">
+  <div class="ec-page-title">
+    <span class="ec-dot-live"></span>
+    Earnings Calendar — Q2 2026
+  </div>
+  <div id="ec-countdowns" class="ec-countdowns"></div>
+  <div class="ec-filters">
+    <button class="ec-flt active" data-ef="all">ALL</button>
+    <button class="ec-flt" data-ef="holdings">★ MY HOLDINGS</button>
+    <button class="ec-flt" data-ef="watchlist">👁 WATCHLIST</button>
+    <button class="ec-flt" data-ef="4">APRIL</button>
+    <button class="ec-flt" data-ef="5">MAY</button>
+    <button class="ec-flt" data-ef="6">JUNE</button>
+  </div>
+  <div id="ec-calendar"></div>
+</div><!-- end #earnings-cal-page -->
+
 <!-- Error -->
 <div id="error-panel">
   <div class="err-title">Error</div>
@@ -1619,17 +1879,21 @@ document.getElementById('skeleton').classList.add('hidden');
 // ---------------------------------------------------------------------------
 // Nav tab switching
 // ---------------------------------------------------------------------------
-const PAGES = ['terminal', 'portfolio', 'news'];
+const PAGES = ['terminal', 'portfolio', 'news', 'watchlist', 'earnings'];
 document.querySelectorAll('.nav-tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     const page = tab.dataset.page;
-    document.getElementById('terminal-page').style.display  = page === 'terminal'  ? '' : 'none';
-    document.getElementById('portfolio-page').style.display = page === 'portfolio' ? 'block' : 'none';
-    document.getElementById('news-page').style.display      = page === 'news'      ? 'block' : 'none';
+    document.getElementById('terminal-page').style.display      = page === 'terminal'  ? '' : 'none';
+    document.getElementById('portfolio-page').style.display     = page === 'portfolio' ? 'block' : 'none';
+    document.getElementById('news-page').style.display          = page === 'news'      ? 'block' : 'none';
+    document.getElementById('watchlist-page').style.display     = page === 'watchlist' ? 'block' : 'none';
+    document.getElementById('earnings-cal-page').style.display  = page === 'earnings'  ? 'block' : 'none';
     if (page === 'portfolio' && pfPositions.length > 0 && !pfData) loadPortfolio();
     if (page === 'news' && !newsLoaded) loadNews();
+    if (page === 'watchlist') { loadMacro(); if (!wlLoaded && wlTickers.length > 0) loadWatchlist(); }
+    if (page === 'earnings') ecInit();
   });
 });
 
@@ -2178,13 +2442,15 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     const page = tab.dataset.page;
-    document.getElementById('terminal-page').style.display   = page === 'terminal'  ? '' : 'none';
-    document.getElementById('portfolio-page').style.display  = page === 'portfolio' ? 'block' : 'none';
-    document.getElementById('news-page').style.display       = page === 'news'      ? 'block' : 'none';
-    document.getElementById('watchlist-page').style.display  = page === 'watchlist' ? 'block' : 'none';
+    document.getElementById('terminal-page').style.display      = page === 'terminal'  ? '' : 'none';
+    document.getElementById('portfolio-page').style.display     = page === 'portfolio' ? 'block' : 'none';
+    document.getElementById('news-page').style.display          = page === 'news'      ? 'block' : 'none';
+    document.getElementById('watchlist-page').style.display     = page === 'watchlist' ? 'block' : 'none';
+    document.getElementById('earnings-cal-page').style.display  = page === 'earnings'  ? 'block' : 'none';
     if (page === 'portfolio' && pfPositions.length > 0 && !pfData) loadPortfolio();
     if (page === 'news'      && !newsLoaded) loadNews();
     if (page === 'watchlist') { loadMacro(); if (!wlLoaded && wlTickers.length > 0) loadWatchlist(); }
+    if (page === 'earnings') ecInit();
   });
 });
 
@@ -2636,6 +2902,351 @@ function renderVolSurface(surface) {
   }).join('');
 }
 
+// ── Earnings Calendar ────────────────────────────────────────────────────────
+const EC_COMPANIES = [
+  { ticker:"AB", name:"AllianceBernstein", date:"2026-04-28", time:"Before Market Open", color:"#00205B", logoText:"AB", confirmed:true, reported:true, nextDate:"2026-07-28", stockReaction:-1.93, eps:0.83, epsPrior:0.78, rev:1.20, fpe:13, epsConsensus:0.84, revConsensus:1.15, epsSurprise:{pct:-1.2,dir:"down",note:"Narrow EPS miss ($0.83 adj. vs $0.84 est.); GAAP revenue $1.20B beat on stronger activity fees"}, watch:{catalysts:["Adjusted EPS $0.83, +4% y/y — narrow miss on estimates but distribution held at $0.83/unit","GAAP net revenues $1.20B — meaningfully beat FactSet consensus of ~$895M","AUM $838.6B, up 6.9% y/y despite $7.1B net outflows in the quarter","Private markets platform at $85B AUM, up 13% y/y — the key growth narrative intact","FY2026 performance fee outlook raised to $95M–$115M (prior: $80M–$100M)"],risks:["Active net outflows of ~$6B remain a headwind to fee revenue mix","Stock fell ~1.9% — market focused on the EPS miss despite revenue beat","Fee compression in core equity/fixed income products persists","Equitable (parent) capital allocation decisions remain a watch item"],quote:"A <strong>mixed print</strong> — GAAP revenues blew past estimates but adjusted EPS narrowly missed. Net outflows of $7.1B and a 1.9% stock decline on the day underscore the market's focus on flow momentum. The private markets franchise ($85B AUM, +13% y/y) remains the re-rating catalyst. Next print: July 28."} },
+  { ticker:"TSLA", name:"Tesla", date:"2026-04-22", time:"After Market Close", color:"#E31937", logoText:"T", confirmed:true, reported:true, nextDate:"2026-07-22", stockReaction:-3.59, eps:0.41, epsPrior:0.73, rev:22.39, fpe:72, epsConsensus:0.37, revConsensus:22.35, epsSurprise:{pct:10.8,dir:"up",note:"Beat EPS; slight revenue miss; capex raised $5B above prior guidance"}, watch:{catalysts:["Non-GAAP EPS $0.41 vs $0.37 expected — margins better than feared","Revenue $22.39B — slight miss vs $22.64B consensus","Model Q launch and Austin robotaxi pilot remain the long-term growth thesis","Energy storage (Megapack) backlog commentary positive"],risks:["Capex raised to $25B for 2026, up $5B from prior guidance — spooked investors","Stock fell 3.6% on earnings day despite EPS beat","China competitive pressure from BYD continues to weigh on ASPs","Revenue miss signals demand softness even as profitability stabilized"],quote:"A <strong>beat on EPS, but the $5B capex raise above prior guidance</strong> overshadowed the print — TSLA fell 3.6% on the day. The robotaxi thesis remains the bull case. Next print: July 22."} },
+  { ticker:"GOOGL", name:"Alphabet", date:"2026-04-29", time:"After Market Close", color:"#4285F4", logoText:"G", confirmed:true, eps:2.63, epsPrior:1.89, rev:106.9, fpe:22, epsSurprise:{pct:6.8,dir:"up",note:"Beat Q4 on Cloud acceleration"}, watch:{catalysts:["Google Cloud revenue growth — consensus at ~29% y/y; $106.9B total rev expected","Gemini 3 monetization signals in Search and Workspace","YouTube ad revenue strength vs. TikTok comps","Capex guide — AI infra spend expected to rise to $90B+ for 2026"],risks:["DOJ remedy phase overhang on search default payments","AI Overviews cannibalization of paid click volume","Waymo losses widening as geographic expansion accelerates","FX headwinds from stronger dollar"],quote:"Every quarter is now a referendum on whether <strong>AI helps or hurts Search economics</strong>. Cloud growth needs to stay above 28% to sustain the re-rating."} },
+  { ticker:"MSFT", name:"Microsoft", date:"2026-04-29", time:"After Market Close", color:"#00A4EF", logoText:"M", confirmed:true, eps:4.07, epsPrior:3.03, rev:81.4, fpe:32, epsSurprise:{pct:3.1,dir:"up",note:"Beat on Azure and commercial bookings"}, watch:{catalysts:["Azure growth — company guided 37–38% CC; consensus wants 38%+ to re-rate","Copilot seat count and per-seat attach rates (commercial Copilot M365)","OpenAI-related capacity commentary and GPU utilization","Commercial bookings and RPO (remaining performance obligations)"],risks:["Capex dollar figure vs. revenue — AI ROI skepticism is back","Activision integration deceleration in gaming","Sequential Azure deceleration from the prior year's strong comp","Windows/PC refresh cycle softer than hoped"],quote:"Microsoft guided Azure 37–38% CC for Q3 — the market needs <strong>38%+ to call this a beat</strong>. The AI capacity narrative is under a tougher sequential comp. Revenue consensus: $81.4B."} },
+  { ticker:"META", name:"Meta Platforms", date:"2026-04-29", time:"After Market Close", color:"#1877F2", logoText:"M", confirmed:true, eps:6.67, epsPrior:4.71, rev:55.4, fpe:24, epsSurprise:{pct:8.4,dir:"up",note:"Beat Q4 on ad pricing and Reels"}, watch:{catalysts:["Ad impression growth and pricing split","Reality Labs loss narrowing vs. Street's -$4.8B expectation","Llama 4 commercial traction and AI assistant DAU","Threads monetization onset"],risks:["2026 capex guidance — prior raise to $105B spooked shorts","China ad spend rollover (Temu/Shein) on tariff regime","Regulatory action in EU on DSA/DMA compliance costs","Reels engagement plateauing among Gen Z"],quote:"Revenue consensus revised up sharply to $55.4B (+31% y/y) — Street pricing in a strong print. <strong>Capex trajectory and China ad spend durability</strong> (Temu/Shein tariff impact) are the swing factors."} },
+  { ticker:"AMZN", name:"Amazon", date:"2026-04-29", time:"After Market Close", color:"#FF9900", logoText:"a", confirmed:true, eps:1.63, epsPrior:0.98, rev:177.2, fpe:38, epsSurprise:{pct:11.2,dir:"up",note:"AWS margin blowout last quarter"}, watch:{catalysts:["AWS growth — Street consensus 25%, BofA at 28%; AWS rev ~$36.8B expected","Total revenue consensus $177.1B — operating income $16.5–$21.5B guided","Advertising revenue growth, now a $65B+ run rate","Bedrock / Trainium customer adoption callouts"],risks:["Operating income guide came in below Street's $22.2B — already flagged cautiously","FY2026 CapEx expanding ~4x to nearly $200B — ROI scrutiny intense","Consumer weakness in discretionary categories under tariff pressure","AWS margin range wide (30.9–40%) — execution variance is elevated"],quote:"<strong>AWS growth and the operating income guide are the two numbers.</strong> Revenue consensus at $177.1B; the debate is whether AWS growth hits 25% or surprises toward 28%."} },
+  { ticker:"AAPL", name:"Apple", date:"2026-04-30", time:"After Market Close", color:"#A2AAAD", logoText:"", confirmed:true, eps:1.95, epsPrior:1.65, rev:109.7, fpe:30, epsSurprise:{pct:2.3,dir:"up",note:"Modest Q1 beat on Services"}, watch:{catalysts:["iPhone units — particularly iPhone 17 sell-through in China","Services revenue growth rate — Street at 14% y/y","Apple Intelligence rollout impact on upgrade cycle","India manufacturing commentary and tariff mitigation strategy"],risks:["China regulatory retaliation risk on App Store or iCloud","Tariff impact on bill of materials and gross margin","Services growth deceleration if ad market softens","Valuation at 30x forward needs flawless execution"],quote:"The <strong>Services flywheel vs. hardware tariff risk</strong> is the central tension. A clean $1.95 EPS print with 14%+ Services growth would re-rate the stock; a margin warning would punish it."} },
+  { ticker:"AMD", name:"AMD", date:"2026-04-28", time:"After Market Close", color:"#ED1C24", logoText:"AMD", confirmed:true, eps:0.96, epsPrior:0.62, rev:7.73, fpe:40, epsSurprise:{pct:5.2,dir:"up",note:"Data center GPU strong in Q4"}, watch:{catalysts:["MI300/MI350 GPU data center revenue — Street at $3.2B for the quarter","PC client recovery commentary","Gaming segment exit strategy update","Design win pipeline for next-gen MI400 series"],risks:["NVIDIA H100/H200 competition holding AI GPU share","Export restrictions may limit China data center TAM","Client PC ASP pressure from Intel and Qualcomm","Memory bandwidth constraints may limit MI300 adoption ceiling"],quote:"AMD's data center GPU run rate is the proof point — <strong>$3B+ in AI GPU quarterly revenue would confirm the NVIDIA challenger narrative</strong>."} },
+  { ticker:"PLTR", name:"Palantir", date:"2026-05-05", time:"Before Market Open", color:"#1D2951", logoText:"P", confirmed:true, eps:0.13, epsPrior:0.07, rev:0.862, fpe:140, epsSurprise:{pct:7.2,dir:"up",note:"US government and commercial both beat"}, watch:{catalysts:["US Commercial revenue — Street at $320M, AIP momentum is the narrative","US Government revenue stability vs. DOGE budget risk","Rule of 40 score trajectory","International commercial ramp"],risks:["DOGE defense budget cuts could pressure US Government ARR","Valuation at 140x forward demands continued re-acceleration","International commercial remains subscale","Revenue concentration in large government contracts"],quote:"Palantir trades on AIP commercial traction — <strong>US Commercial revenue growth above 55% y/y is the bull case trigger</strong>. Government headcount scrutiny under DOGE is the bear overhang."} },
+  { ticker:"NVDA", name:"NVIDIA", date:"2026-05-28", time:"After Market Close", color:"#76B900", logoText:"NV", confirmed:true, eps:0.90, epsPrior:0.61, rev:43.1, fpe:38, epsSurprise:{pct:9.8,dir:"up",note:"Blackwell demand continues to exceed supply"}, watch:{catalysts:["Data Center revenue — Street at $38.8B; Blackwell supply ramp commentary","Gross margin trajectory — Street watching for 73–75% range","Sovereign AI and hyperscaler capex signals","H20 export restriction impact on China revenue"],risks:["H20/export restrictions permanently reduce China TAM","Gross margin compression if Blackwell yields disappoint","AMD/Gaudi 3 competition in cost-sensitive workloads","Inventory build risk if hyperscaler capex pauses"],quote:"The single most important earnings print of the season. <strong>Blackwell supply ramp and gross margin</strong> are the two numbers. H20 China restrictions have been flagged; the market wants to hear about the rest-of-world pipeline."} },
+  { ticker:"CRM", name:"Salesforce", date:"2026-05-28", time:"After Market Close", color:"#00A1E0", logoText:"S", confirmed:true, eps:2.63, epsPrior:2.44, rev:9.85, fpe:28, epsSurprise:{pct:3.6,dir:"up",note:"Agentforce attach rates impressed"}, watch:{catalysts:["Agentforce ARR and seat attach — the key AI monetization metric","cRPO growth — leading indicator of future revenue","Operating margin expansion toward 33%+","Data Cloud growth rate"],risks:["Agentforce remains early-stage; hard to size TAM confidently","Legacy CRM renewal pressure from Microsoft Dynamics","Macro softness impacting enterprise deal sizes and timing","Net revenue retention trending down"],quote:"Salesforce needs to show <strong>Agentforce is converting from pilots to paid seats at scale</strong>. Any slip in cRPO growth will be punished at 28x forward."} },
+  { ticker:"COST", name:"Costco", date:"2026-06-04", time:"After Market Close", color:"#005DAA", logoText:"C", confirmed:true, eps:4.04, epsPrior:3.78, rev:62.5, fpe:48, epsSurprise:{pct:1.8,dir:"up",note:"Comp sales steady at +7% ex-fuel"}, watch:{catalysts:["Comp sales growth — Street at 7% ex-fuel; US comparable needs to hold","Membership fee income growth and renewal rate","E-commerce penetration acceleration","International comp sales, esp. Canada and Asia"],risks:["High valuation at 48x needs perfect execution","Tariff impact on imported food/goods if passed through","Membership renewal headwinds from wallet fatigue","Labor cost inflation at distribution centers"],quote:"Costco's <strong>membership renewal rate is the moat metric</strong> — any slip below 92% triggers a valuation reset. The tariff question is whether the price advantage widens or compresses at 48x."} },
+  { ticker:"ORCL", name:"Oracle", date:"2026-06-09", time:"After Market Close", color:"#F80000", logoText:"OR", confirmed:true, eps:1.68, epsPrior:1.41, rev:14.8, fpe:22, epsSurprise:{pct:4.1,dir:"up",note:"OCI cloud growth re-accelerating"}, watch:{catalysts:["OCI revenue growth — Street at 52% y/y; AI GPU cluster demand","Remaining performance obligations — backlog now >$97B","Database and autonomous DB migration tailwind","Multi-cloud partnership traction with Azure/AWS"],risks:["OCI capacity constrained — can they ship enough GPU clusters?","License attrition as customers migrate to SaaS/cloud","Valuation reset risk if OCI growth decelerates","Autonomous DB cannibalizes high-margin on-prem"],quote:"Oracle's <strong>$97B+ RPO backlog is the structural bull case</strong> — the question is whether OCI can actually build out fast enough to recognize it."} },
+  { ticker:"ADBE", name:"Adobe", date:"2026-06-18", time:"After Market Close", color:"#FF0000", logoText:"AD", confirmed:true, eps:5.15, epsPrior:4.48, rev:5.91, fpe:26, epsSurprise:{pct:2.5,dir:"up",note:"Creative Cloud AI features lifted ARPU"}, watch:{catalysts:["Net new ARR — Street at $550M; Firefly AI monetization ramp","Document Cloud growth, esp. Acrobat AI features","Digital Experience cloud ARR trajectory","ARPU expansion from AI-tier pricing"],risks:["Canva and Figma (post-failed merger) taking creative market share","Midjourney/Sora threat to Firefly differentiation","Slowdown in enterprise seat expansion","FX headwinds in European market"],quote:"Adobe's <strong>Firefly monetization is the AI revenue test for SaaS</strong> — the market wants to see net new ARR inflecting above $550M to validate the AI upsell thesis."} },
+  { ticker:"FDX", name:"FedEx", date:"2026-06-17", time:"After Market Close", color:"#4D148C", logoText:"FX", confirmed:true, eps:5.25, epsPrior:5.29, rev:21.9, fpe:13, epsSurprise:{pct:2.1,dir:"up",note:"DRIVE cost savings ahead of schedule"}, watch:{catalysts:["DRIVE cost savings — on track for $4B+ cumulative by FY27","Express-Ground network consolidation progress","B2B volume recovery as industrial cycle improves","Operating margin trajectory toward 10%+"],risks:["US-China trade tension dampening air freight volumes","Amazon Logistics eating last-mile share","Fuel surcharge revenue declining on lower crude","Peak season capacity utilization below prior years"],quote:"The <strong>DRIVE cost program is the equity story</strong> — every quarter FedEx needs to show $200M+ in incremental savings to justify the re-rating to 13x."} },
+  { ticker:"NKE", name:"Nike", date:"2026-06-25", time:"After Market Close", color:"#111111", logoText:"N", confirmed:true, eps:0.61, epsPrior:0.99, rev:10.8, fpe:28, epsSurprise:{pct:-4.2,dir:"down",note:"Prior quarter missed on DTC weakness"}, watch:{catalysts:["DTC revenue and gross margin recovery — Street needs +200bps","China market rebound — fell -17% y/y last quarter","Win Now plan execution — product and wholesale channel reset","FY27 guidance credibility"],risks:["China consumer discretionary spending not recovering","On, Hoka, New Balance taking premium running share","Tariff impact on Vietnam/Indonesia manufacturing","Gross margin structural compression from promotions"],quote:"Nike's <strong>Win Now turnaround needs to show in the DTC margin line</strong> — a gross margin print below 43% would re-price the recovery timeline materially."} },
+  { ticker:"MELI", name:"MercadoLibre", date:"2026-05-07", time:"After Market Close", color:"#FFE600", logoText:"ML", confirmed:true, eps:12.45, epsPrior:7.35, rev:6.24, fpe:40, epsSurprise:{pct:6.3,dir:"up",note:"Fintech (Mercado Pago) outpaced GMV"}, watch:{catalysts:["GMV growth — Street at 23% y/y in USD; Brazil momentum","Mercado Pago TPV and credit portfolio quality","MPOS device uptake in underbanked markets","Gross margin inflection on logistics cost reduction"],risks:["Brazil FX volatility compresses USD-reported revenue","Credit loss provisions rising as consumer credit scales","Regulatory risk in Brazil on fintech lending","Argentina macro normalization could reduce tailwind"],quote:"<strong>Mercado Pago TPV growth and credit portfolio NPL ratio</strong> are the swing variables — if fintech keeps outpacing commerce, the story re-rates toward a fintech multiple."} },
+  { ticker:"HOOD", name:"Robinhood", date:"2026-05-07", time:"After Market Close", color:"#00C805", logoText:"R", confirmed:true, eps:0.48, epsPrior:0.18, rev:0.924, fpe:22, epsSurprise:{pct:8.9,dir:"up",note:"Crypto and options activity surged"}, watch:{catalysts:["PFOF revenue and options notional — volatility drives Robinhood","Gold subscriber count and ARPU","Crypto trading notional — BTC/ETH rally impacts Q1 revenue","Active users and net deposits"],risks:["PFOF regulatory risk re-emerging under new SEC leadership","Crypto trading revenue highly cyclical","Customer acquisition costs rising in competitive brokerage market","Concentration in retail day-traders who churn"],quote:"Robinhood is a <strong>volatility leveraged play on retail participation</strong> — high VIX and crypto momentum in Q1 should produce a strong print, but the durability question is always the bear case."} },
+  { ticker:"LYFT", name:"Lyft", date:"2026-05-06", time:"After Market Close", color:"#FF00BF", logoText:"L", confirmed:true, eps:0.22, epsPrior:0.09, rev:1.48, fpe:26, epsSurprise:{pct:3.8,dir:"up",note:"Rides volume beat; take-rate stable"}, watch:{catalysts:["Gross bookings growth — Street at 14% y/y","Take-rate trajectory — needs to hold above 28.5%","Driver supply health and incentive cost per ride","Autonomous vehicle partnership with Mobileye/May Mobility — timeline"],risks:["Uber's superior brand and international scale","Driver cost normalization risk","Robotaxi transition risk — LYFT dependent on Uber's or Tesla's success","Price elasticity ceiling on ride frequency"],quote:"LYFT needs to show <strong>gross bookings growth above 14% and a stable take-rate</strong> to maintain its discount-to-Uber multiple compression thesis."} },
+  { ticker:"NU", name:"Nu Holdings", date:"2026-05-13", time:"Before Market Open", color:"#820AD1", logoText:"NU", confirmed:true, eps:0.12, epsPrior:0.09, rev:2.85, fpe:24, epsSurprise:{pct:10.2,dir:"up",note:"Mexico and Colombia growth ahead of plan"}, watch:{catalysts:["Customer growth — 110M+ customers in Brazil/Mexico/Colombia","ARPAC (avg revenue per active customer) expansion","NPL and credit provision trajectory as loan book scales","Mexico activation rate and credit card spend"],risks:["Brazil consumer credit cycle risk — NPLs could spike","FX (BRL, MXN) against USD compresses reported revenue","Regulatory pressure on interchange fees in Brazil","Competition from incumbent banks in credit card space"],quote:"Nu's <strong>ARPAC trajectory and NPL management</strong> are the two proof points — if they can scale revenue without proportional provision growth, the multiple re-rates."} },
+  { ticker:"WMT", name:"Walmart", date:"2026-05-15", time:"Before Market Open", color:"#0071CE", logoText:"WM", confirmed:true, eps:0.58, epsPrior:0.60, rev:167.8, fpe:30, epsSurprise:{pct:3.1,dir:"up",note:"US comp sales and advertising beat"}, watch:{catalysts:["US comp sales — Street at +4.3%; grocery share gains","Walmart Connect advertising revenue — $4.4B run rate","Sam's Club comp sales acceleration","Flipkart/India progress"],risks:["Tariff impact on general merchandise COGS","High-income shopper retention as macro stabilizes","Advertising take-rate pressure from Amazon","Sam's Club membership renewal slowing"],quote:"Walmart is <strong>the tariff bellwether</strong> — commentary on how COGS are being managed vs. Costco and Amazon will set the tone for the entire retail sector."} },
+  { ticker:"AVGO", name:"Broadcom", date:"2026-06-11", time:"After Market Close", color:"#CC0000", logoText:"AV", confirmed:true, eps:1.61, epsPrior:1.12, rev:14.9, fpe:24, epsSurprise:{pct:4.4,dir:"up",note:"XPU custom AI chip ramp exceeded estimates"}, watch:{catalysts:["Custom AI silicon (XPU) revenue — the Google TPU and Meta MTIA proxy","AI networking revenue — Tomahawk 5 and Jericho ramp","VMware integration synergies on track","Semiconductor cycle recovery in networking/storage"],risks:["Hyperscaler custom silicon concentration risk (Google + Meta ~60% of AI rev)","VMware customer attrition under new licensing model","Broadband and industrial semi recovery slower than expected","Export control risk on high-bandwidth networking chips"],quote:"Broadcom's custom AI silicon is <strong>the anti-NVIDIA trade</strong> — XPU revenue above $4.5B for the quarter would validate the hyperscaler co-design thesis at scale."} },
+  { ticker:"BAC", name:"Bank of America", date:"2026-04-15", time:"Before Market Open", color:"#E31837", logoText:"BA", confirmed:true, reported:true, nextDate:"2026-07-15", stockReaction:2.1, eps:0.83, epsPrior:0.76, rev:27.4, fpe:12, epsConsensus:0.81, revConsensus:26.9, epsSurprise:{pct:3.7,dir:"up",note:"Beat on NII and trading revenue"}, watch:{catalysts:["NII of $14.4B beat consensus, guided to modest growth through 2026","Trading revenue strong: FICC +4%, Equities +12% y/y","Consumer deposits up 3% sequentially — deposit beta stabilizing","Announced $25B buyback authorization alongside earnings"],risks:["CRE (commercial real estate) reserve builds a watch item","Investment banking pipeline mixed — M&A slower than peers","Consumer NCO rate ticked up to 0.59% — monitoring","Guide assumes stable curve — sensitive to Fed path"],quote:"A <strong>clean beat across the board</strong> — NII trajectory and the buyback announcement were the standouts. Next print (July 15) will test whether deposit beta has truly peaked."} },
+  { ticker:"AXP", name:"American Express", date:"2026-04-17", time:"Before Market Open", color:"#006FCF", logoText:"AX", confirmed:true, reported:true, nextDate:"2026-07-17", stockReaction:1.8, eps:3.68, epsPrior:3.33, rev:17.8, fpe:19, epsConsensus:3.52, revConsensus:17.6, epsSurprise:{pct:4.5,dir:"up",note:"Beat on billings and net card fee growth"}, watch:{catalysts:["Billed business +8% y/y — T&E led at +10%, robust premium spend","Net card fee revenue +16% on Platinum/Gold refresh uptake","Millennial/Gen-Z now 36% of total billings, growing 15%+ y/y","Raised FY2026 EPS guide to $15.40–$15.80 (prior: $15.00–$15.50)"],risks:["Credit costs stable but NCOs ticked up to 2.1% from 1.9%","Small business (SBS) billings softest segment at +3%","Rewards cost intensity rising as Plat/Gold usage climbs","International growth decelerated vs. expectations"],quote:"A <strong>confident beat-and-raise</strong> — the guide bump was the real story. T&E durability proves the premium consumer is still showing up. Next print: July 17."} },
+  { ticker:"JPM", name:"JPMorgan Chase", date:"2026-04-14", time:"Before Market Open", color:"#0066B2", logoText:"JP", confirmed:true, reported:true, nextDate:"2026-07-14", stockReaction:1.2, eps:4.82, epsPrior:4.44, rev:44.2, fpe:14, epsConsensus:4.58, revConsensus:43.4, epsSurprise:{pct:5.2,dir:"up",note:"Beat on trading and IB revenue"}, watch:{catalysts:["Markets revenue strong — FICC +6%, Equities +11% y/y","Investment banking fees +22%, driven by M&A advisory rebound","NII guide held at $92B for 2026, implying resilience","CET1 ratio at 15.4%, announced $30B buyback authorization"],risks:["Consumer credit reserve build nudged up $250M","Commercial real estate office book still a slow burn","Deposit betas may not have fully peaked","Dimon commentary on geopolitics and macro tone cautious"],quote:"The <strong>fortress balance sheet once again delivered</strong> — markets strength offset a slightly cautious consumer credit read. Next print: July 14."} },
+  { ticker:"GS", name:"Goldman Sachs", date:"2026-04-15", time:"Before Market Open", color:"#7399C6", logoText:"GS", confirmed:true, reported:true, nextDate:"2026-07-15", stockReaction:2.8, eps:12.85, epsPrior:11.58, rev:14.8, fpe:14, epsConsensus:11.80, revConsensus:14.2, epsSurprise:{pct:8.9,dir:"up",note:"Investment banking and trading blew out"}, watch:{catalysts:["Global Banking & Markets revenue +18%, best Q1 since 2021","Advisory fees +35% on deal environment reopening","Asset & Wealth Management AUM hit $3.1T record","Platform Solutions losses narrowing meaningfully"],risks:["Equity underwriting still below cycle average","Expense growth of 9% y/y deserves monitoring","Loan provisions up modestly on CRE exposures","Deal pipeline fragility if macro turns"],quote:"Goldman's <strong>I-banking franchise roared back</strong> — this is the cleanest read-through yet that the deal environment has reopened. Next print: July 15."} },
+  { ticker:"MS", name:"Morgan Stanley", date:"2026-04-16", time:"Before Market Open", color:"#002663", logoText:"MS", confirmed:true, reported:true, nextDate:"2026-07-16", stockReaction:1.5, eps:2.48, epsPrior:2.02, rev:17.2, fpe:16, epsConsensus:2.28, revConsensus:16.8, epsSurprise:{pct:8.8,dir:"up",note:"Wealth Management margin expansion"}, watch:{catalysts:["Wealth Management net new assets $95B, pre-tax margin 29%","Institutional Securities +14% on trading strength","Investment banking fees +28%, M&A leading","Total client assets surpass $8.0T"],risks:["Net new asset growth decelerated sequentially","E*Trade integration benefits largely realized","Expense ratio elevated at 71%","Rate-sensitive sweep deposits still bleeding"],quote:"The <strong>wealth management flywheel keeps spinning</strong> — Morgan Stanley remains the cleanest story in big banks. Next print: July 16."} },
+  { ticker:"LMT", name:"Lockheed Martin", date:"2026-04-22", time:"Before Market Open", color:"#003366", logoText:"LM", confirmed:true, reported:true, nextDate:"2026-07-21", stockReaction:-0.8, eps:6.95, epsPrior:6.39, rev:18.1, fpe:20, epsConsensus:6.70, revConsensus:18.0, epsSurprise:{pct:3.7,dir:"up",note:"Beat on segment margin, F-35 delivery light"}, watch:{catalysts:["Backlog hit record $178B on international demand","Missiles & Fire Control +16%, tailwind from European rearmament","FY26 guide reaffirmed: EPS $27.00–$27.30","$1.2B returned to shareholders via buybacks/dividends"],risks:["F-35 deliveries came in light (126 vs. 130 expected)","Aeronautics margins pressured by TR-3 costs","Classified programs cadence lumpy","DoD budget timing adds modest Q2 uncertainty"],quote:"A <strong>beat on margin offset a soft F-35 delivery print</strong> — the backlog is the bull case now. Stock chopped slightly on the delivery miss. Next print: July 21."} },
+  { ticker:"GEV", name:"GE Vernova", date:"2026-04-22", time:"Before Market Open", color:"#00AEEF", logoText:"GE", confirmed:true, reported:true, nextDate:"2026-07-22", stockReaction:4.5, eps:1.12, epsPrior:0.48, rev:8.4, fpe:52, epsConsensus:0.85, revConsensus:8.2, epsSurprise:{pct:31.8,dir:"up",note:"Power and Electrification margins surged"}, watch:{catalysts:["Power orders +24%, gas turbine slot book sold out through 2028","Electrification revenue +32%, grid modernization tailwind","FY26 EPS guide raised to $4.40–$4.80 (prior: $4.00–$4.40)","FCF hit $720M vs. $280M prior year"],risks:["Wind segment still losing money, offshore drag persists","Supply chain for large transformers remains tight","Valuation at 52x leaves little room for stumble","Lumpy deal timing in large-frame gas"],quote:"A <strong>textbook beat-and-raise</strong> — the gas slot shortage is a multi-year tailwind and electrification growth is accelerating. Next print: July 22."} },
+  { ticker:"INTC", name:"Intel", date:"2026-04-23", time:"After Market Close", color:"#0071C5", logoText:"IN", confirmed:true, reported:true, nextDate:"2026-07-23", stockReaction:18.0, eps:0.29, epsPrior:-0.35, rev:13.58, fpe:28, epsConsensus:0.18, revConsensus:12.8, epsSurprise:{pct:61.1,dir:"up",note:"Massive beat — data center +22% y/y; Q2 guide blew past Street expectations"}, watch:{catalysts:["Non-GAAP EPS $0.29 vs $0.18 consensus — data center drove the upside","Revenue $13.58B vs $12.8B expected — first clean beat in several quarters","Data center revenue +22% y/y to $5.1B — AI demand lifting server CPU","Q2 guide: $13.8–$14.8B revenue, EPS $0.20 — well above Street's $13.07B / $0.09"],risks:["GAAP EPS still -$0.73 — restructuring charges and foundry losses persist","18A external customer ramp still needs to prove out at scale","Can data center momentum sustain against NVIDIA/AMD competitive pressure?"],quote:"<strong>A genuine turnaround beat</strong> — data center rebound and a strong Q2 guide sent shares surging +18%+ after hours. GAAP losses persist but the narrative is finally shifting. Next print: July 23."} },
+  { ticker:"PG", name:"Procter & Gamble", date:"2026-04-24", time:"Before Market Open", color:"#003DA5", logoText:"PG", confirmed:true, reported:true, nextDate:"2026-07-25", stockReaction:4.0, eps:1.63, epsPrior:1.52, rev:21.24, fpe:24, epsConsensus:1.56, revConsensus:20.52, epsSurprise:{pct:4.5,dir:"up",note:"Beat on volume growth — first volume increase across P&G in a year"}, watch:{catalysts:["Net sales +7% y/y to $21.24B — beat $20.52B consensus","Diluted EPS $1.63 vs $1.56 expected; core EPS $1.59","Volume +2% — first across-company volume growth in four quarters","Organic sales +3% on mix and pricing, North America stable"],risks:["FY2026 EPS guidance maintained but flagged toward the lower end of range","Tariff and geopolitical cost pressures flagged for H2","Private label share in paper products still a headwind","China / SK-II segment recovery remains sluggish"],quote:"P&G's <strong>first broad volume growth in a year was the headline</strong> — trade-down fears are easing. Stock +4% on the print. Guidance held but the tone on the back half is cautious. Next print: July 25."} },
+  { ticker:"KO", name:"Coca-Cola", date:"2026-04-28", time:"Before Market Open", color:"#F40009", logoText:"KO", confirmed:true, reported:true, nextDate:"2026-07-28", stockReaction:5.5, eps:0.86, epsPrior:0.68, rev:12.47, fpe:25, epsConsensus:0.81, revConsensus:12.31, epsSurprise:{pct:6.2,dir:"up",note:"Beat on EPS and revenue; organic revenue +10%, strongest in five quarters; FY26 EPS guide raised"}, watch:{catalysts:["Comparable EPS $0.86 vs $0.81 consensus — +18% y/y, clear beat","Adjusted revenue $12.47B vs $12.31B expected — +12% reported","Organic revenue +10% — best performance in five quarters, volume +3% globally","FY2026 EPS growth guide raised to 8–9% (prior: 7–8%) on lower tax rate","Stock +5.5% on the day — strongest consumer staples reaction of earnings season so far"],risks:["FY organic revenue growth target unchanged at 4–5% — back-half caution implied","North America volume still slightly soft — pricing-led beat rather than pure volume","GLP-1 beverage volume tail risk persists in longer-term models","FX translation headwinds remained a drag on reported results"],quote:"A <strong>strong beat-and-raise print</strong> under new CEO Henrique Braun — organic growth of 10% and a guide raise drove shares up 5.5%, the biggest one-day move in years. Next print: July 28."} },
+  { ticker:"V", name:"Visa", date:"2026-04-28", time:"After Market Close", color:"#1A1F71", logoText:"V", confirmed:true, reported:true, nextDate:"2026-07-28", stockReaction:4.1, eps:3.31, epsPrior:2.51, rev:11.2, fpe:28, epsConsensus:3.09, revConsensus:10.72, epsSurprise:{pct:7.1,dir:"up",note:"Strong beat — revenue +17% y/y; payments volume +9%, cross-border +12%; new $20B buyback authorized"}, watch:{catalysts:["Non-GAAP EPS $3.31 vs $3.09 consensus — +20% y/y, clean beat","Revenue $11.2B vs $10.72B consensus — +17% y/y, above high end of estimates","Payments volume +9%, cross-border volume +12% — global travel and commerce robust","Processed transactions +9% y/y; new $20B buyback program announced","Stock +4.1% after hours; Mastercard also lifted on read-through"],risks:["DOJ/merchant litigation overhang remains an ongoing legal watch item","Stablecoin and real-time-rail disintermediation remains a structural long-term risk","FX translation from stronger dollar a modest headwind","US consumer spending deceleration a risk if macro softens in H2"],quote:"Visa's <strong>beat-and-repeat machine delivered again</strong> — revenue +17%, cross-border +12%, and a $20B buyback lit the aftermarket. The global consumer remains resilient. Next print: July 28."} },
+  { ticker:"BA", name:"Boeing", date:"2026-04-22", time:"Before Market Open", color:"#0033A0", logoText:"B", confirmed:true, reported:true, nextDate:"2026-07-22", stockReaction:1.23, eps:-0.11, epsPrior:-1.24, rev:22.22, fpe:null, epsConsensus:-0.29, revConsensus:21.78, epsSurprise:{pct:62.1,dir:"up",note:"Big beat — revenue surged 14% y/y; 737 MAX deliveries recovering"}, watch:{catalysts:["Revenue +14% y/y to $22.22B — strongest quarterly growth since production recovery","GAAP EPS -$0.11 vs -$0.29 consensus — substantially better than feared","737 MAX delivery cadence improving; backlog demand remains robust","Defense segments showed modest improvement; Spirit AeroSystems integration progressing"],risks:["Free cash flow still negative at -$2.44/share trailing — leverage (D/E 9.98) remains elevated","GAAP losses persist despite the EPS beat; full profitability is a 2027+ story","FAA quality audit process ongoing — any regulatory friction could disrupt ramp","Fixed-price defense contracts (T-7A, KC-46) still a margin headwind"],quote:"A <strong>genuine recovery beat</strong> — revenue up 14% and EPS well above consensus signals the worst is behind Boeing. But free cash flow is still negative and the debt load is substantial. Next print: July 22."} },
+  { ticker:"ABBV", name:"AbbVie", date:"2026-04-29", time:"Before Market Open", color:"#071D49", logoText:"AB", confirmed:true, eps:2.69, epsPrior:2.31, rev:14.78, fpe:17, epsSurprise:{pct:4.1,dir:"up",note:"Skyrizi and Rinvoq outperformed"}, watch:{catalysts:["Skyrizi/Rinvoq immunology franchise — combined $7B quarter?","Humira biosimilar erosion — pace and magnitude","Aesthetics (Botox, Juvederm) recovery in China","Pipeline updates on Teliso-V, Emrelis"],risks:["Humira decline sharper than modeled","Medicare Part D IRA impact on U.S. pricing","Aesthetics category still soft in US","Parkinson's/psychiatric pipeline setbacks"],quote:"<strong>Skyrizi + Rinvoq have fully replaced Humira</strong> in the growth narrative — any shortfall there would crack the bull case."} },
+  { ticker:"MRK", name:"Merck", date:"2026-04-30", time:"Before Market Open", color:"#00857C", logoText:"MK", confirmed:true, eps:-1.35, epsPrior:1.72, rev:16.06, fpe:13, epsSurprise:{pct:3.8,dir:"up",note:"Keytruda and Animal Health strong; consensus suppressed by ~$9B Sidera acquisition charge"}, watch:{catalysts:["Keytruda sales run rate — approaching $30B annualized","Subcutaneous Keytruda approval and launch trajectory","Animal Health performance post-supply issues","Gardasil China demand inflection"],risks:["Keytruda patent cliff (2028) weighing on multiple","Gardasil China inventory overhang persisting","Pipeline thinness outside oncology","M&A premium anxiety if a large deal emerges"],quote:"GAAP EPS expected deeply negative (-$1.35) due to the ~$9B upfront charge for the Sidera acquisition; adjusted EPS still positive. <strong>Keytruda and subcutaneous launch progress</strong> are the real metrics to watch here."} },
+  { ticker:"LLY", name:"Eli Lilly", date:"2026-04-30", time:"Before Market Open", color:"#D52B1E", logoText:"LY", confirmed:true, eps:7.26, epsPrior:3.34, rev:17.78, fpe:48, epsSurprise:{pct:5.8,dir:"up",note:"Mounjaro and Zepbound beat expectations"}, watch:{catalysts:["Mounjaro + Zepbound combined revenue — Street now modeling ~$7.5B combined","Supply capacity commentary — injection device capacity unlocking further?","Orforglipron (oral GLP-1) Phase 3 data timing — pivotal catalyst","FY26 guide raise probability — consensus estimates revised up 2.7% in past 30 days"],risks:["Compounding pharmacy legal framework uncertainty — could impact near-term access","Novo Nordisk's CagriSema cardiovascular data read-through","Pricing concessions under Medicare negotiation (IRA)","Manufacturing ramp slippage in injectable capacity"],quote:"Consensus EPS has been revised up again to $7.26 (+117% y/y) on $17.78B revenue — <strong>Mounjaro/Zepbound estimates keep rising faster than the Street can keep up</strong>. The oral GLP-1 (orforglipron) data timeline is now the single biggest option value in biopharma."} },
+  { ticker:"XOM", name:"ExxonMobil", date:"2026-05-01", time:"Before Market Open", color:"#EB1A23", logoText:"EX", confirmed:true, eps:1.04, epsPrior:2.06, rev:81.1, fpe:13, epsSurprise:{pct:-2.1,dir:"down",note:"Refining margins compressed Q4"}, watch:{catalysts:["Permian and Guyana production growth — targeting 4.3 Mboe/d","Pioneer integration synergy realization","Refining margin recovery on seasonal demand","Capital return — $20B buyback pace sustained?"],risks:["Oil price volatility on OPEC+ policy","Chemicals margin continues to disappoint","Downstream earnings sensitivity to crack spreads","Guyana legal/political risk on production sharing"],quote:"EPS estimates cut to $1.04 on softer oil prices — <strong>Permian + Guyana volume growth</strong> is the offset, but realizations are the governor."} },
+  { ticker:"CVX", name:"Chevron", date:"2026-05-01", time:"Before Market Open", color:"#0054A4", logoText:"CV", confirmed:true, eps:2.10, epsPrior:2.03, rev:48.6, fpe:14, epsSurprise:{pct:1.2,dir:"up",note:"Slight beat on upstream volumes"}, watch:{catalysts:["Hess acquisition closing update and Guyana stake commentary","Permian production growth toward 1.0 Mboe/d target","Downstream margin recovery","Buyback pace and dividend commentary"],risks:["Venezuela asset impairment risk","Australia LNG operational reliability","Refining margin pressure persists","Guyana arbitration ruling delay"],quote:"The <strong>Hess closing + Guyana exposure</strong> remains the asymmetric catalyst — upstream execution is steady but Hess is the story."} },
+  { ticker:"PFE", name:"Pfizer", date:"2026-05-05", time:"Before Market Open", color:"#0093D0", logoText:"PF", confirmed:true, eps:0.63, epsPrior:0.55, rev:13.8, fpe:11, epsSurprise:{pct:2.4,dir:"up",note:"Paxlovid inventory drawdown less severe than feared"}, watch:{catalysts:["Oncology pipeline progress — Talzenna, Padcev, Nurtec","Danuglipron (oral GLP-1) Phase 2 readout timing","Cost-cutting program ($4.5B in savings) execution","Non-COVID revenue growth rate"],risks:["Paxlovid COVID demand unpredictable","Loss of exclusivity wave beginning 2026–2027","GLP-1 pipeline behind Lilly and Novo Nordisk","Seagen acquisition integration costs"],quote:"Pfizer's <strong>cost restructuring and oncology pipeline</strong> are the re-rating levers — the COVID revenue cliff is largely priced in, but the Street needs visibility on the next growth leg."} },
+  { ticker:"HD", name:"Home Depot", date:"2026-05-20", time:"Before Market Open", color:"#FF6600", logoText:"HD", confirmed:true, eps:3.68, epsPrior:3.63, rev:39.9, fpe:24, epsSurprise:{pct:1.8,dir:"up",note:"Pro segment held steady; DIY softer"}, watch:{catalysts:["Comparable store sales — Street at +2.0% y/y; Pro customer health","SRS Distribution integration synergies","Spring selling season read-through","Housing turnover recovery commentary"],risks:["High mortgage rates suppressing housing turnover and remodel spend","DIY customer pullback on macro uncertainty","Tariff impact on lumber, imported tools, hardware","Valuation at 24x needs comp acceleration"],quote:"Home Depot is the <strong>housing market proxy</strong> — any sign of mortgage rate relief and housing turnover recovery would catalyze a meaningful re-rate. Pro segment durability is the near-term anchor."} },
+  { ticker:"MU", name:"Micron", date:"2026-06-25", time:"After Market Close", color:"#003087", logoText:"MU", confirmed:true, eps:1.48, epsPrior:-1.73, rev:8.48, fpe:14, epsSurprise:{pct:6.2,dir:"up",note:"HBM3E supply sold out through 2026"}, watch:{catalysts:["HBM3E revenue — on track for $3B+ in 2026; pricing and allocation","DRAM pricing cycle — upcycle just beginning?","NAND profitability recovery timeline","AI server memory content per socket"],risks:["China export restrictions limiting data center revenue","Oversupply risk if Samsung ramps aggressively in 2H","NAND still loss-making; recovery timeline extended","Cyclical demand uncertainty beyond AI workloads"],quote:"Micron's <strong>HBM3E allocation to NVIDIA and hyperscalers</strong> is sold out — the question is how large the AI memory TAM grows and whether Samsung can close the technology gap."} },
+  { ticker:"UNH", name:"UnitedHealth Group", date:"2026-04-17", time:"Before Market Open", color:"#002677", logoText:"UH", confirmed:true, reported:true, nextDate:"2026-07-17", stockReaction:-8.5, eps:6.91, epsPrior:6.61, rev:109.6, fpe:21, epsConsensus:7.29, revConsensus:109.2, epsSurprise:{pct:-5.2,dir:"down",note:"Medical loss ratio jumped to 87.1%, well above consensus of 85.5%; guidance withdrawn"}, watch:{catalysts:["Revenue $109.6B — slight beat on top line","Optum segment showed resilience at +8% y/y","Federal employee plan membership commentary","Long-term MCR target reaffirmation would be positive"],risks:["Medical loss ratio 87.1% vs 85.5% expected — the miss that moved the stock -8.5%","FY2026 EPS guidance withdrawn pending MCR review","DOJ investigation into Medicare Advantage billing practices","Competitor Humana and CVS Health will read through this miss"],quote:"A <strong>rare Optum-era guidance withdrawal</strong> — the MLR miss and guidance pull spooked the market badly. The UNH multiple had priced in near-perfection; this was not that. Next print: July 17."} },
+  { ticker:"UBER", name:"Uber", date:"2026-05-06", time:"After Market Close", color:"#000000", logoText:"UB", confirmed:true, eps:0.83, epsPrior:0.32, rev:11.9, fpe:30, epsSurprise:{pct:5.1,dir:"up",note:"Gross bookings beat; take-rate expanded"}, watch:{catalysts:["Gross bookings growth — Street at 18% y/y","Trips growth and take-rate (Street: 28.8%)","Autonomous vehicle partnership commentary — Waymo, BYD","Freight recovery if industrial cycle turns"],risks:["Autonomous (Waymo/Tesla) competitive overhang","Driver supply / incentive cost normalization","International markets FX translation","Any slowdown in consumer services spend"],quote:"Uber is the <strong>direct LYFT comparable</strong> — watch gross bookings growth and take-rate delta to judge whether the scale advantage is widening. Reports same day as LYFT."} }
+];
+
+let ecInitialized = false;
+let ecFilter = 'all';
+
+function ecGetNow() {
+  return new Date();
+}
+
+function ecDaysUntil(dateStr) {
+  const d = new Date(dateStr + 'T16:00:00');
+  const ms = d - ecGetNow();
+  return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+}
+
+function ecHoursMins(dateStr) {
+  const d = new Date(dateStr + 'T16:00:00');
+  let ms = d - ecGetNow();
+  if (ms <= 0) return { d: 0, h: 0, m: 0 };
+  const days  = Math.floor(ms / 86400000); ms -= days * 86400000;
+  const hours = Math.floor(ms / 3600000);  ms -= hours * 3600000;
+  const mins  = Math.floor(ms / 60000);
+  return { d: days, h: hours, m: mins };
+}
+
+function ecFmtDate(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  return { day: d.getDate(), month: months[d.getMonth()], weekday: days[d.getDay()] };
+}
+
+function ecFmtNext(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+function ecWeekOf(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const dow = d.getDay();
+  const monday = new Date(d); monday.setDate(d.getDate() - ((dow + 6) % 7));
+  const friday = new Date(monday); friday.setDate(monday.getDate() + 4);
+  const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `Week of ${monday.getDate()} ${m[monday.getMonth()]} – ${friday.getDate()} ${m[friday.getMonth()]}`;
+}
+
+function ecIsOwned(ticker) {
+  return pfPositions.some(p => (p.ticker || '').toUpperCase() === ticker.toUpperCase());
+}
+
+function ecIsWatching(ticker) {
+  return (typeof wlTickers !== 'undefined') && wlTickers.some(t => t.toUpperCase() === ticker.toUpperCase());
+}
+
+function ecGoToTicker(ticker) {
+  // Switch to Terminal tab
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  const termTab = document.querySelector('.nav-tab[data-page="terminal"]');
+  if (termTab) termTab.classList.add('active');
+  document.getElementById('earnings-cal-page').style.display = 'none';
+  document.getElementById('terminal-page').style.display = '';
+  // Load the ticker
+  loadTicker(ticker.toUpperCase());
+}
+
+function ecRenderCountdowns() {
+  const el = document.getElementById('ec-countdowns');
+  if (!el) return;
+  const now = ecGetNow();
+  const upcoming = EC_COMPANIES
+    .filter(c => !c.reported && new Date(c.date + 'T23:00:00') >= now)
+    .filter(c => ecIsOwned(c.ticker))
+    .slice(0, 6);
+  if (upcoming.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = upcoming.map(c => {
+    const d = ecDaysUntil(c.date);
+    return `<div class="ec-cd">
+      <div class="ec-cd-tk">${c.ticker}</div>
+      <div class="ec-cd-num">${d}</div>
+      <div class="ec-cd-lbl">days</div>
+    </div>`;
+  }).join('');
+}
+
+function ecRenderCards() {
+  const el = document.getElementById('ec-calendar');
+  if (!el) return;
+  const now = ecGetNow();
+
+  // Clone with live owned/watching state
+  const data = EC_COMPANIES.map(c => ({
+    ...c,
+    owned: ecIsOwned(c.ticker),
+    watchlist: ecIsWatching(c.ticker)
+  }));
+
+  // Sort by date ascending
+  data.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  const filtered = data.filter(c => {
+    if (ecFilter === 'all') return true;
+    if (ecFilter === 'holdings') return c.owned;
+    if (ecFilter === 'watchlist') return c.watchlist;
+    const m = new Date(c.date + 'T12:00:00').getMonth() + 1;
+    return m === parseInt(ecFilter);
+  });
+
+  if (filtered.length === 0) {
+    el.innerHTML = '<div class="ec-empty">No earnings match this filter.</div>';
+    return;
+  }
+
+  el.innerHTML = '';
+  const reported = filtered.filter(c => c.reported);
+  const upcoming = filtered.filter(c => !c.reported);
+
+  // Recently reported section
+  if (reported.length > 0) {
+    const h = document.createElement('div');
+    h.className = 'ec-week-head ec-reported-head';
+    h.innerHTML = `Recently Reported <span class="ec-wcount">${reported.length} result${reported.length > 1 ? 's' : ''}</span>`;
+    el.appendChild(h);
+    reported.forEach(c => el.appendChild(ecMakeCard(c)));
+  }
+
+  // Upcoming — grouped by week
+  const groups = {};
+  upcoming.forEach(c => {
+    const w = ecWeekOf(c.date);
+    if (!groups[w]) groups[w] = [];
+    groups[w].push(c);
+  });
+
+  Object.keys(groups).forEach(week => {
+    const h = document.createElement('div');
+    h.className = 'ec-week-head';
+    const cnt = groups[week].length;
+    h.innerHTML = `${week} <span class="ec-wcount">${cnt} report${cnt > 1 ? 's' : ''}</span>`;
+    el.appendChild(h);
+    groups[week].forEach(c => el.appendChild(ecMakeCard(c)));
+  });
+}
+
+function ecMakeCard(c) {
+  const card = document.createElement('div');
+  const isPast = new Date(c.date + 'T23:00:00') < ecGetNow();
+  const timer = ecHoursMins(c.date);
+  const daysLeft = ecDaysUntil(c.date);
+  const d = ecFmtDate(c.date);
+
+  let cls = 'ec-card';
+  if (c.owned) cls += ' ec-owned';
+  if (c.watchlist) cls += ' ec-watching';
+  if (c.reported) cls += ' ec-reported';
+  card.className = cls;
+  card.dataset.ticker = c.ticker;
+
+  const arrow = c.epsSurprise.dir === 'up' ? '▲' : '▼';
+  const epsClass = c.epsSurprise.dir === 'up' ? 'ec-up' : 'ec-dn';
+  const sign = c.epsSurprise.pct > 0 ? '+' : '';
+  const epsVal = c.eps != null ? `$${c.eps.toFixed(2)}` : '—';
+  const revVal = c.rev != null ? `$${c.rev.toFixed(1)}B` : '—';
+  const fpeVal = c.fpe != null ? `${c.fpe}x` : '—';
+  const epsLabel  = c.reported ? 'Actual EPS'   : 'Consensus EPS';
+  const revLabel  = c.reported ? 'Actual Rev'   : 'Revenue Est.';
+  const epsSub    = c.reported && c.epsConsensus != null ? `Est: $${c.epsConsensus.toFixed(2)}` : (c.epsPrior != null ? `Prior yr: $${c.epsPrior.toFixed(2)}` : '');
+  const revSub    = c.reported && c.revConsensus != null ? `Est: $${c.revConsensus.toFixed(1)}B` : 'Street consensus';
+  const surpriseLbl = c.reported ? 'EPS Surprise' : 'Last Q Surprise';
+  const watchLbl  = c.reported ? 'What We Learned' : 'What to Watch';
+  const catLbl    = c.reported ? '▲ Highlights'  : '▲ Catalysts';
+  const riskLbl   = c.reported ? '▼ Watch Items' : '▼ Risks';
+
+  let statusBadge;
+  if (c.reported) {
+    statusBadge = `<div class="ec-badge ec-b-reported"><span class="ec-dot"></span>REPORTED</div>`;
+  } else if (c.confirmed) {
+    statusBadge = `<div class="ec-badge ec-b-confirmed"><span class="ec-dot"></span>CONFIRMED</div>`;
+  } else {
+    statusBadge = `<div class="ec-badge ec-b-tentative"><span class="ec-dot"></span>TENTATIVE</div>`;
+  }
+
+  const reactionHtml = c.reported && c.stockReaction != null
+    ? `<span class="ec-reaction ${c.stockReaction >= 0 ? 'ec-up' : 'ec-dn'}">${c.stockReaction >= 0 ? '+' : ''}${c.stockReaction.toFixed(1)}%</span>`
+    : '';
+
+  card.innerHTML = `
+    <div class="ec-card-head">
+      <div class="ec-logo" style="background:${c.color}">${c.logoText || c.ticker[0]}</div>
+      <div>
+        <div class="ec-co-name">${c.name} ${reactionHtml}</div>
+        <div class="ec-co-tk" data-ticker="${c.ticker}">${c.ticker}</div>
+        <div class="ec-badges">
+          ${statusBadge}
+          ${c.owned    ? `<div class="ec-badge ec-b-owned">★ OWNED</div>` : ''}
+          ${c.watchlist ? `<div class="ec-badge ec-b-watch">👁 WATCHING</div>` : ''}
+        </div>
+      </div>
+      <div class="ec-date-col">
+        <div class="ec-dt">${d.day}</div>
+        <div class="ec-mo">${d.month} · ${d.weekday}</div>
+        <div class="ec-wh">${c.time}</div>
+      </div>
+      <div class="ec-chev">▼</div>
+    </div>
+    <div class="ec-body">
+      <div class="ec-body-inner">
+        ${!isPast ? `
+          <div class="ec-mini-timer">
+            <div class="ec-mt"><div class="ec-n">${timer.d}</div><div class="ec-l">Days</div></div>
+            <div class="ec-mt"><div class="ec-n">${timer.h}</div><div class="ec-l">Hours</div></div>
+            <div class="ec-mt"><div class="ec-n">${timer.m}</div><div class="ec-l">Mins</div></div>
+          </div>` : ''}
+        <div class="ec-stats">
+          <div class="ec-stat ${c.reported ? 'ec-stat-actual' : ''}">
+            <div class="ec-lbl">${epsLabel}</div>
+            <div class="ec-val">${epsVal}</div>
+            <div class="ec-sub">${epsSub}</div>
+          </div>
+          <div class="ec-stat ${c.reported ? 'ec-stat-actual' : ''}">
+            <div class="ec-lbl">${revLabel}</div>
+            <div class="ec-val">${revVal}</div>
+            <div class="ec-sub">${revSub}</div>
+          </div>
+          <div class="ec-stat">
+            <div class="ec-lbl">Forward P/E</div>
+            <div class="ec-val">${fpeVal}</div>
+            <div class="ec-sub">${c.fpe != null ? 'NTM basis' : 'Data TBD'}</div>
+          </div>
+          <div class="ec-stat">
+            <div class="ec-lbl">${surpriseLbl}</div>
+            <div class="ec-val ${epsClass}">${c.epsSurprise.pct !== 0 ? arrow + ' ' + sign + c.epsSurprise.pct.toFixed(1) + '%' : '—'}</div>
+            <div class="ec-sub">${c.epsSurprise.note}</div>
+          </div>
+          <div class="ec-stat">
+            <div class="ec-lbl">${c.reported ? 'Stock Reaction' : 'Days to Report'}</div>
+            <div class="ec-val ${c.reported ? (c.stockReaction >= 0 ? 'ec-up' : 'ec-dn') : ''}">${c.reported ? (c.stockReaction >= 0 ? '+' : '') + c.stockReaction.toFixed(1) + '%' : (isPast ? '✓' : daysLeft)}</div>
+            <div class="ec-sub">${c.reported ? 'Day-of close vs prior' : c.time}</div>
+          </div>
+        </div>
+        <div class="ec-wtw">
+          <h4>${watchLbl}</h4>
+          <div class="ec-wtw-grid">
+            <div class="ec-wtw-col ec-cat"><h5>${catLbl}</h5><ul>${c.watch.catalysts.map(x => `<li>${x}</li>`).join('')}</ul></div>
+            <div class="ec-wtw-col ec-risk"><h5>${riskLbl}</h5><ul>${c.watch.risks.map(x => `<li>${x}</li>`).join('')}</ul></div>
+          </div>
+          <div class="ec-quote">${c.watch.quote}</div>
+          ${c.reported && c.nextDate ? `<div class="ec-next-report">Next earnings: <strong>${ecFmtNext(c.nextDate)}</strong> — Q2 2026 results</div>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Toggle open/close
+  card.querySelector('.ec-card-head').addEventListener('click', () => {
+    card.classList.toggle('ec-open');
+  });
+
+  // Ticker click → go to terminal
+  card.querySelector('.ec-co-tk').addEventListener('click', e => {
+    e.stopPropagation();
+    ecGoToTicker(c.ticker);
+  });
+
+  return card;
+}
+
+function ecInit() {
+  if (!ecInitialized) {
+    // Wire filters
+    document.querySelectorAll('.ec-flt').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.ec-flt').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        ecFilter = btn.dataset.ef;
+        ecRenderCards();
+      });
+    });
+
+    // Live timer update every minute
+    setInterval(() => {
+      document.querySelectorAll('#ec-calendar .ec-card').forEach(card => {
+        const ticker = card.dataset.ticker;
+        const c = EC_COMPANIES.find(x => x.ticker === ticker);
+        if (!c || c.reported) return;
+        const t = ecHoursMins(c.date);
+        const ns = card.querySelectorAll('.ec-mt .ec-n');
+        if (ns.length === 3) { ns[0].textContent = t.d; ns[1].textContent = t.h; ns[2].textContent = t.m; }
+      });
+    }, 60000);
+
+    ecInitialized = true;
+  }
+  ecRenderCountdowns();
+  ecRenderCards();
+}
 // ── Wire options into ticker load ────────────────────────────────────────────
 const _origLoadTicker = loadTicker;
 loadTicker = async function(symbol, isRefresh = false) {
