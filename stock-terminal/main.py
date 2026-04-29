@@ -589,6 +589,8 @@ RSS_FEEDS = [
     ("Yahoo Finance",    "https://finance.yahoo.com/news/rssindex"),
     ("MarketWatch",      "https://feeds.marketwatch.com/marketwatch/topstories/"),
     ("The Guardian",     "https://www.theguardian.com/business/rss"),
+    ("Federal Reserve",  "https://www.federalreserve.gov/feeds/press_all.xml"),
+    ("Investing.com",    "https://www.investing.com/rss/news_301.rss"),
 ]
 
 _news_cache: dict = {"ts": 0.0, "data": None}
@@ -658,10 +660,13 @@ _EXCLUDE_KEYWORDS = [
 
 _CAT_KEYWORDS = {
     "Fed/Monetary Policy": [
-        "federal reserve", "fed ", "fomc", "interest rate", "rate hike", "rate cut",
+        "federal reserve", "fed", "fomc", "interest rate", "rate hike", "rate cut",
         "central bank", "ecb", "bank of england", "boe", "boj", "bank of japan",
         "quantitative easing", "quantitative tightening", "monetary policy",
-        "inflation", "cpi", "pce", "price stability", "jerome powell", "lagarde",
+        "inflation", "cpi", "pce", "price stability", "jerome powell", "powell",
+        "lagarde", "rate decision", "rate hold", "fed meeting", "fed statement",
+        "fed minutes", "beige book", "press conference", "dot plot",
+        "fed chair", "fed governor", "fed president",
     ],
     "Geopolitics": [
         "war", "conflict", "military", "sanctions", "sanction", "geopolit",
@@ -696,6 +701,9 @@ _CAT_KEYWORDS = {
 # Any article containing at least one of these gets through automatically
 _HIGH_IMPORTANCE = [
     "federal reserve", "fomc", "rate decision", "rate hike", "rate cut",
+    "fed holds", "fed raises", "fed cuts", "fed pauses",
+    "powell speaks", "powell said", "jerome powell",
+    "fed statement", "fed minutes", "fed meeting", "press conference",
     "inflation data", "cpi report", "jobs report", "nonfarm payroll",
     "gdp growth", "gdp contraction", "recession",
     "war ", "invasion", "military strike", "nuclear",
@@ -720,6 +728,11 @@ _NEGATIVE_WORDS = [
 
 
 def _classify_category(text: str) -> str:
+    # Strong Fed signals override scoring
+    fed_triggers = ["federal reserve", "fomc", "powell", "fed meeting", "rate decision",
+                    "rate hike", "rate cut", "fed statement", "fed holds", "press conference"]
+    if any(kw in text for kw in fed_triggers):
+        return "Fed/Monetary Policy"
     scores = {cat: sum(1 for kw in kws if kw in text) for cat, kws in _CAT_KEYWORDS.items()}
     best = max(scores, key=scores.get)
     return best if scores[best] > 0 else "Macro Economy"
@@ -750,7 +763,12 @@ def _keyword_filter(articles: list[dict]) -> list[dict]:
         # Category keyword hits for scoring
         cat_hits = sum(1 for kws in _CAT_KEYWORDS.values() for kw in kws if kw in text)
 
-        if high_hits == 0 and cat_hits < 2:
+        # Always include any Fed/Powell article
+        is_fed = any(kw in text for kw in [
+            "federal reserve", "fomc", "powell", "fed meeting",
+            "rate decision", "rate hike", "rate cut", "fed statement"
+        ])
+        if not is_fed and high_hits == 0 and cat_hits < 2:
             continue
 
         score = 7
