@@ -859,6 +859,164 @@ def get_news():
     return result
 
 
+# ---------------------------------------------------------------------------
+# Macro Dashboard endpoint
+# ---------------------------------------------------------------------------
+
+MACRO_TICKERS = {
+    "S&P 500":  "^GSPC",
+    "Nasdaq":   "^IXIC",
+    "VIX":      "^VIX",
+    "10Y Yield":"^TNX",
+    "DXY":      "DX-Y.NYB",
+    "WTI Oil":  "CL=F",
+    "Gold":     "GC=F",
+    "BTC":      "BTC-USD",
+}
+
+_macro_cache: dict = {"ts": 0.0, "data": None}
+MACRO_CACHE_TTL = 60
+
+
+@app.get("/api/macro")
+def get_macro():
+    now = time.time()
+    if _macro_cache["data"] is not None and (now - _macro_cache["ts"]) < MACRO_CACHE_TTL:
+        return _macro_cache["data"]
+
+    indicators = []
+    for name, sym in MACRO_TICKERS.items():
+        try:
+            info = yf.Ticker(sym).info
+            price      = clean_float(info.get("regularMarketPrice") or info.get("currentPrice"))
+            change     = clean_float(info.get("regularMarketChange"))
+            change_pct = clean_float(info.get("regularMarketChangePercent"))
+            prev_close = clean_float(info.get("previousClose") or info.get("regularMarketPreviousClose"))
+            indicators.append({
+                "name": name, "ticker": sym,
+                "price": price, "change": change,
+                "change_pct": change_pct, "prev_close": prev_close,
+            })
+        except Exception:
+            indicators.append({"name": name, "ticker": sym,
+                               "price": None, "change": None,
+                               "change_pct": None, "prev_close": None})
+
+    result = deep_clean({"indicators": indicators})
+    _macro_cache["ts"]   = now
+    _macro_cache["data"] = result
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Watchlist endpoint
+# ---------------------------------------------------------------------------
+
+@app.get("/api/watchlist")
+def get_watchlist(tickers: str = ""):
+    if not tickers.strip():
+        return {"positions": []}
+
+    syms = [t.strip().upper() for t in tickers.split(",") if t.strip()][:30]
+    results = []
+    for sym in syms:
+        try:
+            info = yf.Ticker(sym).info
+            results.append({
+                "ticker":        sym,
+                "company_name":  info.get("longName") or info.get("shortName") or sym,
+                "sector":        info.get("sector"),
+                "current_price": clean_float(info.get("currentPrice") or info.get("regularMarketPrice")),
+                "change":        clean_float(info.get("regularMarketChange")),
+                "change_pct":    clean_float(info.get("regularMarketChangePercent")),
+                "market_cap":    clean_float(info.get("marketCap")),
+                "pe_trailing":   clean_float(info.get("trailingPE")),
+                "volume":        clean_float(info.get("volume") or info.get("regularMarketVolume")),
+                "day_high":      clean_float(info.get("dayHigh")),
+                "day_low":       clean_float(info.get("dayLow")),
+                "week52_high":   clean_float(info.get("fiftyTwoWeekHigh")),
+                "week52_low":    clean_float(info.get("fiftyTwoWeekLow")),
+            })
+        except Exception:
+            results.append({"ticker": sym, "company_name": sym,
+                            "sector": None, "current_price": None,
+                            "change": None, "change_pct": None,
+                            "market_cap": None, "pe_trailing": None,
+                            "volume": None, "day_high": None,
+                            "day_low": None, "week52_high": None, "week52_low": None})
+
+    return deep_clean({"positions": results})
+
+
+# ---------------------------------------------------------------------------
+# Earnings Calendar endpoint
+# ---------------------------------------------------------------------------
+
+@app.get("/api/earnings")
+def get_earnings(tickers: str = ""):
+    if not tickers.strip():
+        return {"earnings": []}
+
+    syms = [t.strip().upper() for t in tickers.split(",") if t.strip()][:20]
+    results = []
+    today = datetime.date.today()
+
+    for sym in syms:
+        try:
+            t = yf.Ticker(sym)
+            info = t.info
+            company = info.get("longName") or info.get("shortName") or sym
+
+            # Try earnings_dates DataFrame first (most reliable)
+            try:
+                ed = t.earnings_dates
+                if ed is not None and not ed.empty:
+                    # Filter to future dates within 90 days
+                    future = ed[ed.index >= pd.Timestamp(today, tz="America/New_York")]
+                    if not future.empty:
+                        row = future.iloc[-1]  # earliest upcoming
+                        eps_est = clean_float(row.get("EPS Estimate"))
+                        eps_act = clean_float(row.get("Reported EPS"))
+                        results.append({
+                            "ticker":        sym,
+                            "company_name":  company,
+                            "earnings_date": future.index[-1].strftime("%Y-%m-%d"),
+                            "eps_estimate":  eps_est,
+                            "eps_actual":    eps_act,
+                            "surprise_pct":  None,
+                        })
+                        continue
+            except Exception:
+                pass
+
+            # Fallback: calendar dict
+            cal = t.calendar
+            if cal and isinstance(cal, dict):
+                dates = cal.get("Earnings Date", [])
+                if isinstance(dates, list) and dates:
+                    edate = dates[0]
+                elif hasattr(dates, "date"):
+                    edate = dates
+                else:
+                    edate = None
+                if edate:
+                    if hasattr(edate, "date"):
+                        edate = edate.date()
+                    results.append({
+                        "ticker":        sym,
+                        "company_name":  company,
+                        "earnings_date": str(edate),
+                        "eps_estimate":  clean_float(cal.get("EPS Estimate")),
+                        "eps_actual":    None,
+                        "surprise_pct":  None,
+                    })
+        except Exception:
+            pass
+
+    results.sort(key=lambda x: x.get("earnings_date") or "9999-99-99")
+    return deep_clean({"earnings": results})
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))

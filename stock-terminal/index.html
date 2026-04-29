@@ -198,6 +198,91 @@
   .nav-tab:hover { color: var(--text); }
   .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
+  /* ---- Watchlist page ---- */
+  #watchlist-page { padding: 12px 16px; display: none; }
+
+  /* Macro dashboard strip */
+  .macro-grid {
+    display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-bottom: 10px;
+  }
+  @media (max-width: 1100px) { .macro-grid { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 600px)  { .macro-grid { grid-template-columns: repeat(2, 1fr); } }
+  .macro-card {
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 10px 12px; text-align: center;
+  }
+  .macro-card .mc-name { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); display: block; margin-bottom: 4px; }
+  .macro-card .mc-price { font-size: 15px; font-weight: 700; color: var(--text); display: block; }
+  .macro-card .mc-chg { font-size: 10px; margin-top: 2px; }
+  #macro-last-updated { font-size: 9px; color: #333; text-align: right; margin-bottom: 6px; letter-spacing: 1px; }
+
+  /* Watchlist add form */
+  .wl-add-form {
+    display: flex; gap: 8px; align-items: flex-end;
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 12px 14px; margin-bottom: 8px; flex-wrap: wrap;
+  }
+  .wl-input {
+    background: var(--panel2); border: 1px solid var(--border); color: var(--text);
+    font-family: inherit; font-size: 13px; padding: 6px 10px; outline: none;
+    width: 120px; text-transform: uppercase;
+  }
+  .wl-input:focus { border-color: var(--accent); }
+  #wl-add-btn {
+    background: var(--accent); color: #000; border: none;
+    font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    padding: 7px 16px; cursor: pointer;
+  }
+  #wl-add-btn:hover { background: #00cc6e; }
+  #wl-refresh-btn {
+    background: transparent; color: var(--accent); border: 1px solid var(--accent);
+    font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    padding: 6px 14px; cursor: pointer;
+  }
+  #wl-refresh-btn:hover { background: rgba(0,255,136,0.08); }
+
+  /* Watchlist table */
+  .wl-table-wrap { overflow-x: auto; margin-bottom: 10px; }
+  .wl-table {
+    width: 100%; border-collapse: collapse;
+    background: var(--panel); border: 1px solid var(--border);
+  }
+  .wl-table th {
+    font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--label); padding: 8px 12px; text-align: right;
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  .wl-table th:first-child { text-align: left; }
+  .wl-table td {
+    font-size: 12px; padding: 8px 12px; text-align: right;
+    border-bottom: 1px solid #181818; white-space: nowrap;
+  }
+  .wl-table td:first-child { text-align: left; }
+  .wl-table tr:last-child td { border-bottom: none; }
+  .wl-table tr:hover td { background: #161616; cursor: pointer; }
+  .wl-ticker-cell { color: var(--accent); font-weight: 700; font-size: 13px; }
+  .wl-name-cell { font-size: 10px; color: var(--muted); display: block; }
+  .wl-del { background: transparent; border: none; color: #333; cursor: pointer; font-size: 13px; padding: 0 2px; }
+  .wl-del:hover { color: var(--red); }
+  .wl-empty {
+    text-align: center; padding: 40px; background: var(--panel);
+    border: 1px solid var(--border); color: var(--muted); font-size: 11px; letter-spacing: 1px;
+  }
+
+  /* 52w mini bar in watchlist */
+  .mini-range { width: 80px; height: 4px; background: #1e1e1e; border-radius: 2px; display: inline-block; position: relative; vertical-align: middle; }
+  .mini-dot { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 1px solid var(--bg); }
+
+  /* Earnings Calendar */
+  #earnings-panel { margin-top: 8px; }
+  .earnings-table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); }
+  .earnings-table th { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--label); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  .earnings-table td { font-size: 12px; padding: 8px 12px; border-bottom: 1px solid #181818; }
+  .earnings-table tr:last-child td { border-bottom: none; }
+  .earnings-table tr:hover td { background: #161616; }
+  .earnings-soon { color: var(--yellow); font-weight: 700; }
+  .earnings-today { color: var(--red); font-weight: 700; }
+
   /* ---- News page ---- */
   #news-page { padding: 12px 16px; display: none; }
   .news-layout { display: grid; grid-template-columns: 1fr 280px; gap: 12px; align-items: start; }
@@ -404,6 +489,7 @@
   <button class="nav-tab active" data-page="terminal">Terminal</button>
   <button class="nav-tab" data-page="portfolio">Portfolio</button>
   <button class="nav-tab" data-page="news">News</button>
+  <button class="nav-tab" data-page="watchlist">Watchlist</button>
 </div>
 
 <!-- Terminal Page -->
@@ -743,6 +829,23 @@
       </div>
       <div id="pf-chart-wrap"><canvas id="pf-chart"></canvas></div>
     </div>
+    <!-- Earnings Calendar -->
+    <div id="earnings-panel" class="panel hidden">
+      <div class="panel-title">Upcoming Earnings — Portfolio Positions</div>
+      <table class="earnings-table">
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Company</th>
+            <th>Earnings Date</th>
+            <th>Days Away</th>
+            <th>EPS Estimate</th>
+          </tr>
+        </thead>
+        <tbody id="earnings-tbody"></tbody>
+      </table>
+    </div>
+
   </div>
 
 </div><!-- end #portfolio-page -->
@@ -806,6 +909,51 @@
     </div>
   </div>
 </div><!-- end #news-page -->
+
+<!-- Watchlist Page -->
+<div id="watchlist-page">
+
+  <!-- Macro Dashboard -->
+  <div id="macro-last-updated">—</div>
+  <div class="macro-grid" id="macro-grid">
+    <!-- filled by JS -->
+  </div>
+
+  <!-- Add to watchlist -->
+  <div class="wl-add-form">
+    <div class="pf-field">
+      <label style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">Ticker</label>
+      <input id="wl-ticker-input" class="wl-input" type="text" placeholder="TSLA" maxlength="10" autocomplete="off" spellcheck="false">
+    </div>
+    <button id="wl-add-btn">+ Add</button>
+    <button id="wl-refresh-btn">↻ Refresh Prices</button>
+    <span id="wl-status" style="font-size:10px;color:var(--muted);align-self:center"></span>
+  </div>
+
+  <!-- Watchlist table -->
+  <div id="wl-empty" class="wl-empty hidden">No tickers in watchlist. Add one above.</div>
+  <div id="wl-table-wrap" class="wl-table-wrap hidden">
+    <table class="wl-table">
+      <thead>
+        <tr>
+          <th style="text-align:left">Ticker / Name</th>
+          <th>Price</th>
+          <th>Change $</th>
+          <th>Change %</th>
+          <th>Mkt Cap</th>
+          <th>P/E</th>
+          <th>Volume</th>
+          <th>Day Hi</th>
+          <th>Day Lo</th>
+          <th>52W Range</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="wl-tbody"></tbody>
+    </table>
+  </div>
+
+</div><!-- end #watchlist-page -->
 
 <!-- Error -->
 <div id="error-panel">
@@ -1810,6 +1958,216 @@ document.getElementById('news-refresh-btn').addEventListener('click', () => {
   newsLoaded = false;
   loadNews(true);
 });
+
+// ---------------------------------------------------------------------------
+// Nav — update to handle watchlist tab
+// ---------------------------------------------------------------------------
+// patch the existing nav handler to also show/hide watchlist-page
+const _origNavHandler = document.querySelectorAll('.nav-tab');
+_origNavHandler.forEach(tab => {
+  // remove old listeners by cloning (avoids double-fire)
+});
+// Re-bind all tab clicks cleanly
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  const clone = tab.cloneNode(true);
+  tab.parentNode.replaceChild(clone, tab);
+});
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const page = tab.dataset.page;
+    document.getElementById('terminal-page').style.display   = page === 'terminal'  ? '' : 'none';
+    document.getElementById('portfolio-page').style.display  = page === 'portfolio' ? 'block' : 'none';
+    document.getElementById('news-page').style.display       = page === 'news'      ? 'block' : 'none';
+    document.getElementById('watchlist-page').style.display  = page === 'watchlist' ? 'block' : 'none';
+    if (page === 'portfolio' && pfPositions.length > 0 && !pfData) loadPortfolio();
+    if (page === 'news'      && !newsLoaded) loadNews();
+    if (page === 'watchlist') { loadMacro(); if (!wlLoaded && wlTickers.length > 0) loadWatchlist(); }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Macro Dashboard
+// ---------------------------------------------------------------------------
+let macroInterval = null;
+
+async function loadMacro() {
+  try {
+    const res = await fetch('/api/macro');
+    if (!res.ok) return;
+    const data = await res.json();
+    renderMacro(data.indicators || []);
+    const el = document.getElementById('macro-last-updated');
+    if (el) el.textContent = 'MACRO UPDATED ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  } catch(e) {}
+  if (!macroInterval) {
+    macroInterval = setInterval(() => {
+      if (document.getElementById('watchlist-page').style.display !== 'none') loadMacro();
+    }, 60000);
+  }
+}
+
+function renderMacro(indicators) {
+  const grid = document.getElementById('macro-grid');
+  if (!grid) return;
+  grid.innerHTML = indicators.map(ind => {
+    const chgPct = ind.change_pct;
+    const color  = chgPct == null ? '' : chgPct >= 0 ? 'var(--green)' : 'var(--red)';
+    const sign   = chgPct != null && chgPct >= 0 ? '+' : '';
+    const priceStr = ind.price != null ? formatMacroPrice(ind.name, ind.price) : '—';
+    const chgStr   = chgPct != null ? `${sign}${chgPct.toFixed(2)}%` : '—';
+    return `
+      <div class="macro-card">
+        <span class="mc-name">${ind.name}</span>
+        <span class="mc-price">${priceStr}</span>
+        <div class="mc-chg" style="color:${color}">${chgStr}</div>
+      </div>`;
+  }).join('');
+}
+
+function formatMacroPrice(name, v) {
+  if (v == null) return '—';
+  if (name === 'BTC') return '$' + v.toLocaleString('en-US', {maximumFractionDigits: 0});
+  if (name === 'VIX') return v.toFixed(2);
+  if (name === '10Y Yield') return v.toFixed(3) + '%';
+  if (name === 'DXY') return v.toFixed(2);
+  if (name.includes('Oil') || name.includes('Gold')) return '$' + v.toFixed(2);
+  return v.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+// ---------------------------------------------------------------------------
+// Watchlist
+// ---------------------------------------------------------------------------
+let wlTickers  = JSON.parse(localStorage.getItem('wl_tickers') || '[]');
+let wlData     = [];
+let wlLoaded   = false;
+
+function saveWlTickers() { localStorage.setItem('wl_tickers', JSON.stringify(wlTickers)); }
+
+function renderWlTable(positions) {
+  const wrap  = document.getElementById('wl-table-wrap');
+  const empty = document.getElementById('wl-empty');
+  if (wlTickers.length === 0) { wrap.classList.add('hidden'); empty.classList.remove('hidden'); return; }
+  wrap.classList.remove('hidden'); empty.classList.add('hidden');
+
+  const rows = positions.length > 0 ? positions : wlTickers.map(t => ({ ticker: t, company_name: t }));
+  document.getElementById('wl-tbody').innerHTML = rows.map((p, i) => {
+    const chgColor = p.change_pct != null ? (p.change_pct >= 0 ? 'var(--green)' : 'var(--red)') : '';
+    const sign     = p.change_pct != null && p.change_pct >= 0 ? '+' : '';
+    let rangeHtml  = '—';
+    if (p.week52_low != null && p.week52_high != null && p.current_price != null && p.week52_high !== p.week52_low) {
+      const pct = Math.max(2, Math.min(98, (p.current_price - p.week52_low) / (p.week52_high - p.week52_low) * 100));
+      rangeHtml = `<span class="mini-range"><span class="mini-dot" style="left:${pct}%"></span></span>`;
+    }
+    return `<tr onclick="jumpToTerminal('${p.ticker}')">
+      <td><span class="wl-ticker-cell">${p.ticker}</span><span class="wl-name-cell">${p.company_name || ''}</span></td>
+      <td>${p.current_price != null ? '$' + p.current_price.toFixed(2) : '—'}</td>
+      <td style="color:${chgColor}">${p.change != null ? (p.change >= 0 ? '+' : '') + '$' + Math.abs(p.change).toFixed(2) : '—'}</td>
+      <td style="color:${chgColor}">${p.change_pct != null ? sign + p.change_pct.toFixed(2) + '%' : '—'}</td>
+      <td>${p.market_cap != null ? fmtMarketCap(p.market_cap) : '—'}</td>
+      <td>${p.pe_trailing != null ? p.pe_trailing.toFixed(1) : '—'}</td>
+      <td>${p.volume != null ? fmtVolume(p.volume) : '—'}</td>
+      <td>${p.day_high != null ? '$' + p.day_high.toFixed(2) : '—'}</td>
+      <td>${p.day_low != null ? '$' + p.day_low.toFixed(2) : '—'}</td>
+      <td>${rangeHtml}</td>
+      <td onclick="event.stopPropagation()"><button class="wl-del" onclick="removeWlTicker(${i})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadWatchlist() {
+  if (wlTickers.length === 0) { renderWlTable([]); return; }
+  const status = document.getElementById('wl-status');
+  if (status) status.textContent = 'Loading...';
+  try {
+    const res = await fetch('/api/watchlist?tickers=' + encodeURIComponent(wlTickers.join(',')));
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    wlData   = data.positions || [];
+    wlLoaded = true;
+    renderWlTable(wlData);
+    if (status) status.textContent = 'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  } catch(e) {
+    if (status) status.textContent = 'Error: ' + e.message;
+  }
+}
+
+function addWlTicker() {
+  const val = document.getElementById('wl-ticker-input').value.trim().toUpperCase();
+  if (!val) return;
+  if (wlTickers.includes(val)) { alert(val + ' already in watchlist'); return; }
+  wlTickers.push(val);
+  saveWlTickers();
+  document.getElementById('wl-ticker-input').value = '';
+  wlLoaded = false;
+  renderWlTable([]);
+  loadWatchlist();
+}
+
+function removeWlTicker(i) {
+  wlTickers.splice(i, 1);
+  saveWlTickers();
+  wlData.splice(i, 1);
+  renderWlTable(wlData);
+}
+
+document.getElementById('wl-add-btn').addEventListener('click', addWlTicker);
+document.getElementById('wl-refresh-btn').addEventListener('click', () => { wlLoaded = false; loadWatchlist(); });
+document.getElementById('wl-ticker-input').addEventListener('keydown', e => { if (e.key === 'Enter') addWlTicker(); });
+
+// Initial render from localStorage
+renderWlTable([]);
+
+// ---------------------------------------------------------------------------
+// Earnings Calendar
+// ---------------------------------------------------------------------------
+async function loadEarnings() {
+  if (pfPositions.length === 0) return;
+  const tickers = pfPositions.map(p => p.ticker).join(',');
+  try {
+    const res = await fetch('/api/earnings?tickers=' + encodeURIComponent(tickers));
+    if (!res.ok) return;
+    const data = await res.json();
+    renderEarnings(data.earnings || []);
+  } catch(e) {}
+}
+
+function renderEarnings(earnings) {
+  const panel = document.getElementById('earnings-panel');
+  const tbody = document.getElementById('earnings-tbody');
+  if (!panel || !tbody) return;
+  if (earnings.length === 0) { panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  tbody.innerHTML = earnings.map(e => {
+    const d       = e.earnings_date ? new Date(e.earnings_date + 'T00:00:00') : null;
+    const daysAway = d ? Math.round((d - today) / 86400000) : null;
+    let daysCls = '', daysLabel = '—';
+    if (daysAway != null) {
+      daysLabel = daysAway === 0 ? 'TODAY' : daysAway === 1 ? 'Tomorrow' : `${daysAway}d`;
+      daysCls = daysAway === 0 ? 'earnings-today' : daysAway <= 7 ? 'earnings-soon' : '';
+    }
+    const dateStr = d ? d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) : '—';
+    return `<tr>
+      <td style="color:var(--accent);font-weight:700">${e.ticker}</td>
+      <td style="color:var(--muted);font-size:11px">${e.company_name || ''}</td>
+      <td>${dateStr}</td>
+      <td class="${daysCls}">${daysLabel}</td>
+      <td>${e.eps_estimate != null ? '$' + e.eps_estimate.toFixed(2) : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// Hook earnings load into portfolio refresh
+const _origLoadPortfolio = loadPortfolio;
+loadPortfolio = async function() {
+  await _origLoadPortfolio();
+  loadEarnings();
+};
 </script>
 </body>
 </html>
