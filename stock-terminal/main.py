@@ -1035,6 +1035,280 @@ def get_earnings(tickers: str = ""):
     return deep_clean({"earnings": results})
 
 
+# ---------------------------------------------------------------------------
+# Options Analytics endpoint
+# ---------------------------------------------------------------------------
+
+_options_cache: dict = {}
+OPTIONS_CACHE_TTL = 120  # 2 minutes
+
+
+@app.get("/api/options/{symbol}")
+def get_options(symbol: str):
+    symbol = symbol.upper().strip()
+
+    now = time.time()
+    cached = _options_cache.get(symbol)
+    if cached and (now - cached["ts"]) < OPTIONS_CACHE_TTL:
+        return cached["data"]
+
+    try:
+        ticker_obj = yf.Ticker(symbol)
+        info = ticker_obj.info
+        current_price = clean_float(
+            info.get("currentPrice") or info.get("regularMarketPrice")
+        )
+        if current_price is None:
+            raise HTTPException(status_code=404, detail="No price data for this symbol.")
+
+        expirations = ticker_obj.options
+        if not expirations:
+            result = {"available": False, "symbol": symbol, "current_price": current_price}
+            _options_cache[symbol] = {"ts": now, "data": result}
+            return result
+
+        today = datetime.date.today()
+
+        def days_to(exp_str: str) -> int:
+            try:
+                return (datetime.datetime.strptime(exp_str, "%Y-%m-%d").date() - today).days
+            except Exception:
+                return 999
+
+        def exp_label(exp_str: str) -> str:
+            try:
+                return datetime.datetime.strptime(exp_str, "%Y-%m-%d").strftime("%d %b")
+            except Exception:
+                return exp_str
+
+        # Fetch up to 8 chains once — reused for all three sections
+        chains: dict = {}
+        for exp in expirations[:8]:
+            try:
+                chains[exp] = ticker_obj.option_chain(exp)
+            except Exception:
+                continue
+
+        # ── Implied Moves ────────────────────────────────────────────────────
+        implied_moves = []
+        for exp, chain in chains.items():
+            try:
+                calls = chain.calls
+                puts = chain.puts
+                if calls.empty or puts.empty:
+                    continue
+
+                common = set(calls["strike"].tolist()) & set(puts["strike"].tolist())
+                if not common:
+                    continue
+                atm = min(common, key=lambda s: abs(s - current_price))
+
+                def get_mid(df, strike):
+                    row = df[df["strike"] == strike]
+                    if row.empty:
+                        return None
+                    r = row.iloc[0]
+                    bid = clean_float(r.get("bid"))
+                    ask = clean_float(r.get("ask"))
+                    if bid is not None and ask is not None and (bid + ask) > 0:
+                        return (bid + ask) / 2
+                    return clean_float(r.get("lastPrice"))
+
+                call_mid = get_mid(calls, atm)
+                put_mid  = get_mid(puts, atm)
+                if call_mid is None or put_mid is None:
+                    continue
+
+                implied_moves.append({
+                    "expiration":       exp,
+                    "exp_label":        exp_label(exp),
+                    "days_to_expiry":   days_to(exp),
+                    "implied_move_pct": clean_float(round((call_mid + put_mid) / current_price * 100, 2)),
+                    "atm_strike":       clean_float(atm),
+                    "atm_call_mid":     clean_float(round(call_mid, 2)),
+                    "atm_put_mid":      clean_float(round(put_mid, 2)),
+                })
+            except Exception:
+                continue
+
+        implied_moves.sort(key=lambda x: x["days_to_expiry"])
+
+        # ── IV Smiles (all fetched chains) ───────────────────────────────────
+        smiles: dict = {}
+        default_smile_exp = None
+
+        for exp, chain in chains.items():
+            try:
+                calls = chain.calls
+                puts  = chain.puts
+
+                def build_map(df):
+                    m = {}
+                    for _, row in df.iterrows():
+                        s  = clean_float(row["strike"])
+                        iv = clean_float(row.get("impliedVolatility"))
+                        if s is None or iv is None or iv < 0.001:
+                            continue
+                        iv_pct = round(iv * 100, 2)
+                        if iv_pct <= 0:
+                            continue
+                        m[s] = {
+                            "iv":     iv_pct,
+                            "volume": clean_float(row.get("volume")) or 0,
+                            "oi":     clean_float(row.get("openInterest")) or 0,
+                        }
+                    return m
+
+                call_map = build_map(calls)
+                put_map  = build_map(puts)
+
+                all_strikes = sorted(set(call_map) | set(put_map))
+                if len(all_strikes) <= 5:
+                    continue
+
+                atm = min(all_strikes, key=lambda s: abs(s - current_price))
+
+                strikes_data = []
+                for s in all_strikes:
+                    cd = call_map.get(s, {})
+                    pd = put_map.get(s, {})
+                    strikes_data.append({
+                        "strike":      s,
+                        "moneyness":   clean_float(round(s / current_price * 100, 1)),
+                        "call_iv":     cd.get("iv"),
+                        "put_iv":      pd.get("iv"),
+                        "call_volume": cd.get("volume"),
+                        "put_volume":  pd.get("volume"),
+                        "call_oi":     cd.get("oi"),
+                        "put_oi":      pd.get("oi"),
+                        "is_atm":      s == atm,
+                    })
+
+                atm_idx   = all_strikes.index(atm)
+                below_ivs = [put_map[s]["iv"] for s in all_strikes[max(0, atm_idx-2):atm_idx] if s in put_map]
+                above_ivs = [put_map[s]["iv"] for s in all_strikes[atm_idx+1:atm_idx+3]        if s in put_map]
+
+                skew_label = None
+                if below_ivs and above_ivs:
+                    diff = sum(below_ivs)/len(below_ivs) - sum(above_ivs)/len(above_ivs)
+                    if diff > 3:
+                        skew_label = "PUT SKEW — fear premium detected"
+                    elif diff < -3:
+                        skew_label = "CALL SKEW — momentum/squeeze pricing"
+                    else:
+                        skew_label = "CLASSIC SMILE"
+
+                smiles[exp] = {
+                    "expiration":     exp,
+                    "exp_label":      exp_label(exp),
+                    "days_to_expiry": days_to(exp),
+                    "strikes":        strikes_data,
+                    "atm_strike":     clean_float(atm),
+                    "skew_label":     skew_label,
+                }
+                if default_smile_exp is None:
+                    default_smile_exp = exp
+            except Exception:
+                continue
+
+        # ── Volatility Surface ───────────────────────────────────────────────
+        surface_data = None
+        try:
+            surface_exps = list(chains.keys())
+            strike_data: dict = {}
+
+            for exp, chain in chains.items():
+                def iv_oi_map(df):
+                    m = {}
+                    for _, row in df.iterrows():
+                        s  = clean_float(row["strike"])
+                        iv = clean_float(row.get("impliedVolatility"))
+                        if s and iv and iv >= 0.001:
+                            iv_pct = iv * 100
+                            if iv_pct > 0:
+                                m[s] = {"iv": iv_pct, "oi": clean_float(row.get("openInterest")) or 0}
+                    return m
+
+                c_map = iv_oi_map(chain.calls)
+                p_map = iv_oi_map(chain.puts)
+
+                for s in set(c_map) | set(p_map):
+                    civ = c_map.get(s, {}).get("iv")
+                    piv = p_map.get(s, {}).get("iv")
+                    avg_iv = (
+                        (civ + piv) / 2 if (civ and piv) else (civ or piv)
+                    )
+                    if avg_iv is None:
+                        continue
+                    if s not in strike_data:
+                        strike_data[s] = {}
+                    strike_data[s][exp] = {
+                        "avg_iv":  round(avg_iv, 1),
+                        "call_oi": c_map.get(s, {}).get("oi"),
+                        "put_oi":  p_map.get(s, {}).get("oi"),
+                    }
+
+            valid_strikes = sorted(s for s, d in strike_data.items() if len(d) >= 3)
+
+            surface_rows = []
+            for pct in [0.90, 0.95, 1.00, 1.05, 1.10]:
+                if not valid_strikes:
+                    break
+                closest = min(valid_strikes, key=lambda s: abs(s - current_price * pct))
+                cells = []
+                for exp in surface_exps:
+                    cell = strike_data.get(closest, {}).get(exp, {})
+                    cells.append({
+                        "expiration": exp,
+                        "exp_label":  exp_label(exp),
+                        "avg_iv":     cell.get("avg_iv"),
+                        "call_oi":    cell.get("call_oi"),
+                        "put_oi":     cell.get("put_oi"),
+                        "is_atm":     abs(pct - 1.0) < 0.001,
+                    })
+                surface_rows.append({
+                    "moneyness_pct":   pct * 100,
+                    "moneyness_label": f"{int(pct * 100)}%",
+                    "strike":          clean_float(closest),
+                    "cells":           cells,
+                })
+
+            all_ivs = [c["avg_iv"] for r in surface_rows for c in r["cells"] if c.get("avg_iv")]
+            surface_data = {
+                "rows": surface_rows,
+                "expirations": [{"expiration": e, "exp_label": exp_label(e)} for e in surface_exps],
+                "iv_min": clean_float(round(min(all_ivs), 1)) if all_ivs else 0,
+                "iv_max": clean_float(round(max(all_ivs), 1)) if all_ivs else 100,
+            }
+        except Exception:
+            pass
+
+        is_sparse = len(implied_moves) < 3 or len(smiles) < 2
+
+        result = deep_clean({
+            "available":           True,
+            "symbol":              symbol,
+            "current_price":       current_price,
+            "implied_moves":       implied_moves,
+            "smiles":              smiles,
+            "default_smile_exp":   default_smile_exp,
+            "available_expirations": [
+                {"expiration": e, "exp_label": exp_label(e), "days_to_expiry": days_to(e)}
+                for e in chains.keys()
+            ],
+            "surface":    surface_data,
+            "is_sparse":  is_sparse,
+        })
+
+        _options_cache[symbol] = {"ts": now, "data": result}
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Options fetch failed: {str(e)}")
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))

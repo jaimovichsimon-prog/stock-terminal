@@ -535,6 +535,108 @@
 
   /* Concentration warning list */
   #conc-list { font-size: 11px; color: var(--yellow); margin-top: 4px; }
+
+  /* ---- Options Analytics ---- */
+  #options-panel { margin-top: 8px; }
+  .options-toggle-header {
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; user-select: none; padding-bottom: 0; border-bottom: none; margin-bottom: 0;
+  }
+  .options-toggle-header .panel-title { margin-bottom: 0; border-bottom: none; }
+  .options-arrow { font-size: 10px; color: var(--muted); transition: transform 0.2s; }
+  .options-arrow.open { transform: rotate(180deg); }
+  #options-body { margin-top: 14px; }
+  .opts-section-lbl {
+    font-family: 'Inter', sans-serif; font-size: 9px; font-weight: 600;
+    letter-spacing: 1.2px; text-transform: uppercase; color: var(--label);
+    margin-bottom: 10px; margin-top: 20px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .opts-section-lbl:first-child { margin-top: 0; }
+  .opts-sparse-warn {
+    background: rgba(240,180,41,0.08); border: 1px solid rgba(240,180,41,0.3);
+    color: var(--yellow); font-size: 10px; letter-spacing: 0.5px;
+    padding: 8px 12px; margin-bottom: 14px; border-radius: 4px;
+  }
+
+  /* Implied Move Strip */
+  .implied-strip {
+    display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px;
+    scrollbar-width: thin; scrollbar-color: var(--border2) transparent;
+  }
+  .implied-strip::-webkit-scrollbar { height: 4px; }
+  .implied-strip::-webkit-scrollbar-track { background: transparent; }
+  .implied-strip::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .move-card {
+    flex-shrink: 0; background: var(--panel2); border: 1px solid var(--border);
+    padding: 12px 16px; min-width: 88px; text-align: center; border-radius: 6px;
+    cursor: default; position: relative; transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .move-card:hover { border-color: var(--border2); box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+  .move-pct {
+    font-family: 'JetBrains Mono', monospace; font-size: 17px; font-weight: 700;
+    display: block; margin-bottom: 4px;
+  }
+  .move-pct.g  { color: var(--green); }
+  .move-pct.y  { color: var(--yellow); }
+  .move-pct.o  { color: #ff8c00; }
+  .move-pct.r  { color: var(--red); }
+  .move-date { font-size: 11px; color: var(--text); display: block; margin-bottom: 2px; }
+  .move-dte  { font-size: 9px; color: var(--muted); display: block; }
+  .move-tooltip {
+    display: none; position: absolute; bottom: calc(100% + 6px); left: 50%;
+    transform: translateX(-50%); background: #1a1a2a; border: 1px solid var(--border2);
+    padding: 8px 10px; font-size: 10px; color: var(--muted); white-space: nowrap;
+    z-index: 20; border-radius: 4px; pointer-events: none;
+    line-height: 1.7; text-align: left;
+  }
+  .move-card:hover .move-tooltip { display: block; }
+
+  /* IV Smile */
+  .smile-controls { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .opts-select {
+    background: var(--bg); border: 1px solid var(--border2); color: var(--text);
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    padding: 5px 10px; outline: none; cursor: pointer; border-radius: 4px;
+  }
+  .opts-select:focus { border-color: var(--accent); }
+  .smile-skew-badge {
+    font-size: 9px; font-weight: 700; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px;
+  }
+  .smile-skew-badge.put  { background: rgba(248,81,73,0.15); color: var(--red); }
+  .smile-skew-badge.call { background: rgba(0,217,126,0.12); color: var(--green); }
+  .smile-skew-badge.sym  { background: rgba(88,166,255,0.12); color: var(--blue); }
+  #smile-chart-wrap { position: relative; height: 220px; }
+
+  /* Vol Surface */
+  .surface-wrap { overflow-x: auto; }
+  .surface-table { border-collapse: collapse; min-width: 100%; }
+  .surface-table th {
+    font-family: 'Inter', sans-serif; font-size: 9px; font-weight: 600;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--label);
+    padding: 7px 10px; text-align: center; border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .surface-table th:first-child { text-align: left; min-width: 60px; }
+  .surface-table td {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    padding: 9px 12px; text-align: center; cursor: default;
+    border-bottom: 1px solid rgba(255,255,255,0.03); white-space: nowrap;
+  }
+  .surface-table td:first-child {
+    text-align: left; font-family: 'Inter', sans-serif; font-size: 10px;
+    font-weight: 600; color: var(--muted); background: var(--panel) !important;
+    border-right: 1px solid var(--border); padding-right: 16px;
+  }
+  .surface-table .atm-cell { box-shadow: inset 0 0 0 2px rgba(255,255,255,0.25); }
+  .surface-legend-wrap {
+    display: flex; align-items: center; gap: 10px; margin-top: 8px;
+    font-size: 9px; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .surface-legend-bar {
+    flex: 1; height: 6px; border-radius: 3px;
+    background: linear-gradient(to right, #142864, #3c3c3c, #c82828);
+  }
 </style>
 </head>
 <body>
@@ -747,6 +849,49 @@
     </div>
     <div id="chart-wrap">
       <canvas id="price-chart"></canvas>
+    </div>
+  </div>
+
+  <!-- Options Analytics -->
+  <div id="options-panel" class="panel hidden">
+    <div class="options-toggle-header" id="options-toggle">
+      <div class="panel-title">Options Analytics</div>
+      <span class="options-arrow" id="options-arrow">&#9660;</span>
+    </div>
+    <div id="options-body" class="hidden">
+
+      <div id="options-sparse-warn" class="opts-sparse-warn hidden">
+        Options data sparse — interpret with caution
+      </div>
+
+      <!-- Implied Move Strip -->
+      <div class="opts-section-lbl">Market-Implied Move (ATM Straddle / Spot)</div>
+      <div class="implied-strip" id="implied-strip"></div>
+
+      <!-- IV Smile -->
+      <div class="opts-section-lbl">IV Smile / Skew</div>
+      <div class="smile-controls">
+        <select id="smile-exp-select" class="opts-select"></select>
+        <span id="smile-skew-badge" class="smile-skew-badge hidden"></span>
+      </div>
+      <div id="smile-chart-wrap">
+        <canvas id="smile-chart"></canvas>
+      </div>
+
+      <!-- Vol Surface -->
+      <div class="opts-section-lbl">Volatility Surface</div>
+      <div class="surface-wrap">
+        <table class="surface-table" id="surface-table">
+          <thead id="surface-thead"></thead>
+          <tbody id="surface-tbody"></tbody>
+        </table>
+      </div>
+      <div class="surface-legend-wrap">
+        <span>Low IV</span>
+        <div class="surface-legend-bar"></div>
+        <span>High IV</span>
+      </div>
+
     </div>
   </div>
 
@@ -2224,6 +2369,278 @@ const _origLoadPortfolio = loadPortfolio;
 loadPortfolio = async function() {
   await _origLoadPortfolio();
   loadEarnings();
+};
+
+// ---------------------------------------------------------------------------
+// Options Analytics
+// ---------------------------------------------------------------------------
+let optionsData = null;
+let smileChart  = null;
+let optionsPanelOpen = false;
+
+// ATM vertical line plugin for Chart.js
+const atmLinePlugin = {
+  id: 'atmLine',
+  afterDatasetsDraw(chart, _args, opts) {
+    if (opts == null || opts.xValue == null) return;
+    const { ctx, scales, chartArea } = chart;
+    const xScale = scales.x;
+    if (!xScale) return;
+    const px = xScale.getPixelForValue(opts.xValue);
+    if (px == null || isNaN(px)) return;
+    ctx.save();
+    ctx.setLineDash([5, 4]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(px, chartArea.top);
+    ctx.lineTo(px, chartArea.bottom);
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+Chart.register(atmLinePlugin);
+
+// ── Toggle collapse ──────────────────────────────────────────────────────────
+document.getElementById('options-toggle').addEventListener('click', () => {
+  optionsPanelOpen = !optionsPanelOpen;
+  const body  = document.getElementById('options-body');
+  const arrow = document.getElementById('options-arrow');
+  body.classList.toggle('hidden', !optionsPanelOpen);
+  arrow.classList.toggle('open', optionsPanelOpen);
+});
+
+// ── Main fetch ───────────────────────────────────────────────────────────────
+async function loadOptions(symbol) {
+  const panel = document.getElementById('options-panel');
+  panel.classList.add('hidden');
+  optionsData = null;
+
+  try {
+    const res = await fetch('/api/options/' + encodeURIComponent(symbol));
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.available) return;
+
+    optionsData = data;
+    panel.classList.remove('hidden');
+
+    if (data.is_sparse) {
+      document.getElementById('options-sparse-warn').classList.remove('hidden');
+    } else {
+      document.getElementById('options-sparse-warn').classList.add('hidden');
+    }
+
+    renderImpliedMoves(data.implied_moves || []);
+    buildSmileSelector(data);
+    if (data.default_smile_exp && data.smiles && data.smiles[data.default_smile_exp]) {
+      renderSmileChart(data.smiles[data.default_smile_exp]);
+    }
+    if (data.surface) renderVolSurface(data.surface);
+  } catch(e) {
+    // silently skip — options unavailable
+  }
+}
+
+// ── Implied Move Strip ───────────────────────────────────────────────────────
+function renderImpliedMoves(moves) {
+  const strip = document.getElementById('implied-strip');
+  if (!moves.length) { strip.innerHTML = '<span style="color:var(--muted);font-size:11px">No implied move data available.</span>'; return; }
+
+  strip.innerHTML = moves.map(m => {
+    const pct = m.implied_move_pct;
+    let cls = 'g';
+    if (pct > 10) cls = 'r';
+    else if (pct > 6) cls = 'o';
+    else if (pct > 3) cls = 'y';
+    return `
+      <div class="move-card">
+        <span class="move-pct ${cls}">±${pct != null ? pct.toFixed(1) : '—'}%</span>
+        <span class="move-date">${m.exp_label || m.expiration}</span>
+        <span class="move-dte">${m.days_to_expiry != null ? m.days_to_expiry + 'd' : ''}</span>
+        <div class="move-tooltip">
+          ATM Strike: $${m.atm_strike != null ? m.atm_strike.toFixed(0) : '—'}<br>
+          Call Mid: $${m.atm_call_mid != null ? m.atm_call_mid.toFixed(2) : '—'}<br>
+          Put Mid: $${m.atm_put_mid  != null ? m.atm_put_mid.toFixed(2)  : '—'}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Smile expiration selector ────────────────────────────────────────────────
+function buildSmileSelector(data) {
+  const sel = document.getElementById('smile-exp-select');
+  sel.innerHTML = '';
+  const exps = data.available_expirations || [];
+  exps.forEach(e => {
+    const opt = document.createElement('option');
+    opt.value = e.expiration;
+    opt.textContent = e.exp_label + (e.days_to_expiry != null ? '  (' + e.days_to_expiry + 'd)' : '');
+    if (e.expiration === data.default_smile_exp) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  sel.onchange = () => {
+    const exp = sel.value;
+    if (data.smiles && data.smiles[exp]) {
+      renderSmileChart(data.smiles[exp]);
+    }
+  };
+}
+
+// ── IV Smile Chart ────────────────────────────────────────────────────────────
+function renderSmileChart(smileExp) {
+  if (!smileExp || !smileExp.strikes) return;
+
+  const strikes = smileExp.strikes;
+  const labels   = strikes.map(s => s.strike);
+  const callIVs  = strikes.map(s => (s.call_iv != null && s.call_iv > 0) ? s.call_iv : null);
+  const putIVs   = strikes.map(s => (s.put_iv  != null && s.put_iv  > 0) ? s.put_iv  : null);
+  const atmStrike = smileExp.atm_strike;
+
+  // Skew badge
+  const badge = document.getElementById('smile-skew-badge');
+  if (smileExp.skew_label) {
+    badge.textContent = smileExp.skew_label;
+    badge.className   = 'smile-skew-badge';
+    if (smileExp.skew_label.startsWith('PUT'))  badge.classList.add('put');
+    else if (smileExp.skew_label.startsWith('CALL')) badge.classList.add('call');
+    else badge.classList.add('sym');
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+
+  const ctx = document.getElementById('smile-chart').getContext('2d');
+  if (smileChart) { smileChart.destroy(); smileChart = null; }
+
+  smileChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Call IV',
+          data: callIVs,
+          borderColor: '#4fc3f7',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: '#4fc3f7',
+          tension: 0.2,
+          fill: false,
+          spanGaps: true,
+        },
+        {
+          label: 'Put IV',
+          data: putIVs,
+          borderColor: '#ffb74d',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: '#ffb74d',
+          tension: 0.2,
+          fill: false,
+          spanGaps: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          display: true,
+          labels: {
+            color: '#7d8590', font: { family: 'Inter', size: 10 },
+            boxWidth: 12, padding: 14,
+          }
+        },
+        tooltip: {
+          backgroundColor: '#1a1a1a', borderColor: '#2a2a2a', borderWidth: 1,
+          titleColor: '#666', bodyColor: '#e0e0e0', padding: 10,
+          callbacks: {
+            title: (items) => '$' + items[0].label,
+            label: (ctx) => {
+              const v = ctx.parsed.y;
+              return v != null ? ' ' + ctx.dataset.label + ': ' + v.toFixed(1) + '%' : null;
+            },
+          }
+        },
+        atmLine: { xValue: atmStrike },
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          grid:  { color: '#1a1a1a' },
+          ticks: { color: '#555', maxTicksLimit: 10, font: { family: 'JetBrains Mono', size: 10 },
+                   callback: v => '$' + v },
+          title: { display: true, text: 'Strike', color: '#555', font: { size: 10 } },
+        },
+        y: {
+          position: 'right',
+          grid:  { color: '#1a1a1a' },
+          ticks: { color: '#555', font: { family: 'JetBrains Mono', size: 10 },
+                   callback: v => v.toFixed(0) + '%' },
+          title: { display: true, text: 'Implied Volatility', color: '#555', font: { size: 10 } },
+        },
+      },
+    },
+  });
+}
+
+// ── Volatility Surface Heatmap ────────────────────────────────────────────────
+function surfaceColor(iv, ivMin, ivMax) {
+  if (iv == null) return '#1a1a22';
+  const t = ivMax > ivMin ? Math.max(0, Math.min(1, (iv - ivMin) / (ivMax - ivMin))) : 0.5;
+  if (t < 0.5) {
+    const s = t * 2;
+    return `rgb(${Math.round(20 + s*40)},${Math.round(40 + s*20)},${Math.round(100 - s*40)})`;
+  } else {
+    const s = (t - 0.5) * 2;
+    return `rgb(${Math.round(60 + s*140)},${Math.round(60 - s*20)},${Math.round(60 - s*20)})`;
+  }
+}
+
+function surfaceTextColor(iv, ivMin, ivMax) {
+  if (iv == null) return '#444';
+  const t = ivMax > ivMin ? (iv - ivMin) / (ivMax - ivMin) : 0.5;
+  return (t < 0.25 || (t > 0.35 && t < 0.65)) ? '#ccc' : '#fff';
+}
+
+function renderVolSurface(surface) {
+  const thead = document.getElementById('surface-thead');
+  const tbody = document.getElementById('surface-tbody');
+  if (!surface || !surface.rows || !surface.rows.length) {
+    thead.innerHTML = ''; tbody.innerHTML = '';
+    return;
+  }
+
+  const { rows, iv_min, iv_max } = surface;
+  const exps = rows[0].cells.map(c => c);
+
+  // Header
+  thead.innerHTML = '<tr><th>Moneyness</th>' +
+    exps.map(c => `<th>${c.exp_label}</th>`).join('') + '</tr>';
+
+  // Rows
+  tbody.innerHTML = rows.map(row => {
+    const label = `${row.moneyness_label}<br><span style="color:var(--label);font-size:9px">$${row.strike != null ? row.strike.toFixed(0) : '—'}</span>`;
+    const cells = row.cells.map(c => {
+      const iv  = c.avg_iv;
+      const bg  = surfaceColor(iv, iv_min, iv_max);
+      const fg  = surfaceTextColor(iv, iv_min, iv_max);
+      const atm = c.is_atm ? ' atm-cell' : '';
+      const tip = `Strike $${row.strike != null ? row.strike.toFixed(0) : '—'} | ${c.exp_label} | IV: ${iv != null ? iv.toFixed(1) + '%' : '—'} | Call OI: ${c.call_oi != null ? Math.round(c.call_oi).toLocaleString() : '—'} | Put OI: ${c.put_oi != null ? Math.round(c.put_oi).toLocaleString() : '—'}`;
+      return `<td class="${atm}" style="background:${bg};color:${fg}" title="${tip}">${iv != null ? iv.toFixed(1) + '%' : '—'}</td>`;
+    }).join('');
+    return `<tr><td>${label}</td>${cells}</tr>`;
+  }).join('');
+}
+
+// ── Wire options into ticker load ────────────────────────────────────────────
+const _origLoadTicker = loadTicker;
+loadTicker = async function(symbol, isRefresh = false) {
+  await _origLoadTicker(symbol, isRefresh);
+  if (!isRefresh) loadOptions(symbol);
 };
 </script>
 </body>
