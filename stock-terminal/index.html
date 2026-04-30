@@ -168,37 +168,57 @@
   #chart-wrap { position: relative; height: 280px; }
 
   /* ---- Split / Compare ---- */
-  #terminal-split-wrap { display: flex; gap: 14px; align-items: flex-start; }
+  #terminal-split-wrap { display: flex; gap: 16px; align-items: flex-start; }
   #terminal-main { flex: 1; min-width: 0; }
   #compare-panel {
-    width: 350px; flex-shrink: 0; display: none;
-    position: sticky; top: 54px;
-    max-height: calc(100vh - 66px); overflow-y: auto;
+    flex: 1; min-width: 0;
+    display: none; flex-direction: column;
   }
-  #compare-panel.open { display: block; }
+  #compare-panel.open { display: flex; }
   #compare-toggle-btn {
-    padding: 6px 13px; background: transparent;
+    padding: 6px 14px; background: transparent;
     border: 1px solid var(--border2); border-radius: 4px;
-    color: var(--muted); font-family: inherit; font-size: 11px;
-    font-weight: 600; cursor: pointer; letter-spacing: .06em;
+    color: var(--accent); font-family: inherit; font-size: 11px;
+    font-weight: 700; cursor: pointer; letter-spacing: .06em;
     transition: all .15s; white-space: nowrap; margin-left: 8px;
+    display: flex; align-items: center; gap: 5px;
   }
-  #compare-toggle-btn:hover { color: var(--accent); border-color: var(--accent); }
-  #compare-toggle-btn.active { color: var(--accent); border-color: var(--accent); background: rgba(0,255,136,.06); }
+  #compare-toggle-btn:hover { border-color: var(--accent); background: rgba(0,255,136,.06); }
+  #compare-toggle-btn.active { background: rgba(0,255,136,.1); border-color: var(--accent); }
+  /* Compare panel search bar */
+  #cmp-bar {
+    display: flex; gap: 7px; align-items: center;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 10px; margin-bottom: 12px;
+  }
   #cmp-input {
-    flex: 1; background: var(--panel2); border: 1px solid var(--border2);
-    border-radius: 4px; padding: 7px 10px; color: var(--text);
-    font-family: inherit; font-size: 12px; text-transform: uppercase;
-    outline: none;
+    flex: 1; background: transparent; border: none;
+    color: var(--text); font-family: inherit; font-size: 13px;
+    font-weight: 700; text-transform: uppercase; outline: none;
+    letter-spacing: .06em;
   }
-  #cmp-input:focus { border-color: var(--accent); }
-  #cmp-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
-  .cmp-stat { background: var(--panel2); border-radius: 4px; padding: 7px 10px; }
-  .cmp-stat-lbl { font-size: 9px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 2px; }
-  .cmp-stat-val { font-size: 12px; font-weight: 700; color: var(--text); }
-  @media (max-width: 1050px) {
+  #cmp-input::placeholder { color: var(--muted); font-weight: 400; font-size: 12px; text-transform: none; letter-spacing: 0; }
+  #cmp-go-btn { padding: 5px 14px; background: var(--accent); color: #07090b; border: none; border-radius: 4px; font-size: 11px; font-weight: 800; cursor: pointer; font-family: inherit; letter-spacing: .04em; }
+  #cmp-close-btn { padding: 4px 9px; background: transparent; border: 1px solid var(--border2); border-radius: 4px; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; margin-left: auto; }
+  #cmp-close-btn:hover { color: var(--text); border-color: var(--border); }
+  /* Compare body */
+  #cmp-hdr-section { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  #cmp-ticker-label { font-size: 10px; letter-spacing: .12em; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; }
+  #cmp-name { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #cmp-price { font-size: 32px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1; }
+  #cmp-change { font-size: 13px; font-weight: 600; margin-top: 4px; }
+  #cmp-meta { font-size: 10px; color: var(--muted); margin-top: 5px; }
+  #cmp-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 14px; }
+  .cmp-stat { background: var(--panel2); border-radius: 4px; padding: 8px 10px; }
+  .cmp-stat-lbl { font-size: 9px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 3px; }
+  .cmp-stat-val { font-size: 13px; font-weight: 700; color: var(--text); }
+  @media (max-width: 1100px) {
     #terminal-split-wrap { flex-direction: column; }
-    #compare-panel { width: 100%; position: static; max-height: none; }
+    #compare-panel { width: 100%; }
+    #cmp-stats { grid-template-columns: repeat(4, 1fr); }
+  }
+  @media (max-width: 700px) {
+    #cmp-stats { grid-template-columns: 1fr 1fr; }
   }
 
   /* ---- Portfolio impact on news cards ---- */
@@ -1267,7 +1287,7 @@
 <div id="search-bar">
   <input id="ticker-input" type="text" placeholder="Enter ticker symbol..." maxlength="10" autocomplete="off" spellcheck="false">
   <button id="search-btn">Search</button>
-  <button id="compare-toggle-btn" title="Compare two tickers side by side">⊞ Compare</button>
+  <button id="compare-toggle-btn" title="Add a second asset to compare side by side">＋ Add Asset</button>
 </div>
 
 <!-- Skeleton -->
@@ -1522,44 +1542,50 @@
 
 </div><!-- end #terminal-main -->
 
-<!-- ── Compare Panel ──────────────────────────────────────────────────────── -->
+<!-- ── Compare Panel (50/50 split) ───────────────────────────────────────── -->
 <div id="compare-panel">
-  <div class="panel" style="padding:14px">
 
-    <!-- Search row -->
-    <div style="display:flex;gap:7px;margin-bottom:14px;align-items:center">
-      <input id="cmp-input" type="text" placeholder="Compare ticker…" maxlength="10" autocomplete="off" spellcheck="false">
-      <button id="cmp-go-btn" style="padding:6px 13px;background:var(--accent);color:#07090b;border:none;border-radius:4px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.04em">GO</button>
-      <button id="cmp-close-btn" style="padding:5px 10px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer;font-size:15px;line-height:1">×</button>
+  <!-- Search bar — mirrors the main search bar style -->
+  <div id="cmp-bar">
+    <input id="cmp-input" type="text" placeholder="Enter ticker to compare…" maxlength="10" autocomplete="off" spellcheck="false">
+    <button id="cmp-go-btn">GO</button>
+    <button id="cmp-close-btn" title="Close compare panel">×</button>
+  </div>
+
+  <div id="cmp-empty" class="panel" style="text-align:center;color:var(--muted);padding:60px 0;font-size:10px;letter-spacing:.12em">ENTER A TICKER ABOVE TO COMPARE</div>
+  <div id="cmp-loading" class="panel" style="display:none;text-align:center;color:var(--muted);padding:60px 0;font-size:11px">Loading…</div>
+
+  <div id="cmp-body" style="display:none;flex-direction:column;gap:12px">
+
+    <!-- Header panel -->
+    <div class="panel" style="padding:16px 18px">
+      <div id="cmp-hdr-section">
+        <div id="cmp-ticker-label"></div>
+        <div id="cmp-name"></div>
+        <div id="cmp-price"></div>
+        <div id="cmp-change"></div>
+        <div id="cmp-meta"></div>
+      </div>
     </div>
 
-    <div id="cmp-empty" style="text-align:center;color:var(--muted);padding:36px 0;font-size:10px;letter-spacing:.12em">ENTER A TICKER TO COMPARE</div>
-    <div id="cmp-loading" style="display:none;text-align:center;color:var(--muted);padding:36px 0;font-size:11px">Loading…</div>
-
-    <div id="cmp-body" style="display:none">
-      <!-- Header -->
-      <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
-        <div id="cmp-name" style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
-        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
-          <div id="cmp-price" style="font-size:24px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums"></div>
-          <div id="cmp-change" style="font-size:12px;font-weight:600"></div>
-        </div>
-        <div id="cmp-meta" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
-      </div>
-
-      <!-- Stats grid -->
+    <!-- Stats panel -->
+    <div class="panel" style="padding:14px 16px">
       <div id="cmp-stats"></div>
+    </div>
 
-      <!-- Mini chart -->
-      <div style="position:relative;height:150px;margin-bottom:12px">
+    <!-- Chart panel -->
+    <div class="panel" style="padding:14px 16px">
+      <div style="font-size:9px;letter-spacing:.1em;color:var(--muted);margin-bottom:10px;text-transform:uppercase">Price — Last 60 Days</div>
+      <div style="position:relative;height:220px">
         <canvas id="cmp-chart"></canvas>
       </div>
-
-      <!-- Actions -->
-      <button id="cmp-load-btn" style="width:100%;padding:7px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);font-size:10px;font-family:inherit;cursor:pointer;letter-spacing:.08em;transition:all .15s">LOAD IN TERMINAL →</button>
     </div>
 
+    <!-- Load button -->
+    <button id="cmp-load-btn" class="panel" style="width:100%;padding:10px;background:transparent;border:1px solid var(--border2);border-radius:6px;color:var(--muted);font-size:10px;font-family:inherit;cursor:pointer;letter-spacing:.08em;transition:all .15s;text-align:center">LOAD IN MAIN TERMINAL →</button>
+
   </div>
+
 </div><!-- end #compare-panel -->
 
 </div><!-- end #terminal-split-wrap -->
@@ -4213,12 +4239,13 @@ async function loadCompare(symbol) {
     const chg  = data.price?.change ?? 0;
     const chgP = data.price?.change_pct ?? 0;
     const chgColor = chg >= 0 ? 'var(--accent)' : 'var(--red)';
+    document.getElementById('cmp-ticker-label').textContent = symbol;
     document.getElementById('cmp-name').textContent  = info.company_name || symbol;
     document.getElementById('cmp-price').textContent = data.price?.current != null ? '$' + data.price.current.toFixed(2) : '—';
     document.getElementById('cmp-change').innerHTML  =
       `<span style="color:${chgColor}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)} (${chg >= 0 ? '+' : ''}${chgP.toFixed(2)}%)</span>`;
     document.getElementById('cmp-meta').textContent  =
-      [symbol, info.exchange, info.sector].filter(Boolean).join(' · ');
+      [info.exchange, info.sector].filter(Boolean).join(' · ');
 
     // Stats
     const val = data.valuation || {};
@@ -4280,7 +4307,7 @@ async function loadCompare(symbol) {
     }
 
     document.getElementById('cmp-loading').style.display = 'none';
-    document.getElementById('cmp-body').style.display    = 'block';
+    document.getElementById('cmp-body').style.display    = 'flex';
   } catch (e) {
     document.getElementById('cmp-loading').style.display = 'none';
     document.getElementById('cmp-empty').style.display   = 'block';
@@ -4288,18 +4315,31 @@ async function loadCompare(symbol) {
   }
 }
 
-// Compare toggle
-document.getElementById('compare-toggle-btn').addEventListener('click', () => {
-  const panel = document.getElementById('compare-panel');
-  const btn   = document.getElementById('compare-toggle-btn');
-  const open  = panel.classList.toggle('open');
-  btn.classList.toggle('active', open);
-  if (open) setTimeout(() => document.getElementById('cmp-input').focus(), 80);
-});
-document.getElementById('cmp-close-btn').addEventListener('click', () => {
+function _openCompare() {
+  document.getElementById('compare-panel').classList.add('open');
+  document.getElementById('compare-toggle-btn').classList.add('active');
+  document.getElementById('compare-toggle-btn').innerHTML = '✕ Remove Asset';
+  setTimeout(() => document.getElementById('cmp-input').focus(), 80);
+}
+function _closeCompare() {
   document.getElementById('compare-panel').classList.remove('open');
   document.getElementById('compare-toggle-btn').classList.remove('active');
+  document.getElementById('compare-toggle-btn').innerHTML = '＋ Add Asset';
+  // Reset state
+  document.getElementById('cmp-body').style.display    = 'none';
+  document.getElementById('cmp-empty').style.display   = 'block';
+  document.getElementById('cmp-empty').textContent     = 'ENTER A TICKER ABOVE TO COMPARE';
+  document.getElementById('cmp-input').value           = '';
+  if (cmpChart) { cmpChart.destroy(); cmpChart = null; }
+  cmpSymbol = null;
+}
+
+// Compare toggle
+document.getElementById('compare-toggle-btn').addEventListener('click', () => {
+  const open = document.getElementById('compare-panel').classList.contains('open');
+  open ? _closeCompare() : _openCompare();
 });
+document.getElementById('cmp-close-btn').addEventListener('click', _closeCompare);
 document.getElementById('cmp-go-btn').addEventListener('click', () => {
   loadCompare(document.getElementById('cmp-input').value);
 });
@@ -4310,6 +4350,7 @@ document.getElementById('cmp-load-btn').addEventListener('click', () => {
   if (cmpSymbol) {
     document.getElementById('ticker-input').value = cmpSymbol;
     loadTicker(cmpSymbol);
+    _closeCompare();
   }
 });
 
