@@ -670,11 +670,8 @@
 
   /* ── App gate (full-screen lock when not authenticated) ─────────────────── */
   #app-gate {
-    display: none; position: fixed; inset: 0;
-    background: rgba(7,9,11,0.92); backdrop-filter: blur(12px);
-    z-index: 999;
+    display: none; /* gate permanently disabled — app is public */
   }
-  #app-gate.active { display: block; }
 
   /* ── Auth Modal ──────────────────────────────────────────────────────────── */
   #auth-overlay {
@@ -693,8 +690,7 @@
     font-size: 11px; color: var(--muted); margin: -14px 0 20px;
     line-height: 1.5;
   }
-  /* hide close button when modal is a required gate */
-  #auth-overlay.gated #auth-close { display: none; }
+  /* (gated mode removed — modal is always dismissable) */
   .auth-logo {
     font-size: 11px; letter-spacing: .2em; color: var(--accent);
     font-weight: 700; text-transform: uppercase; margin-bottom: 8px;
@@ -1157,7 +1153,7 @@
   <div id="auth-modal">
     <button id="auth-close">×</button>
     <div class="auth-logo">Terminal Pro</div>
-    <p class="auth-subtitle">Sign in to access the terminal.</p>
+    <p class="auth-subtitle">Sign in to save your portfolio, sync your watchlist, and manage price alerts.</p>
     <div class="auth-tabs">
       <button class="auth-tab active" data-auth="login">Sign In</button>
       <button class="auth-tab" data-auth="register">Create Account</button>
@@ -1490,6 +1486,9 @@
   </div>
 
   <!-- Empty state -->
+  <div id="pf-guest-banner" style="display:none;margin-bottom:12px;padding:10px 14px;background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.15);border-radius:6px;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px">
+    <span>Your portfolio is saved locally. <button onclick="openAuthModal('register')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:11px;padding:0;font-family:inherit">Sign in</button> to sync it across devices.</span>
+  </div>
   <div id="pf-empty">
     <div class="em-title">No positions yet</div>
     <div class="em-sub">ADD A POSITION ABOVE TO GET STARTED</div>
@@ -1670,6 +1669,7 @@
           <button class="nf-btn active" data-sent="all">All</button>
           <button class="nf-btn" data-sent="Positive" style="color:var(--accent)">▲ Positive</button>
           <button class="nf-btn" data-sent="Negative" style="color:var(--red)">▼ Negative</button>
+          <button class="nf-btn" data-sent="Neutral" style="color:var(--muted)">● Neutral</button>
         </div>
       </div>
       <div id="news-skeleton">
@@ -1747,6 +1747,9 @@
   </div>
 
   <!-- Watchlist table -->
+  <div id="wl-guest-banner" style="display:none;margin-bottom:10px;padding:10px 14px;background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.15);border-radius:6px;font-size:11px;color:var(--muted)">
+    Your watchlist is saved locally. <button onclick="openAuthModal('register')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:11px;padding:0;font-family:inherit">Sign in</button> to sync it across devices.
+  </div>
   <div id="wl-empty" class="wl-empty hidden">No tickers in watchlist. Add one above.</div>
   <div id="wl-table-wrap" class="wl-table-wrap hidden">
     <table class="wl-table">
@@ -1814,6 +1817,14 @@
     </tr></thead>
     <tbody id="alerts-tbody"></tbody>
   </table>
+  <div id="alerts-guest" style="display:none;text-align:center;padding:48px 20px">
+    <div style="font-size:28px;margin-bottom:12px;opacity:.3">🔔</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:8px">Sign in to create price alerts</div>
+    <div style="font-size:11px;color:#333;margin-bottom:20px">Get notified by email when a stock hits your target price.</div>
+    <button onclick="openAuthModal('login')" style="padding:8px 20px;background:var(--accent);color:#07090b;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Sign In</button>
+    <span style="margin:0 8px;color:#333;font-size:11px">or</span>
+    <button onclick="openAuthModal('register')" style="padding:8px 20px;background:transparent;color:var(--accent);border:1px solid var(--accent);border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Create Account</button>
+  </div>
   <div id="alerts-empty" style="display:none;text-align:center;color:var(--muted);padding:40px;font-size:13px">No alerts yet. Create one with "+ New Alert" or from any ticker page.</div>
 </div>
 
@@ -3730,7 +3741,7 @@ function ecInit() {
 let _alerts = [];
 
 async function loadAlerts() {
-  if (!authToken) return;
+  if (!authToken) { renderGuestBanners(); return; }
   try {
     const res = await fetch('/api/user/alerts', { headers: { Authorization: `Bearer ${authToken}` } });
     _alerts = (await res.json()).alerts || [];
@@ -3742,6 +3753,7 @@ function renderAlerts() {
   const tbody = document.getElementById('alerts-tbody');
   const empty = document.getElementById('alerts-empty');
   if (!tbody) return;
+  if (!authToken) { renderGuestBanners(); return; }
   if (!_alerts.length) {
     tbody.innerHTML = '';
     if (empty) empty.style.display = 'block';
@@ -4139,38 +4151,19 @@ async function syncAfterLogin() {
 }
 
 // ---------------------------------------------------------------------------
-// Gate helpers — lock/unlock the entire app
+// Auth gate helpers — gate removed, app is fully public.
+// lockApp / unlockApp kept as no-ops so call-sites don't break.
 // ---------------------------------------------------------------------------
-function lockApp() {
-  document.getElementById('app-gate').classList.add('active');
-  // Open modal in gated mode (close button hidden, backdrop click disabled)
-  const overlay = document.getElementById('auth-overlay');
-  overlay.classList.add('open', 'gated');
-  document.getElementById('auth-error').textContent = '';
-  document.getElementById('auth-email').value = '';
-  document.getElementById('auth-password').value = '';
-  // Show Sign In tab by default
-  authMode = 'login';
-  document.querySelectorAll('.auth-tab').forEach(t =>
-    t.classList.toggle('active', t.dataset.auth === 'login')
-  );
-  document.getElementById('auth-submit-btn').textContent = 'Sign In';
-  setTimeout(() => document.getElementById('auth-email').focus(), 80);
-}
-
-function unlockApp() {
-  document.getElementById('app-gate').classList.remove('active');
-  const overlay = document.getElementById('auth-overlay');
-  overlay.classList.remove('open', 'gated');
-}
+function lockApp()   { /* no-op — app is public */ }
+function unlockApp() { /* no-op */ }
 
 function setAuth(token, user) {
   authToken = token;
   authUser  = user;
   localStorage.setItem('auth_token', token);
   localStorage.setItem('auth_user', JSON.stringify(user));
-  unlockApp();
   renderUserPill();
+  renderGuestBanners();
   syncAfterLogin();
   loadAlerts();
   loadTransactions();
@@ -4182,7 +4175,7 @@ function clearAuth() {
   localStorage.removeItem('auth_token');
   localStorage.removeItem('auth_user');
   renderUserPill();
-  lockApp();
+  renderGuestBanners();
 }
 
 function renderUserPill() {
@@ -4196,38 +4189,46 @@ function renderUserPill() {
     avatar.textContent = authUser.email[0].toUpperCase();
     emailEl.textContent = authUser.email;
   } else {
-    signInBtn.style.display = 'none'; // always hidden — gate handles sign-in
+    signInBtn.style.display = '';   // show Sign In button when logged out
     pill.classList.remove('visible');
   }
 }
 
-// Verify stored token on load, then gate or unlock
+function renderGuestBanners() {
+  const loggedIn = !!authUser;
+  const pfBanner = document.getElementById('pf-guest-banner');
+  const wlBanner = document.getElementById('wl-guest-banner');
+  const alertsGuest = document.getElementById('alerts-guest');
+  const alertsHeader = document.querySelector('.alerts-header');
+  const alertsTbl = document.getElementById('alerts-tbl');
+  if (pfBanner) pfBanner.style.display = loggedIn ? 'none' : 'flex';
+  if (wlBanner) wlBanner.style.display = loggedIn ? 'none' : 'block';
+  if (alertsGuest) alertsGuest.style.display = loggedIn ? 'none' : 'block';
+  if (alertsHeader) alertsHeader.style.display = loggedIn ? '' : 'none';
+  if (alertsTbl) alertsTbl.style.display = loggedIn ? '' : 'none';
+}
+
+// Verify stored token on load — no gating, app is always visible
 (async () => {
   if (authToken) {
     try {
       const r = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${authToken}` } });
       if (!r.ok) {
-        // Token invalid — clear and gate
+        // Token invalid — clear session, stay on page as guest
         authToken = null; authUser = null;
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
-        renderUserPill();
-        lockApp();
       } else {
-        renderUserPill();
-        unlockApp();
         syncAfterLogin();
+        loadAlerts();
+        loadTransactions();
       }
     } catch {
-      // Offline — trust stored token, show app
-      renderUserPill();
-      unlockApp();
+      // Offline — trust stored token
     }
-  } else {
-    // No token at all — gate immediately
-    renderUserPill();
-    lockApp();
   }
+  renderUserPill();
+  renderGuestBanners();
 })();
 
 // ---------------------------------------------------------------------------
@@ -4249,19 +4250,13 @@ function openAuthModal(mode = 'login') {
 }
 
 function closeAuthModal() {
-  const overlay = document.getElementById('auth-overlay');
-  if (overlay.classList.contains('gated')) return; // can't close a required gate
-  overlay.classList.remove('open');
+  document.getElementById('auth-overlay').classList.remove('open');
 }
 
 document.getElementById('nav-signin-btn').addEventListener('click', () => openAuthModal('login'));
 document.getElementById('auth-close').addEventListener('click', closeAuthModal);
 document.getElementById('auth-overlay').addEventListener('click', e => {
-  // Don't close if the modal is a required gate
-  if (e.target === document.getElementById('auth-overlay') &&
-      !document.getElementById('auth-overlay').classList.contains('gated')) {
-    closeAuthModal();
-  }
+  if (e.target === document.getElementById('auth-overlay')) closeAuthModal();
 });
 
 document.querySelectorAll('.auth-tab').forEach(tab => {

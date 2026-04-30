@@ -1228,16 +1228,55 @@ _HIGH_IMPORTANCE = [
     "sovereign default", "currency crisis", "flash crash",
 ]
 
-_POSITIVE_WORDS = [
-    "rally", "surge", "gain", "rise", "jump", "soar", "boom", "recovery",
-    "growth", "strong", "beat", "exceed", "better than expected", "optimism",
-    "record high", "bullish", "rebound", "improve",
+# ---------------------------------------------------------------------------
+# Sentiment classification — phrase-aware, weighted, word-boundary safe
+# All phrases are relative to RISK ASSETS (equities, credit spreads, etc.)
+# ---------------------------------------------------------------------------
+
+# Strong multi-word phrases (±2 each). Order matters — most specific first.
+_SENT_STRONG_POS = [
+    "better than expected", "beat expectations", "beats estimates", "beat estimates",
+    "blowout", "record high", "all-time high", "new high",
+    "rate cut", "rate cuts", "fed cut", "fed cuts", "fed pivot",
+    "soft landing", "dovish", "easing cycle", "quantitative easing",
+    "ceasefire", "peace deal", "trade deal", "trade agreement",
+    "lower inflation", "inflation cools", "cooling inflation", "disinflation",
+    "stronger than expected", "strong jobs", "strong gdp", "solid growth",
+    "market rally", "stocks rally", "stocks surge", "equities rally",
+    "upgrade", "raised guidance", "raised outlook",
 ]
-_NEGATIVE_WORDS = [
-    "crash", "collapse", "plunge", "fall", "drop", "decline", "slump", "fear",
-    "crisis", "recession", "contraction", "worse than expected", "miss",
-    "risk", "concern", "warning", "layoff", "deficit", "loss", "bearish",
-    "slowdown", "cut", "shrink", "downturn",
+
+_SENT_STRONG_NEG = [
+    "worse than expected", "miss expectations", "misses estimates", "missed estimates",
+    "missed expectations", "below expectations",
+    "rate hike", "rate hikes", "hawkish", "tightening cycle",
+    "market crash", "flash crash", "bank collapse", "bank failure",
+    "financial crisis", "systemic risk", "contagion", "bank run",
+    "stagflation", "hyperinflation", "inflation surge", "inflation spike",
+    "oil supply disruption", "sanctions imposed",
+    "debt ceiling crisis", "sovereign default", "credit crunch",
+    "yield curve inversion", "recession confirmed", "gdp contraction",
+    "emergency meeting", "credit downgrade", "downgraded",
+    "layoffs announced", "mass layoffs", "job cuts",
+    "war escalates", "military strike", "nuclear threat",
+    "trade war", "tariff war",
+]
+
+# Single-word signals — only matched with word boundaries (padded spaces)
+_SENT_WEAK_POS = [
+    " rally ", " rallies ", " surge ", " surges ", " gain ", " gains ",
+    " rise ", " rises ", " jump ", " jumps ", " soar ", " soars ",
+    " boom ", " recovery ", " rebound ", " rebounds ",
+    " bullish ", " upbeat ", " optimism ", " expansion ",
+    " hiring ", " outperform ", " improvement ", " accelerate ",
+]
+
+_SENT_WEAK_NEG = [
+    " crash ", " crashes ", " collapse ", " collapses ",
+    " plunge ", " plunges ", " tumble ", " tumbles ",
+    " slump ", " slumps ", " bearish ", " slowdown ",
+    " downturn ", " layoffs ", " contraction ", " recessionary ",
+    " downgrade ", " underperform ",
 ]
 
 
@@ -1253,11 +1292,31 @@ def _classify_category(text: str) -> str:
 
 
 def _classify_sentiment(text: str) -> str:
-    pos = sum(1 for w in _POSITIVE_WORDS if w in text)
-    neg = sum(1 for w in _NEGATIVE_WORDS if w in text)
-    if pos > neg:
+    """
+    Score sentiment relative to risk assets (equities / credit).
+    Strong multi-word phrases = ±2; weak single words (with boundaries) = ±1.
+    Returns Positive / Negative / Neutral.
+    Net score must reach ±2 to avoid false classification from a single weak word.
+    """
+    t = " " + text + " "   # pad for word-boundary matching
+
+    score = 0
+    for phrase in _SENT_STRONG_POS:
+        if phrase in t:
+            score += 2
+    for phrase in _SENT_STRONG_NEG:
+        if phrase in t:
+            score -= 2
+    for word in _SENT_WEAK_POS:
+        if word in t:
+            score += 1
+    for word in _SENT_WEAK_NEG:
+        if word in t:
+            score -= 1
+
+    if score >= 2:
         return "Positive"
-    if neg > pos:
+    if score <= -2:
         return "Negative"
     return "Neutral"
 
@@ -1329,24 +1388,38 @@ def _claude_filter(articles: list[dict]) -> list[dict]:
     )
 
     system = (
-        "You are a financial news filter for a professional trading terminal.\n"
-        "Your job is to identify only macro-relevant, market-moving news.\n\n"
+        "You are a financial news filter for a professional equity trading terminal.\n"
+        "Your job is to identify macro-relevant, market-moving news AND classify its "
+        "sentiment from the perspective of an equity investor (risk assets: stocks, credit).\n\n"
         "INCLUDE: Fed decisions, interest rates, inflation data, central bank policy, "
-        "geopolitical conflicts, oil/gas supply disruptions, Strait of Hormuz, wars, "
-        "sanctions, major AI breakthroughs or regulation, systemic financial risk, "
-        "large sovereign events, natural disasters with economic impact, "
-        "major political elections or instability.\n\n"
+        "geopolitical conflicts, oil/gas supply disruptions, wars, sanctions, major AI "
+        "breakthroughs or regulation, systemic financial risk, large sovereign events, "
+        "natural disasters with economic impact, major political elections or instability.\n\n"
         "EXCLUDE: individual company earnings (unless systemic), crypto minor moves, "
         "sports, lifestyle, celebrity, regional politics with no macro impact, "
-        "routine economic data releases with no surprise.\n\n"
+        "routine data releases with no surprise.\n\n"
+        "SENTIMENT RULES — always relative to equities/risk assets:\n"
+        "  Positive: news that should lift equity prices or reduce risk premiums.\n"
+        "    Examples: Fed pauses/cuts rates, inflation cooling, strong jobs, ceasefire, "
+        "    trade deal, stimulus, better-than-expected GDP, market rally, dovish signals.\n"
+        "  Negative: news that should pressure equity prices or widen risk premiums.\n"
+        "    Examples: Fed hikes/stays hawkish, inflation surge, recession confirmed, "
+        "    bank failure, geopolitical escalation, sanctions, credit downgrade, "
+        "    tariff escalation, earnings recession fears, market sell-off.\n"
+        "  Neutral: genuinely ambiguous news where the equity impact is unclear or mixed.\n"
+        "    Examples: Fed holds with no guidance change, mixed economic data, "
+        "    scheduled data release in-line with expectations.\n"
+        "IMPORTANT: Do NOT use tone of writing as a proxy. 'Fed pauses rate hikes' sounds "
+        "calm but is Positive for equities. 'Unemployment rises' sounds bad but could be "
+        "Positive if it means the Fed will ease. Always reason from equity market impact.\n\n"
         "For each article that passes the filter, return a JSON array with:\n"
         "- id (original index)\n"
         "- importance_score (1-10, where 10 = market-moving event)\n"
         "- category: one of [Fed/Monetary Policy, Geopolitics, Commodities, Tech/AI, Markets, Macro Economy]\n"
-        "- market_impact: 2-sentence explanation of potential market impact written for a trader\n"
-        "- sentiment: Positive / Negative / Neutral (relative to risk assets)\n\n"
+        "- market_impact: 2-sentence explanation of the equity market impact, written for a trader\n"
+        "- sentiment: exactly one of Positive / Negative / Neutral\n\n"
         "Only include articles with importance_score >= 7.\n"
-        "Return only valid JSON array, no markdown, no preamble."
+        "Return only a valid JSON array, no markdown, no preamble."
     )
 
     try:
