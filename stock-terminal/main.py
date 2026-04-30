@@ -1397,45 +1397,20 @@ def _claude_filter(articles: list[dict]) -> list[dict]:
     )
 
     system = (
-        "You are a financial news analyst for a professional equity trading terminal.\n"
-        "Your job: filter macro-relevant news AND classify each article's sentiment "
-        "strictly from the perspective of an equity investor (S&P 500 / risk assets).\n\n"
-        "INCLUDE: Fed/central bank decisions, inflation data, jobs reports, GDP, "
-        "geopolitical conflicts, oil/gas disruptions, wars, sanctions, AI regulation, "
-        "systemic financial risk, sovereign events, major elections.\n"
+        "You are a financial news filter for a professional equity trading terminal.\n"
+        "Your job: identify macro-relevant, market-moving news articles.\n\n"
+        "INCLUDE: Fed/central bank decisions, inflation data, jobs reports, GDP surprises, "
+        "geopolitical conflicts, oil/gas disruptions, wars, sanctions, major AI regulation, "
+        "systemic financial risk, sovereign events, major elections or political instability.\n"
         "EXCLUDE: individual company earnings (unless systemic), crypto minor moves, "
         "sports, lifestyle, celebrity, regional politics with no macro impact, "
-        "routine data in-line with forecasts.\n\n"
-        "SENTIMENT — always relative to equities / risk assets:\n"
-        "  Positive = news that should LIFT equity prices or reduce risk premiums.\n"
-        "    Rate cut / Fed pause / dovish signal → Positive\n"
-        "    Inflation cooling / soft landing / strong jobs → Positive\n"
-        "    Ceasefire / trade deal / stimulus → Positive\n"
-        "    Better-than-expected economic data → Positive\n"
-        "  Negative = news that should PRESSURE equity prices or widen risk premiums.\n"
-        "    Rate hike / hawkish surprise / tightening → Negative\n"
-        "    Inflation surge / stagflation fears → Negative\n"
-        "    Bank failure / credit crunch / systemic risk → Negative\n"
-        "    War escalation / sanctions / supply shock → Negative\n"
-        "    Recession confirmed / GDP contraction → Negative\n"
-        "  Neutral = ONLY for articles that are genuinely 50/50 with no clear primary direction.\n"
-        "    Example: Fed holds with no guidance change and mixed tone → Neutral\n"
-        "    Example: routine data exactly in-line with consensus → Neutral\n"
-        "CRITICAL RULES:\n"
-        "1. Do NOT use headline tone as proxy. 'Unemployment rises' can be Positive if "
-        "   it signals Fed easing. 'Fed pauses' sounds neutral but IS Positive for equities.\n"
-        "2. Do NOT default to Neutral when unsure. If there is a primary market direction, "
-        "   use Positive or Negative. Reserve Neutral only for truly ambiguous cases.\n"
-        "3. In the current environment (tariffs, geopolitical tension, AI), expect a "
-        "   meaningful share of Negative AND Positive articles. A distribution of "
-        "   0 Positive is almost certainly wrong.\n\n"
-        "Return a JSON array where each passing article has:\n"
-        "  id (original index), importance_score (1-10), "
-        "category (one of: Fed/Monetary Policy, Geopolitics, Commodities, Tech/AI, Markets, Macro Economy), "
-        "market_impact (2 sentences for a trader), "
-        "sentiment (exactly: Positive, Negative, or Neutral)\n"
-        "Only include articles with importance_score >= 7.\n"
-        "Return only valid JSON array. No markdown, no preamble."
+        "routine data exactly in-line with forecasts.\n\n"
+        "Return a JSON array. Each passing article must have:\n"
+        "  id            — original index (integer)\n"
+        "  importance_score — 1-10 (10 = market-moving event; only include >= 7)\n"
+        "  category      — one of: Fed/Monetary Policy, Geopolitics, Commodities, Tech/AI, Markets, Macro Economy\n"
+        "  market_impact — 2 sentences explaining the potential equity market impact, written for a trader\n"
+        "Return only a valid JSON array. No markdown, no extra text."
     )
 
     try:
@@ -1465,9 +1440,13 @@ def _claude_filter(articles: list[dict]) -> list[dict]:
             continue
         art = dict(articles[idx])
         art["importance_score"] = score
-        art["category"]        = item.get("category", "Markets")
-        art["market_impact"]   = item.get("market_impact", "")
-        art["sentiment"]       = item.get("sentiment", "Neutral")
+        art["category"]      = item.get("category", "Markets")
+        art["market_impact"] = item.get("market_impact", "")
+        # Sentiment classified by phrase engine, not by Claude
+        # (Claude tends to over-produce Neutral; the phrase engine is deterministic)
+        art["sentiment"] = _classify_sentiment(
+            (art.get("title", "") + " " + art.get("summary", "")).lower()
+        )
         enriched.append(art)
 
     enriched.sort(key=lambda x: x["importance_score"], reverse=True)
