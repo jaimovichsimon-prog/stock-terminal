@@ -4234,30 +4234,35 @@ async function loadCompare(symbol) {
     if (!res.ok) throw new Error('not found');
     const data = await res.json();
 
-    // Header
-    const info = data.info || {};
-    const chg  = data.price?.change ?? 0;
-    const chgP = data.price?.change_pct ?? 0;
+    // API structure: data.header, data.price_stats, data.volume, data.fundamentals, data.technicals, data.chart
+    const hdr  = data.header  || {};
+    const ps   = data.price_stats || {};
+    const vol  = data.volume  || {};
+    const fund = data.fundamentals || {};
+    const tech = data.technicals || {};
+
+    const chg  = hdr.change ?? 0;
+    const chgP = hdr.change_pct ?? 0;
     const chgColor = chg >= 0 ? 'var(--accent)' : 'var(--red)';
+
     document.getElementById('cmp-ticker-label').textContent = symbol;
-    document.getElementById('cmp-name').textContent  = info.company_name || symbol;
-    document.getElementById('cmp-price').textContent = data.price?.current != null ? '$' + data.price.current.toFixed(2) : '—';
+    document.getElementById('cmp-name').textContent  = hdr.company_name || symbol;
+    document.getElementById('cmp-price').textContent = hdr.current_price != null ? '$' + hdr.current_price.toFixed(2) : '—';
     document.getElementById('cmp-change').innerHTML  =
       `<span style="color:${chgColor}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)} (${chg >= 0 ? '+' : ''}${chgP.toFixed(2)}%)</span>`;
     document.getElementById('cmp-meta').textContent  =
-      [info.exchange, info.sector].filter(Boolean).join(' · ');
+      [hdr.exchange, hdr.sector].filter(Boolean).join(' · ');
 
-    // Stats
-    const val = data.valuation || {};
+    // Stats — match the actual API field names
     const stats = [
-      { l: 'Market Cap',  v: _cmpFmt(info.market_cap, '$') },
-      { l: 'P/E (TTM)',   v: val.pe_ttm != null ? val.pe_ttm.toFixed(1) : '—' },
-      { l: '52W High',    v: data.price?.week_52_high != null ? '$' + data.price.week_52_high.toFixed(2) : '—' },
-      { l: '52W Low',     v: data.price?.week_52_low  != null ? '$' + data.price.week_52_low.toFixed(2)  : '—' },
-      { l: 'Volume',      v: _cmpFmt(data.price?.volume) },
-      { l: 'Avg Volume',  v: _cmpFmt(data.price?.avg_volume) },
-      { l: 'Div Yield',   v: val.dividend_yield != null ? val.dividend_yield.toFixed(2) + '%' : '—' },
-      { l: 'Beta',        v: data.risk?.beta != null ? data.risk.beta.toFixed(2) : '—' },
+      { l: 'Market Cap',  v: _cmpFmt(fund.market_cap, '$') },
+      { l: 'P/E (TTM)',   v: fund.pe_trailing != null ? fund.pe_trailing.toFixed(1) : '—' },
+      { l: '52W High',    v: ps.week52_high != null ? '$' + ps.week52_high.toFixed(2) : '—' },
+      { l: '52W Low',     v: ps.week52_low  != null ? '$' + ps.week52_low.toFixed(2)  : '—' },
+      { l: 'Volume',      v: _cmpFmt(vol.current) },
+      { l: 'Avg Vol',     v: _cmpFmt(vol.avg_30d) },
+      { l: 'Div Yield',   v: fund.dividend_yield != null ? (fund.dividend_yield * 100).toFixed(2) + '%' : '—' },
+      { l: 'Beta',        v: tech.beta != null ? tech.beta.toFixed(2) : '—' },
     ];
     document.getElementById('cmp-stats').innerHTML = stats.map(s => `
       <div class="cmp-stat">
@@ -4265,8 +4270,8 @@ async function loadCompare(symbol) {
         <div class="cmp-stat-val">${s.v}</div>
       </div>`).join('');
 
-    // Mini chart — last 60 days
-    if (data.chart?.dates && data.chart?.prices) {
+    // Chart — last 60 days (data.chart.dates / data.chart.prices)
+    if (data.chart?.dates?.length && data.chart?.prices?.length) {
       const labels = data.chart.dates.slice(-60);
       const prices = data.chart.prices.slice(-60);
       const isUp   = prices.length > 1 && prices[prices.length - 1] >= prices[0];
