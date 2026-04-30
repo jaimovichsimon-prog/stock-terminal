@@ -1557,32 +1557,128 @@
 
   <div id="cmp-body" style="display:none;flex-direction:column;gap:12px">
 
-    <!-- Header panel -->
-    <div class="panel" style="padding:16px 18px">
-      <div id="cmp-hdr-section">
-        <div id="cmp-ticker-label"></div>
-        <div id="cmp-name"></div>
-        <div id="cmp-price"></div>
-        <div id="cmp-change"></div>
-        <div id="cmp-meta"></div>
+    <!-- Header (mirrors #header-panel) -->
+    <div id="cmp-header-panel" class="panel">
+      <div class="hdr-left">
+        <div class="company-name" id="cmp-hdr-name"></div>
+        <div class="meta">
+          <span id="cmp-hdr-ticker"></span>
+          <span id="cmp-hdr-exchange"></span>
+          <span id="cmp-hdr-sector"></span>
+          <span id="cmp-hdr-industry"></span>
+        </div>
+      </div>
+      <div class="hdr-right">
+        <div class="price-main" id="cmp-hdr-price"></div>
+        <div class="change-line">
+          <span id="cmp-hdr-change"></span>
+          <span style="margin-left:8px" id="cmp-hdr-changepct"></span>
+        </div>
+        <div class="bid-ask">
+          <span>BID <b id="cmp-hdr-bid"></b></span>
+          <span>ASK <b id="cmp-hdr-ask"></b></span>
+          <span>SPREAD <b id="cmp-hdr-spread"></b></span>
+        </div>
+      </div>
+      <div class="hdr-footer">
+        <div style="font-size:10px;color:var(--muted)" id="cmp-hdr-updated"></div>
+        <button id="cmp-load-btn" style="margin-left:auto;padding:6px 13px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);font-size:10px;font-family:inherit;cursor:pointer;letter-spacing:.08em;transition:all .15s">LOAD IN MAIN →</button>
       </div>
     </div>
 
-    <!-- Stats panel -->
-    <div class="panel" style="padding:14px 16px">
-      <div id="cmp-stats"></div>
+    <!-- Row 1: Price Stats | Volume | Fundamentals -->
+    <div class="grid-3">
+      <div class="panel">
+        <div class="panel-title">Price Statistics</div>
+        <div class="row"><span class="lbl">Open</span><span class="val" id="cmp-ps-open"></span></div>
+        <div class="row"><span class="lbl">Prev Close</span><span class="val" id="cmp-ps-prevclose"></span></div>
+        <div class="row"><span class="lbl">Day High</span><span class="val" id="cmp-ps-high"></span></div>
+        <div class="row"><span class="lbl">Day Low</span><span class="val" id="cmp-ps-low"></span></div>
+        <div class="row"><span class="lbl">VWAP</span><span class="val" id="cmp-ps-vwap"></span></div>
+        <div style="margin-top:10px">
+          <div class="row" style="margin-bottom:2px"><span class="lbl">52-Week Range</span></div>
+          <div class="range-bar">
+            <div class="range-track"><div class="range-dot" id="cmp-range-dot"></div></div>
+            <div class="range-labels"><span id="cmp-range-lo"></span><span id="cmp-range-hi"></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Volume</div>
+        <div class="row"><span class="lbl">Volume</span><span class="val" id="cmp-vol-current"></span></div>
+        <div class="row"><span class="lbl">Avg Vol (30d)</span><span class="val" id="cmp-vol-avg"></span></div>
+        <div class="row"><span class="lbl">Vol Ratio</span><span class="val" id="cmp-vol-ratio"></span></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Fundamentals</div>
+        <div class="row"><span class="lbl">Market Cap</span><span class="val" id="cmp-f-mktcap"></span></div>
+        <div class="row"><span class="lbl">P/E Trailing</span><span class="val" id="cmp-f-pe"></span></div>
+        <div class="row"><span class="lbl">P/E Forward</span><span class="val" id="cmp-f-fwdpe"></span></div>
+        <div class="row"><span class="lbl">EPS (TTM)</span><span class="val" id="cmp-f-eps"></span></div>
+        <div class="row"><span class="lbl">Price/Book</span><span class="val" id="cmp-f-pb"></span></div>
+        <div class="row"><span class="lbl">EV/EBITDA</span><span class="val" id="cmp-f-evebitda"></span></div>
+        <div class="row"><span class="lbl">Revenue TTM</span><span class="val" id="cmp-f-rev"></span></div>
+        <div class="row"><span class="lbl">EBITDA Margin</span><span class="val" id="cmp-f-ebitdam"></span></div>
+        <div class="row"><span class="lbl">Div Yield</span><span class="val" id="cmp-f-div"></span></div>
+      </div>
     </div>
 
-    <!-- Chart panel -->
-    <div class="panel" style="padding:14px 16px">
-      <div style="font-size:9px;letter-spacing:.1em;color:var(--muted);margin-bottom:10px;text-transform:uppercase">Price — Last 60 Days</div>
-      <div style="position:relative;height:220px">
+    <!-- Row 2: Technicals | Analyst -->
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-title">Technical Indicators</div>
+        <div class="row" style="margin-bottom:8px">
+          <div><span class="lbl">RSI (14)</span>
+            <div><span class="val" id="cmp-t-rsi-val"></span><span class="val" id="cmp-t-rsi-lbl" style="font-size:10px;margin-left:6px"></span></div>
+          </div>
+        </div>
+        <div style="margin-bottom:10px">
+          <span class="lbl">MACD (12,26,9)</span>
+          <div class="macd-row" style="margin-top:4px">
+            <div class="macd-cell"><span class="lbl">Value</span><div class="val" id="cmp-t-macd-val"></div></div>
+            <div class="macd-cell"><span class="lbl">Signal</span><div class="val" id="cmp-t-macd-sig"></div></div>
+            <div class="macd-cell"><span class="lbl">Hist</span><div class="val" id="cmp-t-macd-hist"></div></div>
+            <div class="macd-cell"><span class="lbl">Dir</span><div class="val" id="cmp-t-macd-dir"></div></div>
+          </div>
+        </div>
+        <div style="margin-bottom:10px">
+          <span class="lbl">Moving Averages</span>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px">
+            <div><span class="lbl">SMA 20</span><div class="val" id="cmp-t-sma20-val"></div><div class="val" id="cmp-t-sma20-pos" style="font-size:10px"></div></div>
+            <div><span class="lbl">SMA 50</span><div class="val" id="cmp-t-sma50-val"></div><div class="val" id="cmp-t-sma50-pos" style="font-size:10px"></div></div>
+            <div><span class="lbl">SMA 200</span><div class="val" id="cmp-t-sma200-val"></div><div class="val" id="cmp-t-sma200-pos" style="font-size:10px"></div></div>
+          </div>
+        </div>
+        <div class="row" style="margin-bottom:5px"><span class="lbl">Beta (vs SPY)</span><span class="val" id="cmp-t-beta"></span></div>
+        <div class="row"><span class="lbl">Hist Vol 30d</span><span class="val" id="cmp-t-hv"></span></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Analyst Consensus</div>
+        <div class="consensus-bar">
+          <div class="seg-buy"  id="cmp-an-bar-buy"  style="width:0%"></div>
+          <div class="seg-hold" id="cmp-an-bar-hold" style="width:0%"></div>
+          <div class="seg-sell" id="cmp-an-bar-sell" style="width:0%"></div>
+        </div>
+        <div class="consensus-counts">
+          <span class="green">Buy: <b id="cmp-an-buy">—</b></span>
+          <span style="color:var(--muted)">Hold: <b id="cmp-an-hold">—</b></span>
+          <span class="red">Sell: <b id="cmp-an-sell">—</b></span>
+        </div>
+        <div class="consensus-label" id="cmp-an-consensus"></div>
+        <div style="margin-top:14px">
+          <div class="row"><span class="lbl">Avg Price Target</span><span class="val" id="cmp-an-target"></span></div>
+          <div class="row"><span class="lbl">Implied Upside</span><span class="val" id="cmp-an-upside"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="panel">
+      <div class="panel-title" style="margin-bottom:8px">Price Chart — 6 Months</div>
+      <div style="position:relative;height:280px">
         <canvas id="cmp-chart"></canvas>
       </div>
     </div>
-
-    <!-- Load button -->
-    <button id="cmp-load-btn" class="panel" style="width:100%;padding:10px;background:transparent;border:1px solid var(--border2);border-radius:6px;color:var(--muted);font-size:10px;font-family:inherit;cursor:pointer;letter-spacing:.08em;transition:all .15s;text-align:center">LOAD IN MAIN TERMINAL →</button>
 
   </div>
 
@@ -4210,15 +4306,166 @@ async function ecLoadLive() {
 let cmpChart  = null;
 let cmpSymbol = null;
 
-function _cmpFmt(v, prefix = '', suffix = '', decimals = 2) {
-  if (v == null) return '—';
-  if (typeof v === 'number') {
-    if (Math.abs(v) >= 1e12) return prefix + (v / 1e12).toFixed(2) + 'T' + suffix;
-    if (Math.abs(v) >= 1e9)  return prefix + (v / 1e9).toFixed(2) + 'B' + suffix;
-    if (Math.abs(v) >= 1e6)  return prefix + (v / 1e6).toFixed(2) + 'M' + suffix;
-    return prefix + v.toFixed(decimals) + suffix;
+function renderCompare(data) {
+  // Helper: set textContent on element prefixed with 'cmp-'
+  const cs = (id, val) => { const el = document.getElementById('cmp-' + id); if (el) el.textContent = val ?? dash; };
+
+  const h    = data.header       || {};
+  const ps   = data.price_stats  || {};
+  const vol  = data.volume       || {};
+  const fund = data.fundamentals || {};
+  const tech = data.technicals   || {};
+  const a    = data.analyst      || {};
+
+  // ── Header ────────────────────────────────────────────────────────────────
+  cs('hdr-name',     h.company_name || cmpSymbol);
+  cs('hdr-ticker',   h.ticker   || '');
+  cs('hdr-exchange', h.exchange || '');
+  cs('hdr-sector',   h.sector   || '');
+  cs('hdr-industry', h.industry || '');
+  cs('hdr-price',    fmtPrice(h.current_price));
+
+  const chg = h.change; const pct = h.change_pct;
+  const cls = colorClass(chg);
+  const chgEl = document.getElementById('cmp-hdr-change');
+  const pctEl = document.getElementById('cmp-hdr-changepct');
+  chgEl.textContent = chg != null ? (chg >= 0 ? '+' : '') + chg.toFixed(2) : dash;
+  chgEl.style.color = cls === 'green' ? 'var(--green)' : cls === 'red' ? 'var(--red)' : '';
+  pctEl.textContent = fmtPct(pct);
+  pctEl.style.color = cls === 'green' ? 'var(--green)' : cls === 'red' ? 'var(--red)' : '';
+
+  cs('hdr-bid',    fmtPrice(h.bid));
+  cs('hdr-ask',    fmtPrice(h.ask));
+  cs('hdr-spread', h.spread != null ? h.spread.toFixed(2) : dash);
+
+  if (h.last_updated) {
+    try {
+      const d = new Date(h.last_updated);
+      document.getElementById('cmp-hdr-updated').textContent =
+        'LAST ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+    } catch(e) {}
   }
-  return String(v);
+
+  // ── Price Stats ───────────────────────────────────────────────────────────
+  cs('ps-open',      fmtPrice(ps.open));
+  cs('ps-prevclose', fmtPrice(ps.prev_close));
+  cs('ps-high',      fmtPrice(ps.day_high));
+  cs('ps-low',       fmtPrice(ps.day_low));
+  cs('ps-vwap',      fmtPrice(ps.vwap));
+  document.getElementById('cmp-range-lo').textContent = fmtPrice(ps.week52_low);
+  document.getElementById('cmp-range-hi').textContent = fmtPrice(ps.week52_high);
+  const dot = document.getElementById('cmp-range-dot');
+  const dotPct = ps.week52_pct != null ? Math.max(2, Math.min(98, ps.week52_pct)) : 50;
+  dot.style.left = dotPct + '%';
+
+  // ── Volume ────────────────────────────────────────────────────────────────
+  cs('vol-current', fmtVolume(vol.current));
+  cs('vol-avg',     fmtVolume(vol.avg_30d));
+  const ratioEl = document.getElementById('cmp-vol-ratio');
+  const r = vol.ratio;
+  if (r == null) { ratioEl.textContent = dash; ratioEl.style.color = ''; }
+  else if (r > 2)   { ratioEl.textContent = r.toFixed(2) + 'x  2x SURGE'; ratioEl.style.color = 'var(--green)'; }
+  else if (r > 1.5) { ratioEl.textContent = r.toFixed(2) + 'x  HIGH';     ratioEl.style.color = 'var(--yellow)'; }
+  else              { ratioEl.textContent = r.toFixed(2) + 'x';            ratioEl.style.color = 'var(--text)'; }
+
+  // ── Fundamentals ─────────────────────────────────────────────────────────
+  cs('f-mktcap',   fmtMarketCap(fund.market_cap));
+  cs('f-pe',       fmt(fund.pe_trailing));
+  cs('f-fwdpe',    fmt(fund.pe_forward));
+  cs('f-eps',      fmtPrice(fund.eps_ttm));
+  cs('f-pb',       fmt(fund.price_to_book));
+  cs('f-evebitda', fmt(fund.ev_ebitda));
+  cs('f-rev',      fmtMarketCap(fund.revenue_ttm));
+  cs('f-ebitdam',  fmtRatioPct(fund.ebitda_margin));
+  cs('f-div',      fmtRatioPct(fund.dividend_yield));
+
+  // ── Technicals ────────────────────────────────────────────────────────────
+  cs('t-rsi-val', fmt(tech.rsi?.value));
+  const rsiLblEl = document.getElementById('cmp-t-rsi-lbl');
+  const rsiLbl = tech.rsi?.label;
+  if (rsiLbl) {
+    rsiLblEl.textContent = rsiLbl;
+    rsiLblEl.style.color = rsiLbl === 'Overbought' ? 'var(--red)' : rsiLbl === 'Oversold' ? 'var(--green)' : 'var(--muted)';
+  } else { rsiLblEl.textContent = ''; }
+
+  cs('t-macd-val',  fmt(tech.macd?.value, 4));
+  cs('t-macd-sig',  fmt(tech.macd?.signal, 4));
+  cs('t-macd-hist', fmt(tech.macd?.histogram, 4));
+  const dirEl = document.getElementById('cmp-t-macd-dir');
+  dirEl.textContent = tech.macd?.direction || dash;
+  dirEl.style.color = tech.macd?.direction === 'Bullish' ? 'var(--green)' : tech.macd?.direction === 'Bearish' ? 'var(--red)' : '';
+
+  const cmpSMA = (sfx, sma) => {
+    const vEl = document.getElementById('cmp-t-' + sfx + '-val');
+    const pEl = document.getElementById('cmp-t-' + sfx + '-pos');
+    if (vEl) vEl.textContent = fmtPrice(sma?.value);
+    if (pEl) { pEl.textContent = sma?.position || ''; pEl.style.color = sma?.position === 'Above' ? 'var(--green)' : sma?.position === 'Below' ? 'var(--red)' : ''; }
+  };
+  cmpSMA('sma20',  tech.sma20);
+  cmpSMA('sma50',  tech.sma50);
+  cmpSMA('sma200', tech.sma200);
+  cs('t-beta', fmt(tech.beta));
+  cs('t-hv', tech.hv30d != null ? tech.hv30d.toFixed(1) + '%' : dash);
+
+  // ── Analyst ───────────────────────────────────────────────────────────────
+  const total = (a.buy || 0) + (a.hold || 0) + (a.sell || 0);
+  if (total > 0) {
+    document.getElementById('cmp-an-bar-buy').style.width  = ((a.buy  || 0) / total * 100) + '%';
+    document.getElementById('cmp-an-bar-hold').style.width = ((a.hold || 0) / total * 100) + '%';
+    document.getElementById('cmp-an-bar-sell').style.width = ((a.sell || 0) / total * 100) + '%';
+  }
+  document.getElementById('cmp-an-buy').textContent  = a.buy  != null ? a.buy  : dash;
+  document.getElementById('cmp-an-hold').textContent = a.hold != null ? a.hold : dash;
+  document.getElementById('cmp-an-sell').textContent = a.sell != null ? a.sell : dash;
+  const consEl = document.getElementById('cmp-an-consensus');
+  consEl.textContent = a.consensus || dash;
+  if (a.consensus) {
+    const c = a.consensus;
+    consEl.style.color = c === 'Strong Buy' ? 'var(--green)' : c === 'Buy' ? '#66ff99' : c === 'Strong Sell' ? 'var(--red)' : c === 'Sell' ? '#ff7777' : 'var(--yellow)';
+  }
+  cs('an-target', fmtPrice(a.target_price));
+  const upEl = document.getElementById('cmp-an-upside');
+  upEl.textContent = fmtPct(a.implied_upside);
+  upEl.style.color = a.implied_upside != null ? (a.implied_upside >= 0 ? 'var(--green)' : 'var(--red)') : '';
+
+  // ── Chart ─────────────────────────────────────────────────────────────────
+  if (cmpChart) { cmpChart.destroy(); cmpChart = null; }
+  if (data.chart?.dates?.length && data.chart?.prices?.length) {
+    const ctx    = document.getElementById('cmp-chart').getContext('2d');
+    const prices = data.chart.prices;
+    const isUp   = prices.length > 1 && prices[prices.length - 1] >= prices[0];
+    const col    = isUp ? '#00ff88' : '#ff5050';
+    const gradFn = c => {
+      const g = c.chart.ctx.createLinearGradient(0, 0, 0, 280);
+      g.addColorStop(0, isUp ? 'rgba(0,255,136,.15)' : 'rgba(255,80,80,.15)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      return g;
+    };
+    const mkSMA = (d, color) => d ? { label: '', data: d, borderColor: color, borderWidth: 1, pointRadius: 0, fill: false, tension: 0.3 } : null;
+    cmpChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: data.chart.dates,
+        datasets: [
+          { label: cmpSymbol, data: prices, borderColor: col, borderWidth: 1.5, pointRadius: 0, fill: true, backgroundColor: gradFn, tension: 0.3 },
+          mkSMA(data.chart.sma20,  'rgba(0,200,255,0.6)'),
+          mkSMA(data.chart.sma50,  'rgba(255,160,0,0.6)'),
+          mkSMA(data.chart.sma200, 'rgba(200,100,255,0.5)'),
+        ].filter(Boolean),
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.y.toFixed(2) } },
+        },
+        scales: {
+          x: { display: false },
+          y: { display: true, position: 'right', ticks: { color: '#555', font: { size: 9 }, maxTicksLimit: 5, callback: v => '$' + v.toFixed(0) }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        },
+      },
+    });
+  }
 }
 
 async function loadCompare(symbol) {
@@ -4228,95 +4475,17 @@ async function loadCompare(symbol) {
   document.getElementById('cmp-empty').style.display   = 'none';
   document.getElementById('cmp-body').style.display    = 'none';
   document.getElementById('cmp-loading').style.display = 'block';
-
   try {
-    const res  = await fetch('/api/ticker/' + encodeURIComponent(symbol));
+    const res = await fetch('/api/ticker/' + encodeURIComponent(symbol));
     if (!res.ok) throw new Error('not found');
     const data = await res.json();
-
-    // API structure: data.header, data.price_stats, data.volume, data.fundamentals, data.technicals, data.chart
-    const hdr  = data.header  || {};
-    const ps   = data.price_stats || {};
-    const vol  = data.volume  || {};
-    const fund = data.fundamentals || {};
-    const tech = data.technicals || {};
-
-    const chg  = hdr.change ?? 0;
-    const chgP = hdr.change_pct ?? 0;
-    const chgColor = chg >= 0 ? 'var(--accent)' : 'var(--red)';
-
-    document.getElementById('cmp-ticker-label').textContent = symbol;
-    document.getElementById('cmp-name').textContent  = hdr.company_name || symbol;
-    document.getElementById('cmp-price').textContent = hdr.current_price != null ? '$' + hdr.current_price.toFixed(2) : '—';
-    document.getElementById('cmp-change').innerHTML  =
-      `<span style="color:${chgColor}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)} (${chg >= 0 ? '+' : ''}${chgP.toFixed(2)}%)</span>`;
-    document.getElementById('cmp-meta').textContent  =
-      [hdr.exchange, hdr.sector].filter(Boolean).join(' · ');
-
-    // Stats — match the actual API field names
-    const stats = [
-      { l: 'Market Cap',  v: _cmpFmt(fund.market_cap, '$') },
-      { l: 'P/E (TTM)',   v: fund.pe_trailing != null ? fund.pe_trailing.toFixed(1) : '—' },
-      { l: '52W High',    v: ps.week52_high != null ? '$' + ps.week52_high.toFixed(2) : '—' },
-      { l: '52W Low',     v: ps.week52_low  != null ? '$' + ps.week52_low.toFixed(2)  : '—' },
-      { l: 'Volume',      v: _cmpFmt(vol.current) },
-      { l: 'Avg Vol',     v: _cmpFmt(vol.avg_30d) },
-      { l: 'Div Yield',   v: fund.dividend_yield != null ? (fund.dividend_yield * 100).toFixed(2) + '%' : '—' },
-      { l: 'Beta',        v: tech.beta != null ? tech.beta.toFixed(2) : '—' },
-    ];
-    document.getElementById('cmp-stats').innerHTML = stats.map(s => `
-      <div class="cmp-stat">
-        <div class="cmp-stat-lbl">${s.l}</div>
-        <div class="cmp-stat-val">${s.v}</div>
-      </div>`).join('');
-
-    // Chart — last 60 days (data.chart.dates / data.chart.prices)
-    if (data.chart?.dates?.length && data.chart?.prices?.length) {
-      const labels = data.chart.dates.slice(-60);
-      const prices = data.chart.prices.slice(-60);
-      const isUp   = prices.length > 1 && prices[prices.length - 1] >= prices[0];
-      const col    = isUp ? '#00ff88' : '#ff5050';
-      if (cmpChart) { cmpChart.destroy(); cmpChart = null; }
-      const ctx = document.getElementById('cmp-chart').getContext('2d');
-      cmpChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            data: prices, borderColor: col, borderWidth: 1.5,
-            pointRadius: 0, fill: true,
-            backgroundColor: ctx => {
-              const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 150);
-              g.addColorStop(0, isUp ? 'rgba(0,255,136,.18)' : 'rgba(255,80,80,.18)');
-              g.addColorStop(1, 'rgba(0,0,0,0)');
-              return g;
-            },
-            tension: 0.3,
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false, animation: false,
-          plugins: { legend: { display: false }, tooltip: {
-            callbacks: { label: ctx => '$' + ctx.parsed.y.toFixed(2) }
-          }},
-          scales: {
-            x: { display: false },
-            y: { display: true, position: 'right',
-              ticks: { color: '#555', font: { size: 9 }, maxTicksLimit: 4,
-                callback: v => '$' + v.toFixed(0) },
-              grid: { color: 'rgba(255,255,255,0.04)' }
-            }
-          }
-        }
-      });
-    }
-
+    renderCompare(data);
     document.getElementById('cmp-loading').style.display = 'none';
     document.getElementById('cmp-body').style.display    = 'flex';
   } catch (e) {
     document.getElementById('cmp-loading').style.display = 'none';
     document.getElementById('cmp-empty').style.display   = 'block';
-    document.getElementById('cmp-empty').textContent     = 'Ticker not found.';
+    document.getElementById('cmp-empty').textContent     = 'Ticker not found or no data available.';
   }
 }
 
@@ -4337,6 +4506,10 @@ function _closeCompare() {
   document.getElementById('cmp-input').value           = '';
   if (cmpChart) { cmpChart.destroy(); cmpChart = null; }
   cmpSymbol = null;
+  // Reset analyst bars
+  ['cmp-an-bar-buy','cmp-an-bar-hold','cmp-an-bar-sell'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.width = '0%';
+  });
 }
 
 // Compare toggle
