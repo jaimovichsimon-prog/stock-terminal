@@ -2923,13 +2923,7 @@ function renderNewsCards(articles) {
   // Portfolio-only filter
   if (typeof _nfPfOnly !== 'undefined' && _nfPfOnly) {
     const affectedIds = new Set((_pfImpacts || []).map(i => i.article_id));
-    filtered = filtered.filter((_, idx) => {
-      // find original index in newsArticles
-      const origIdx = newsArticles.indexOf(articles[idx] ?? filtered[idx]);
-      return affectedIds.has(origIdx);
-    });
-    // simpler: keep any article whose original index appears in _pfImpacts
-    filtered = articles.filter((_, idx) => affectedIds.has(idx));
+    filtered = filtered.filter(a => affectedIds.has(newsArticles.indexOf(a)));
   }
 
   if (filtered.length === 0) {

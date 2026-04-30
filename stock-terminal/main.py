@@ -1229,70 +1229,129 @@ _HIGH_IMPORTANCE = [
 ]
 
 # ---------------------------------------------------------------------------
-# Sentiment classification — equity/risk-asset perspective, phrase-weighted
+# Sentiment classification — equity/risk-asset perspective
 # ---------------------------------------------------------------------------
-# Multi-word phrases are scored ±2 (more precise context).
-# Single words use padded spaces for boundary matching and score ±1.
-# Net score must reach ±2 to avoid mis-classifying from a single weak word.
-# Words like "cut", "fall", "risk", "concern" are intentionally omitted:
-# they are too ambiguous on their own (rate CUT = Positive for equities).
+# Phrases scored ±2 (unambiguous multi-word signals).
+# Single words scored ±1 via regex \b boundaries — fixes the space-padding
+# bug where "rally." at end of sentence was silently skipped.
 
-_SENT_PHRASES_POS = [  # score +2 each
-    "rate cut", "rate cuts", "fed cut", "fed cuts", "fed pivot", "fed pause",
-    "fed pauses", "interest rate cut", "interest rate cuts",
+_SENT_PHRASES_POS = [
+    # Fed / monetary dovish
+    "rate cut", "rate cuts", "fed cut", "fed cuts", "fed pivot",
+    "fed pause", "fed pauses", "fed holds", "fed hold",
+    "interest rate cut", "interest rate cuts",
+    "dovish", "easing cycle", "quantitative easing",
+    "stimulus package", "fiscal stimulus",
+    # Inflation cooling
+    "inflation cools", "inflation cooled", "cooling inflation",
+    "inflation falls", "inflation fell", "inflation eases", "inflation eased",
+    "inflation slows", "inflation slowed", "lower inflation", "disinflation",
+    "prices cool", "prices ease", "prices fall",
+    # Data beats
     "better than expected", "beat expectations", "beats estimates",
-    "beat estimates", "above expectations", "strong jobs report",
-    "blowout quarter", "record high", "all-time high", "new all-time high",
-    "soft landing", "dovish", "dovish signal", "easing cycle",
-    "quantitative easing", "stimulus package", "fiscal stimulus",
-    "ceasefire", "peace deal", "trade deal", "trade agreement signed",
-    "inflation cools", "cooling inflation", "lower inflation",
-    "disinflation", "inflation slows", "inflation falls",
-    "market rally", "stocks rally", "equities rally", "stocks surge",
-    "strong gdp", "gdp beats", "economy accelerates", "upgrade",
-    "raised guidance", "raised outlook", "buyback", "dividend increase",
+    "beat estimates", "above expectations", "exceeded expectations",
+    "blowout", "record high", "all-time high",
+    # Growth / jobs
+    "soft landing", "strong jobs", "jobs added", "strong gdp", "gdp beats",
+    "economy grows", "economy expands", "economy accelerates",
+    # Market positive
+    "stocks rally", "markets rally", "equities rally", "market rally",
+    "stocks surge", "markets surge",
+    # Geopolitical resolution
+    "ceasefire", "peace deal", "trade deal", "trade agreement",
+    "sanctions lifted", "sanctions eased", "tariffs reduced",
+    # Company positive
+    "raised guidance", "raised outlook", "upgrade", "buyback",
 ]
 
-_SENT_PHRASES_NEG = [  # score -2 each
+_SENT_PHRASES_NEG = [
+    # Fed / monetary hawkish
     "rate hike", "rate hikes", "interest rate hike", "interest rate hikes",
-    "hawkish", "hawkish signal", "tightening cycle", "emergency rate hike",
+    "hawkish", "tightening cycle", "emergency rate hike",
+    # Data misses
     "worse than expected", "miss expectations", "misses estimates",
     "missed estimates", "below expectations", "disappoints",
-    "market crash", "flash crash", "market sell-off", "market selloff",
+    "hotter than expected",
+    # Inflation rising
+    "inflation rises", "inflation rose", "inflation jumps", "inflation surged",
+    "inflation accelerates", "inflation surge", "inflation spike",
+    "prices rise", "prices surged", "prices jumped",
+    # Market crash
+    "market crash", "flash crash", "market selloff", "market sell-off",
     "stocks plunge", "equities fall sharply",
+    # Financial crisis
     "bank collapse", "bank failure", "bank run", "systemic risk",
     "financial crisis", "credit crunch", "contagion",
-    "stagflation", "hyperinflation", "inflation surge", "inflation spike",
-    "inflation jumps", "inflation accelerates",
+    "stagflation", "hyperinflation",
+    # Recession
     "recession confirmed", "gdp contraction", "gdp shrinks",
-    "yield curve inversion", "sovereign default", "debt ceiling crisis",
-    "credit downgrade", "rating downgrade", "emergency meeting",
+    "yield curve inversion", "sovereign default", "debt ceiling",
+    "credit downgrade", "rating downgrade",
+    # Geopolitical
     "war escalates", "military invasion", "military strike",
-    "nuclear threat", "sanctions imposed", "oil supply disruption",
-    "tariff escalation", "trade war escalates",
-    "mass layoffs", "layoffs announced", "job cuts announced",
+    "nuclear threat", "sanctions imposed", "new sanctions",
+    "oil supply disruption", "trade war", "tariff escalation",
+    "new tariffs", "tariff hike",
+    # Jobs
+    "mass layoffs", "layoffs announced", "job cuts",
 ]
 
-_SENT_WORDS_POS = [  # score +1 each (word-boundary matched)
-    " rally ", " rallies ", " surge ", " surges ", " gain ", " gains ",
-    " rise ", " rises ", " jump ", " jumps ", " soar ", " soars ",
-    " boom ", " recovery ", " recovers ", " rebound ", " rebounds ",
-    " bullish ", " upbeat ", " optimism ", " expansion ", " expansionary ",
-    " hiring ", " outperform ", " outperforms ", " upgrade ", " upgrades ",
-    " improves ", " improvement ",
+# Single words — regex \b avoids matching substrings and handles punctuation
+_SENT_WORDS_POS = [
+    "rally", "rallies", "rallied", "rallying",
+    "surge", "surges", "surged", "surging",
+    "gain", "gains", "gained", "gaining",
+    "rise", "rises", "rose", "rising",
+    "jump", "jumps", "jumped", "jumping",
+    "soar", "soars", "soared", "soaring",
+    "boom", "booms", "boomed",
+    "recovery", "recover", "recovers", "recovered", "recovering",
+    "rebound", "rebounds", "rebounded", "rebounding",
+    "bullish", "upbeat", "optimism", "optimistic",
+    "expansion", "expansionary", "expands", "expanded", "expanding",
+    "advance", "advances", "advanced", "advancing",
+    "outperform", "outperforms", "outperformed",
+    "upgrade", "upgrades", "upgraded",
+    "improves", "improved", "improving", "improvement",
+    "accelerate", "accelerates", "accelerated", "accelerating",
+    "stabilize", "stabilizes", "stabilized", "stabilizing",
+    "strengthen", "strengthens", "strengthened", "strengthening",
+    "boost", "boosts", "boosted", "boosting",
+    "hiring", "hired",
 ]
 
-_SENT_WORDS_NEG = [  # score -1 each (word-boundary matched)
-    " crash ", " crashes ", " collapse ", " collapses ",
-    " plunge ", " plunges ", " tumble ", " tumbles ",
-    " slump ", " slumps ", " bearish ", " slowdown ",
-    " downturn ", " layoffs ", " contraction ", " recessionary ",
-    " downgrade ", " downgrades ", " underperform ",
+_SENT_WORDS_NEG = [
+    "crash", "crashes", "crashed", "crashing",
+    "collapse", "collapses", "collapsed", "collapsing",
+    "plunge", "plunges", "plunged", "plunging",
+    "tumble", "tumbles", "tumbled", "tumbling",
+    "slump", "slumps", "slumped", "slumping",
+    "fell", "fallen", "falling",
+    "drop", "drops", "dropped", "dropping",
+    "decline", "declines", "declined", "declining",
+    "weaken", "weakens", "weakened", "weakening", "weakness",
+    "bearish", "slowdown", "downturn",
+    "layoffs", "contraction", "recessionary",
+    "downgrade", "downgrades", "downgraded", "downgrading",
+    "underperform", "underperforms", "underperformed",
+    "pressured", "pressuring",
+    "deteriorate", "deteriorates", "deteriorated", "deteriorating",
+    "slipped", "slipping",
+    "worsen", "worsens", "worsened", "worsening",
+    "shrink", "shrinks", "shrank", "shrinking",
+    "contract", "contracts", "contracted", "contracting",
 ]
+
+# Compile word patterns once at import time for performance
+_RE_POS = re.compile(
+    r'\b(?:' + '|'.join(re.escape(w) for w in _SENT_WORDS_POS) + r')\b'
+)
+_RE_NEG = re.compile(
+    r'\b(?:' + '|'.join(re.escape(w) for w in _SENT_WORDS_NEG) + r')\b'
+)
 
 
 def _classify_category(text: str) -> str:
-    # Strong Fed signals override scoring
     fed_triggers = ["federal reserve", "fomc", "powell", "fed meeting", "rate decision",
                     "rate hike", "rate cut", "fed statement", "fed holds", "press conference"]
     if any(kw in text for kw in fed_triggers):
@@ -1304,12 +1363,11 @@ def _classify_category(text: str) -> str:
 
 def _classify_sentiment(text: str) -> str:
     """
-    Classify market sentiment from equity-investor perspective.
-    Multi-word phrases score ±2; single padded words score ±1.
-    Threshold: net score > 0 → Positive, < 0 → Negative, == 0 → Neutral.
-    A single strong phrase (±2) or two weak words (±1 each) is enough.
+    Equity-investor sentiment.
+    Phrases score ±2; single words via pre-compiled regex score ±1.
+    score > 0 → Positive, score < 0 → Negative, 0 → Neutral.
     """
-    t = " " + text + " "   # pad for clean word-boundary matching
+    t = text.lower()
     score = 0
     for phrase in _SENT_PHRASES_POS:
         if phrase in t:
@@ -1317,12 +1375,8 @@ def _classify_sentiment(text: str) -> str:
     for phrase in _SENT_PHRASES_NEG:
         if phrase in t:
             score -= 2
-    for word in _SENT_WORDS_POS:
-        if word in t:
-            score += 1
-    for word in _SENT_WORDS_NEG:
-        if word in t:
-            score -= 1
+    score += len(_RE_POS.findall(t))
+    score -= len(_RE_NEG.findall(t))
     if score > 0:
         return "Positive"
     if score < 0:
@@ -1477,20 +1531,157 @@ class PortfolioImpactRequest(BaseModel):
     articles: List[dict]   # [{id, title, summary}]
 
 
+# ---------------------------------------------------------------------------
+# Per-ticker topic keywords — used when Claude is unavailable.
+# Maps ticker → relevant topics so oil news → YPF, chip news → NVDA, etc.
+# ---------------------------------------------------------------------------
+_TICKER_TOPICS: dict[str, list[str]] = {
+    # Energy
+    "YPF":  ["oil", "petroleum", "crude", "opec", "brent", "wti", "natural gas",
+             "energy price", "oil price", "fuel", "refin", "hydrocarbons",
+             "latin america energy", "argentina energy"],
+    "XOM":  ["oil", "petroleum", "crude", "opec", "brent", "wti", "natural gas", "energy"],
+    "CVX":  ["oil", "petroleum", "crude", "opec", "brent", "wti", "energy"],
+    "BP":   ["oil", "petroleum", "crude", "opec", "brent", "wti", "energy"],
+    "COP":  ["oil", "petroleum", "crude", "opec", "energy"],
+    "SLB":  ["oil", "drilling", "oilfield", "crude", "energy"],
+    "OXY":  ["oil", "petroleum", "crude", "opec", "energy"],
+    "PSX":  ["oil", "refinery", "petroleum", "crude", "energy"],
+    "MPC":  ["oil", "refinery", "petroleum", "crude", "energy"],
+    "HAL":  ["oil", "drilling", "oilfield", "crude", "energy"],
+    "PBR":  ["oil", "petroleum", "crude", "opec", "brazil energy"],
+    "USO":  ["oil", "crude", "wti", "petroleum"],
+    "UNG":  ["natural gas", "lng", "gas price"],
+    # Semiconductors / Tech
+    "NVDA": ["nvidia", "gpu", "semiconductor", "ai chip", "artificial intelligence",
+             "data center", "blackwell", "chip", "h100", "export control"],
+    "AMD":  ["amd", "semiconductor", "cpu", "gpu", "chip", "processor"],
+    "INTC": ["intel", "semiconductor", "chip", "processor", "foundry"],
+    "TSM":  ["tsmc", "taiwan", "semiconductor", "chip", "foundry"],
+    "TSMC": ["tsmc", "taiwan", "semiconductor", "chip", "foundry"],
+    "QCOM": ["qualcomm", "semiconductor", "chip", "mobile", "wireless"],
+    "AVGO": ["broadcom", "semiconductor", "chip", "networking"],
+    "MU":   ["micron", "memory", "dram", "nand", "semiconductor"],
+    "AMAT": ["semiconductor", "chip equipment", "wafer"],
+    "LRCX": ["semiconductor", "chip equipment", "wafer"],
+    # Big Tech
+    "AAPL": ["apple", "iphone", "ipad", "mac", "app store", "china tariff",
+             "consumer electronics", "services revenue"],
+    "MSFT": ["microsoft", "azure", "windows", "office", "cloud", "ai"],
+    "GOOGL":["google", "alphabet", "search", "youtube", "android", "cloud"],
+    "GOOG": ["google", "alphabet", "search", "youtube", "android", "cloud"],
+    "AMZN": ["amazon", "aws", "e-commerce", "cloud", "retail"],
+    "META": ["meta", "facebook", "instagram", "whatsapp", "social media", "advertising"],
+    "NFLX": ["netflix", "streaming", "content", "subscriber"],
+    # Finance
+    "JPM":  ["jpmorgan", "banking", "interest rate", "fed", "credit", "financial"],
+    "BAC":  ["bank of america", "banking", "interest rate", "credit", "financial"],
+    "GS":   ["goldman", "investment banking", "trading", "financial"],
+    "MS":   ["morgan stanley", "wealth management", "banking", "financial"],
+    "WFC":  ["wells fargo", "banking", "mortgage", "credit"],
+    "C":    ["citigroup", "banking", "global", "credit", "financial"],
+    "BRK.B":["berkshire", "insurance", "buffett", "financial"],
+    # Autos / EV
+    "TSLA": ["tesla", "electric vehicle", "ev", "lithium", "battery", "autonomous"],
+    "GM":   ["general motors", "automobile", "ev", "car", "tariff"],
+    "F":    ["ford", "automobile", "ev", "car", "tariff"],
+    "RIVN": ["rivian", "electric vehicle", "ev"],
+    # Commodities / Materials
+    "GLD":  ["gold", "precious metal", "safe haven", "inflation hedge"],
+    "SLV":  ["silver", "precious metal"],
+    "GDX":  ["gold mining", "gold", "precious metal"],
+    "FCX":  ["copper", "mining", "commodity"],
+    "NEM":  ["gold mining", "gold"],
+    # Healthcare / Pharma
+    "JNJ":  ["johnson", "pharma", "drug", "fda", "healthcare"],
+    "PFE":  ["pfizer", "pharma", "drug", "fda", "vaccine"],
+    "MRK":  ["merck", "pharma", "drug", "fda"],
+    "ABBV": ["abbvie", "pharma", "drug", "fda", "immunology"],
+    "LLY":  ["lilly", "pharma", "drug", "fda", "obesity", "glp"],
+    # Consumer / Retail
+    "WMT":  ["walmart", "retail", "consumer", "tariff", "import"],
+    "AMZN": ["amazon", "retail", "consumer", "tariff", "e-commerce"],
+    "TGT":  ["target", "retail", "consumer", "tariff"],
+    "COST": ["costco", "retail", "consumer", "membership"],
+    # Argentina / EM specific
+    "LOMA": ["argentina", "cement", "construction", "latin america"],
+    "GGAL": ["argentina", "bank", "galicia", "financial", "peso"],
+    "BMA":  ["argentina", "bank", "macro", "financial", "peso"],
+    "CEPU": ["argentina", "energy", "electricity", "utility"],
+    "GLOB": ["globant", "technology", "software", "latin america"],
+    "MELI": ["mercadolibre", "e-commerce", "fintech", "latin america", "brazil"],
+}
+
+# Sector-level fallback: if ticker not in _TICKER_TOPICS, match by sector keywords
+_SECTOR_TOPICS: dict[str, list[str]] = {
+    "Energy":                   ["oil", "petroleum", "crude", "opec", "brent", "wti",
+                                  "natural gas", "lng", "energy price", "fuel"],
+    "Technology":               ["semiconductor", "chip", "ai", "artificial intelligence",
+                                  "tech", "cloud", "data center", "software"],
+    "Financials":               ["interest rate", "fed rate", "bank", "banking",
+                                  "credit", "lending", "financial crisis", "yield"],
+    "Healthcare":               ["drug", "fda", "pharmaceutical", "biotech",
+                                  "clinical trial", "healthcare", "vaccine"],
+    "Consumer Discretionary":   ["consumer spending", "retail", "tariff", "import",
+                                  "automobile", "housing"],
+    "Industrials":              ["manufacturing", "pmi", "factory", "supply chain",
+                                  "infrastructure", "tariff"],
+    "Materials":                ["gold", "copper", "mining", "steel", "aluminum",
+                                  "commodity", "raw material"],
+}
+
+
 def _keyword_portfolio_impact(tickers: list, articles: list) -> dict:
-    """Keyword fallback: flag articles that directly mention a portfolio ticker."""
+    """
+    Sector/topic-aware fallback for portfolio impact when Claude is unavailable.
+    Checks: (1) direct ticker mention, (2) company-specific topic keywords,
+    (3) sector-level topic keywords.
+    """
     impacts = []
     for a in articles:
-        text = " " + (a.get("title", "") + " " + a.get("summary", "")).lower() + " "
-        for ticker in tickers:
-            # Word-boundary match so "MS" doesn't match "MSFT"
-            if f" {ticker.lower()} " in text or f"({ticker.lower()})" in text:
+        raw = (a.get("title", "") + " " + a.get("summary", "")).lower()
+        art_sent = _classify_sentiment(raw)
+
+        for entry in tickers:
+            # entry may be just a ticker string or a dict {ticker, sector, name}
+            if isinstance(entry, dict):
+                ticker = entry.get("ticker", "").upper()
+                sector = entry.get("sector", "")
+            else:
+                ticker = str(entry).upper()
+                sector = ""
+
+            direction = art_sent if art_sent != "Neutral" else "Mixed"
+            note      = None
+
+            # 1. Direct ticker mention (word boundary)
+            if re.search(r'\b' + re.escape(ticker) + r'\b', raw, re.IGNORECASE):
+                note = f"{ticker} is directly referenced in this article."
+
+            # 2. Company-specific topic keywords
+            elif ticker in _TICKER_TOPICS:
+                matched = [kw for kw in _TICKER_TOPICS[ticker] if kw in raw]
+                if matched:
+                    topic = matched[0]
+                    note = (f"This article covers {topic}, which directly affects "
+                            f"{ticker}'s revenues and valuation.")
+
+            # 3. Sector-level fallback
+            elif sector and sector in _SECTOR_TOPICS:
+                matched = [kw for kw in _SECTOR_TOPICS[sector] if kw in raw]
+                if matched:
+                    topic = matched[0]
+                    note = (f"As a {sector} company, {ticker} is exposed to "
+                            f"{topic} dynamics covered in this article.")
+
+            if note:
                 impacts.append({
                     "article_id": a["id"],
-                    "ticker": ticker.upper(),
-                    "direction": "Mixed",
-                    "note": f"{ticker.upper()} is directly referenced in this article.",
+                    "ticker":     ticker,
+                    "direction":  direction,
+                    "note":       note,
                 })
+
     return {"impacts": impacts}
 
 
