@@ -638,6 +638,147 @@
     background: linear-gradient(to right, #142864, #3c3c3c, #c82828);
   }
 
+  /* ── Nav user pill ───────────────────────────────────────────────────────── */
+  #nav-user-area {
+    margin-left: auto; display: flex; align-items: center; gap: 10px;
+  }
+  #nav-signin-btn {
+    padding: 5px 14px; border: 1px solid var(--border2);
+    border-radius: 999px; background: transparent; color: var(--muted);
+    font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600;
+    letter-spacing: .08em; cursor: pointer; transition: all .15s;
+  }
+  #nav-signin-btn:hover { color: var(--accent); border-color: var(--accent); }
+  #nav-user-pill {
+    display: none; align-items: center; gap: 8px;
+    padding: 4px 12px 4px 8px; border: 1px solid var(--border2);
+    border-radius: 999px; background: var(--panel);
+  }
+  #nav-user-pill.visible { display: flex; }
+  .user-avatar {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent); color: #07090b;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 800; text-transform: uppercase;
+  }
+  #nav-user-email { font-size: 11px; color: var(--text); font-weight: 500; }
+  #nav-logout-btn {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 14px; padding: 0; line-height: 1; transition: color .15s;
+  }
+  #nav-logout-btn:hover { color: var(--red); }
+
+  /* ── Auth Modal ──────────────────────────────────────────────────────────── */
+  #auth-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.7); backdrop-filter: blur(6px);
+    z-index: 1000; align-items: center; justify-content: center;
+  }
+  #auth-overlay.open { display: flex; }
+  #auth-modal {
+    background: var(--panel); border: 1px solid var(--border2);
+    border-radius: 12px; padding: 32px; width: 380px;
+    box-shadow: 0 24px 80px rgba(0,0,0,.6);
+    position: relative;
+  }
+  .auth-logo {
+    font-size: 11px; letter-spacing: .2em; color: var(--accent);
+    font-weight: 700; text-transform: uppercase; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .auth-logo::before {
+    content: "▪"; font-size: 16px;
+  }
+  .auth-tabs {
+    display: flex; gap: 0; margin-bottom: 24px;
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+  }
+  .auth-tab {
+    flex: 1; padding: 8px; background: transparent; border: none;
+    color: var(--muted); font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 600; letter-spacing: .08em;
+    cursor: pointer; transition: all .15s; text-transform: uppercase;
+  }
+  .auth-tab.active { background: var(--panel2); color: var(--text); }
+  .auth-field { margin-bottom: 14px; }
+  .auth-field label {
+    display: block; font-size: 10px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--label); margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .auth-field input {
+    width: 100%; padding: 10px 12px; background: var(--bg);
+    border: 1px solid var(--border2); border-radius: 6px;
+    color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px;
+    outline: none; transition: border-color .15s; box-sizing: border-box;
+  }
+  .auth-field input:focus { border-color: var(--accent); }
+  #auth-submit-btn {
+    width: 100%; padding: 11px; margin-top: 6px;
+    background: var(--accent); border: none; border-radius: 8px;
+    color: #07090b; font-family: 'Inter', sans-serif; font-size: 13px;
+    font-weight: 700; cursor: pointer; transition: opacity .15s;
+    letter-spacing: .04em;
+  }
+  #auth-submit-btn:hover { opacity: .88; }
+  #auth-submit-btn:disabled { opacity: .5; cursor: not-allowed; }
+  #auth-error {
+    margin-top: 10px; font-size: 12px; color: var(--red);
+    text-align: center; min-height: 16px;
+  }
+  #auth-close {
+    position: absolute; top: 16px; right: 16px;
+    background: none; border: none; color: var(--muted);
+    font-size: 18px; cursor: pointer; line-height: 1;
+    transition: color .15s;
+  }
+  #auth-close:hover { color: var(--text); }
+
+  /* ── AI Analysis panel ───────────────────────────────────────────────────── */
+  #ai-panel {
+    display: none; margin-bottom: 10px;
+  }
+  #ai-panel.visible { display: block; }
+  #ai-panel .panel-title {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .ai-spark {
+    color: var(--accent); font-size: 14px; line-height: 1;
+  }
+  #ai-content {
+    font-family: 'Inter', sans-serif; font-size: 13px;
+    line-height: 1.7; color: var(--text); padding-top: 8px;
+    min-height: 60px;
+  }
+  #ai-content h2 {
+    font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin: 16px 0 6px;
+    padding-bottom: 4px; border-bottom: 1px solid var(--border);
+  }
+  #ai-content h2:first-child { margin-top: 4px; }
+  #ai-content p { margin: 0 0 8px; color: var(--muted); }
+  #ai-content strong { color: var(--text); font-weight: 600; }
+  #ai-content ul { margin: 4px 0 8px; padding-left: 16px; }
+  #ai-content li { color: var(--muted); margin-bottom: 3px; }
+  .ai-cursor {
+    display: inline-block; width: 2px; height: 13px;
+    background: var(--accent); margin-left: 1px;
+    animation: blink 0.8s step-end infinite; vertical-align: text-bottom;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  .ai-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 14px; border: 1px solid rgba(0,217,126,.4);
+    border-radius: 999px; background: var(--accent-dim);
+    color: var(--accent); font-family: 'Inter', sans-serif;
+    font-size: 11px; font-weight: 600; letter-spacing: .06em;
+    cursor: pointer; transition: all .15s; white-space: nowrap;
+  }
+  .ai-btn:hover { background: rgba(0,217,126,.18); border-color: var(--accent); }
+  .ai-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .ai-btn.loading .ai-btn-icon { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
   /* ── Earnings Calendar ───────────────────────────────────────────────────── */
   #earnings-cal-page { padding: 16px 18px; display: none; }
 
@@ -890,6 +1031,36 @@
   <button class="nav-tab" data-page="news">News</button>
   <button class="nav-tab" data-page="watchlist">Watchlist</button>
   <button class="nav-tab" data-page="earnings">Earnings</button>
+  <div id="nav-user-area">
+    <button id="nav-signin-btn">Sign In</button>
+    <div id="nav-user-pill">
+      <div class="user-avatar" id="nav-avatar"></div>
+      <span id="nav-user-email"></span>
+      <button id="nav-logout-btn" title="Sign out">×</button>
+    </div>
+  </div>
+</div>
+
+<!-- Auth Modal -->
+<div id="auth-overlay">
+  <div id="auth-modal">
+    <button id="auth-close">×</button>
+    <div class="auth-logo">Terminal Pro</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-auth="login">Sign In</button>
+      <button class="auth-tab" data-auth="register">Create Account</button>
+    </div>
+    <div class="auth-field">
+      <label>Email</label>
+      <input id="auth-email" type="email" placeholder="you@example.com" autocomplete="email">
+    </div>
+    <div class="auth-field">
+      <label>Password</label>
+      <input id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button id="auth-submit-btn">Sign In</button>
+    <div id="auth-error"></div>
+  </div>
 </div>
 
 <!-- Terminal Page -->
@@ -938,7 +1109,16 @@
     <div class="hdr-footer">
       <div id="refresh-status">—</div>
       <div style="font-size:10px;color:var(--muted)" id="hdr-updated"></div>
+      <button class="ai-btn" id="ai-analyze-btn" style="margin-left:auto">
+        <span class="ai-btn-icon">✦</span> AI Analysis
+      </button>
     </div>
+  </div>
+
+  <!-- AI Analysis Panel -->
+  <div id="ai-panel" class="panel">
+    <div class="panel-title"><span class="ai-spark">✦</span> AI Analysis</div>
+    <div id="ai-content"></div>
   </div>
 
   <!-- Row 1: Price Stats | Volume | Fundamentals -->
@@ -3252,7 +3432,331 @@ const _origLoadTicker = loadTicker;
 loadTicker = async function(symbol, isRefresh = false) {
   await _origLoadTicker(symbol, isRefresh);
   if (!isRefresh) loadOptions(symbol);
+  // Reset AI panel when new ticker loaded
+  if (!isRefresh) {
+    document.getElementById('ai-panel').classList.remove('visible');
+    document.getElementById('ai-content').innerHTML = '';
+  }
 };
+
+// ---------------------------------------------------------------------------
+// Auth state
+// ---------------------------------------------------------------------------
+let authToken = localStorage.getItem('auth_token') || null;
+let authUser  = JSON.parse(localStorage.getItem('auth_user') || 'null');
+
+// ---------------------------------------------------------------------------
+// Server sync helpers (portfolio + watchlist)
+// ---------------------------------------------------------------------------
+async function pushPortfolioToServer() {
+  if (!authToken || !pfPositions) return;
+  try {
+    await fetch('/api/user/portfolio', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({ positions: pfPositions }),
+    });
+  } catch (_) { /* offline — local state is the source of truth */ }
+}
+
+async function pushWatchlistToServer() {
+  if (!authToken || !wlTickers) return;
+  try {
+    await fetch('/api/user/watchlist', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({ tickers: wlTickers }),
+    });
+  } catch (_) { /* offline */ }
+}
+
+async function syncAfterLogin() {
+  if (!authToken) return;
+  try {
+    const [pfRes, wlRes] = await Promise.all([
+      fetch('/api/user/portfolio', { headers: { Authorization: `Bearer ${authToken}` } }),
+      fetch('/api/user/watchlist', { headers: { Authorization: `Bearer ${authToken}` } }),
+    ]);
+    if (!pfRes.ok || !wlRes.ok) return;
+
+    const pfServer = await pfRes.json();
+    const wlServer = await wlRes.json();
+
+    const serverPositions = pfServer.positions || [];
+    const serverTickers   = wlServer.tickers   || [];
+
+    if (serverPositions.length > 0) {
+      // Server has data — use it (authoritative)
+      pfPositions = serverPositions;
+      localStorage.setItem('pf_positions', JSON.stringify(pfPositions));
+    } else if (pfPositions.length > 0) {
+      // Server empty but local has data — upload local to server
+      await pushPortfolioToServer();
+    }
+
+    if (serverTickers.length > 0) {
+      wlTickers = serverTickers;
+      localStorage.setItem('wl_tickers', JSON.stringify(wlTickers));
+    } else if (wlTickers.length > 0) {
+      await pushWatchlistToServer();
+    }
+
+    // Re-render both views
+    renderPfTable(null);
+    pfData = null;
+    renderWlTable([]);
+    wlLoaded = false;
+  } catch (err) {
+    console.warn('syncAfterLogin failed:', err);
+  }
+}
+
+function setAuth(token, user) {
+  authToken = token;
+  authUser  = user;
+  localStorage.setItem('auth_token', token);
+  localStorage.setItem('auth_user', JSON.stringify(user));
+  renderUserPill();
+  syncAfterLogin();   // ← pull/push data immediately on login
+}
+
+function clearAuth() {
+  authToken = null;
+  authUser  = null;
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('auth_user');
+  renderUserPill();
+}
+
+function renderUserPill() {
+  const signInBtn = document.getElementById('nav-signin-btn');
+  const pill      = document.getElementById('nav-user-pill');
+  const avatar    = document.getElementById('nav-avatar');
+  const emailEl   = document.getElementById('nav-user-email');
+  if (authUser) {
+    signInBtn.style.display = 'none';
+    pill.classList.add('visible');
+    avatar.textContent = authUser.email[0].toUpperCase();
+    emailEl.textContent = authUser.email;
+  } else {
+    signInBtn.style.display = '';
+    pill.classList.remove('visible');
+  }
+}
+
+// Verify stored token on load + sync data
+(async () => {
+  if (authToken) {
+    try {
+      const r = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${authToken}` } });
+      if (!r.ok) {
+        clearAuth();
+      } else {
+        renderUserPill();
+        syncAfterLogin();  // ← restore server data on page reload
+      }
+    } catch { /* offline — keep local state */ }
+  }
+  renderUserPill();
+})();
+
+// ---------------------------------------------------------------------------
+// Auth modal
+// ---------------------------------------------------------------------------
+let authMode = 'login'; // 'login' | 'register'
+
+function openAuthModal(mode = 'login') {
+  authMode = mode;
+  document.getElementById('auth-overlay').classList.add('open');
+  document.getElementById('auth-error').textContent = '';
+  document.getElementById('auth-email').value = '';
+  document.getElementById('auth-password').value = '';
+  document.querySelectorAll('.auth-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.auth === mode);
+  });
+  document.getElementById('auth-submit-btn').textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+  setTimeout(() => document.getElementById('auth-email').focus(), 50);
+}
+
+function closeAuthModal() {
+  document.getElementById('auth-overlay').classList.remove('open');
+}
+
+document.getElementById('nav-signin-btn').addEventListener('click', () => openAuthModal('login'));
+document.getElementById('auth-close').addEventListener('click', closeAuthModal);
+document.getElementById('auth-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('auth-overlay')) closeAuthModal();
+});
+
+document.querySelectorAll('.auth-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    authMode = tab.dataset.auth;
+    document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.auth === authMode));
+    document.getElementById('auth-submit-btn').textContent = authMode === 'login' ? 'Sign In' : 'Create Account';
+    document.getElementById('auth-error').textContent = '';
+  });
+});
+
+// Enter key submits
+document.getElementById('auth-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('auth-submit-btn').click();
+});
+document.getElementById('auth-email').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('auth-password').focus();
+});
+
+document.getElementById('auth-submit-btn').addEventListener('click', async () => {
+  const btn      = document.getElementById('auth-submit-btn');
+  const errorEl  = document.getElementById('auth-error');
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+
+  if (!email || !password) { errorEl.textContent = 'Please fill in all fields.'; return; }
+
+  btn.disabled = true;
+  btn.textContent = authMode === 'login' ? 'Signing in…' : 'Creating account…';
+  errorEl.textContent = '';
+
+  try {
+    const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errorEl.textContent = data.detail || 'Something went wrong.';
+      btn.disabled = false;
+      btn.textContent = authMode === 'login' ? 'Sign In' : 'Create Account';
+      return;
+    }
+    setAuth(data.token, { email: data.email, user_id: data.user_id });
+    closeAuthModal();
+  } catch (err) {
+    errorEl.textContent = 'Network error. Please try again.';
+    btn.disabled = false;
+    btn.textContent = authMode === 'login' ? 'Sign In' : 'Create Account';
+  }
+});
+
+document.getElementById('nav-logout-btn').addEventListener('click', () => {
+  clearAuth();
+  document.getElementById('ai-panel').classList.remove('visible');
+});
+
+// ---------------------------------------------------------------------------
+// Wire save functions → server push on every change
+// (savePfPositions and saveWlTickers are declared earlier;
+//  we override them here once auth JS is in scope)
+// ---------------------------------------------------------------------------
+const _localSavePf = savePfPositions;
+savePfPositions = function () {
+  _localSavePf();
+  pushPortfolioToServer();
+};
+
+const _localSaveWl = saveWlTickers;
+saveWlTickers = function () {
+  _localSaveWl();
+  pushWatchlistToServer();
+};
+
+// ---------------------------------------------------------------------------
+// AI Analysis
+// ---------------------------------------------------------------------------
+let aiAbortCtrl = null;
+
+function renderMarkdown(text) {
+  return text
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, match => `<ul>${match}</ul>`)
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/^(?!<[hup])/gm, '')
+    .trim();
+}
+
+document.getElementById('ai-analyze-btn').addEventListener('click', async () => {
+  if (!authToken) {
+    openAuthModal('login');
+    return;
+  }
+  if (!currentSymbol) return;
+
+  const btn     = document.getElementById('ai-analyze-btn');
+  const panel   = document.getElementById('ai-panel');
+  const content = document.getElementById('ai-content');
+
+  // Abort previous if running
+  if (aiAbortCtrl) aiAbortCtrl.abort();
+  aiAbortCtrl = new AbortController();
+
+  btn.disabled = true;
+  btn.classList.add('loading');
+  btn.innerHTML = '<span class="ai-btn-icon">↻</span> Analyzing…';
+  panel.classList.add('visible');
+  content.innerHTML = '<span class="ai-cursor"></span>';
+
+  let raw = '';
+
+  try {
+    const res = await fetch(`/api/analyze/${currentSymbol}`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+      signal: aiAbortCtrl.signal,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Analysis failed' }));
+      if (res.status === 401) {
+        clearAuth();
+        closeAuthModal();
+        openAuthModal('login');
+        panel.classList.remove('visible');
+        return;
+      }
+      content.innerHTML = `<p style="color:var(--red)">${err.detail}</p>`;
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    content.innerHTML = '<span class="ai-cursor"></span>';
+    const cursor = content.querySelector('.ai-cursor');
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      for (const line of chunk.split('\n')) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6).trim();
+        if (payload === '[DONE]') break;
+        try {
+          const { text, error } = JSON.parse(payload);
+          if (error) { raw += `\n\n*Error: ${error}*`; break; }
+          if (text) raw += text;
+        } catch { /* partial chunk */ }
+      }
+      // Re-render with cursor at end
+      content.innerHTML = renderMarkdown(raw) + '<span class="ai-cursor"></span>';
+      content.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // Final render without cursor
+    content.innerHTML = renderMarkdown(raw);
+
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      content.innerHTML = `<p style="color:var(--red)">Connection error. Please try again.</p>`;
+    }
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    btn.innerHTML = '<span class="ai-btn-icon">✦</span> Re-analyze';
+  }
+});
 </script>
 </body>
 </html>

@@ -31,7 +31,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 # Auth deps
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, func
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Float, func, select, delete as sa_delete
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from jose import JWTError, jwt
 
@@ -60,6 +60,20 @@ class User(Base):
     email      = Column(String, unique=True, index=True, nullable=False)
     hashed_pw  = Column(String, nullable=False)
     created_at = Column(DateTime, default=func.now())
+
+class PortfolioPosition(Base):
+    __tablename__ = "portfolio_positions"
+    id       = Column(Integer, primary_key=True, index=True)
+    user_id  = Column(Integer, nullable=False, index=True)
+    ticker   = Column(String, nullable=False)
+    shares   = Column(Float, nullable=False)
+    avg_cost = Column(Float, nullable=False)
+
+class WatchlistItem(Base):
+    __tablename__ = "watchlist_items"
+    id      = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False, index=True)
+    ticker  = Column(String, nullable=False)
 
 Base.metadata.create_all(bind=engine)
 
@@ -107,7 +121,7 @@ def get_current_user(authorization: Optional[str] = Header(None), db: Session = 
         user_id = int(payload["sub"])
     except (JWTError, KeyError, ValueError):
         raise HTTPException(status_code=401, detail="Invalid token")
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     return user
@@ -136,7 +150,7 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
     body.email = body.email.strip().lower()
     if len(body.password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
-    if db.query(User).filter(User.email == body.email).first():
+    if db.execute(select(User).where(User.email == body.email)).scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
     user = User(email=body.email, hashed_pw=hash_password(body.password))
     db.add(user)
@@ -147,7 +161,7 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
 @app.post("/api/auth/login", response_model=AuthResponse)
 def login(body: LoginRequest, db: Session = Depends(get_db)):
     body.email = body.email.strip().lower()
-    user = db.query(User).filter(User.email == body.email).first()
+    user = db.execute(select(User).where(User.email == body.email)).scalar_one_or_none()
     if not user or not verify_password(body.password, user.hashed_pw):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     return AuthResponse(token=create_token(user.id, user.email), email=user.email, user_id=user.id)
@@ -155,6 +169,65 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
 @app.get("/api/auth/me")
 def me(current_user: User = Depends(get_current_user)):
     return {"user_id": current_user.id, "email": current_user.email}
+
+# ---------------------------------------------------------------------------
+# User data models
+# ---------------------------------------------------------------------------
+class PositionItem(BaseModel):
+    ticker:   str
+    shares:   float
+    avg_cost: float
+
+class PortfolioBody(BaseModel):
+    positions: List[PositionItem]
+
+class WatchlistBody(BaseModel):
+    tickers: List[str]
+
+# ---------------------------------------------------------------------------
+# Portfolio endpoints
+# ---------------------------------------------------------------------------
+@app.get("/api/user/portfolio")
+def get_portfolio(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    rows = db.execute(
+        select(PortfolioPosition).where(PortfolioPosition.user_id == current_user.id)
+    ).scalars().all()
+    return {"positions": [{"ticker": r.ticker, "shares": r.shares, "avg_cost": r.avg_cost} for r in rows]}
+
+@app.put("/api/user/portfolio")
+def put_portfolio(body: PortfolioBody, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db.execute(sa_delete(PortfolioPosition).where(PortfolioPosition.user_id == current_user.id))
+    for p in body.positions:
+        db.add(PortfolioPosition(
+            user_id=current_user.id,
+            ticker=p.ticker.upper().strip(),
+            shares=p.shares,
+            avg_cost=p.avg_cost,
+        ))
+    db.commit()
+    return {"ok": True, "count": len(body.positions)}
+
+# ---------------------------------------------------------------------------
+# Watchlist endpoints
+# ---------------------------------------------------------------------------
+@app.get("/api/user/watchlist")
+def get_watchlist(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    rows = db.execute(
+        select(WatchlistItem).where(WatchlistItem.user_id == current_user.id)
+    ).scalars().all()
+    return {"tickers": [r.ticker for r in rows]}
+
+@app.put("/api/user/watchlist")
+def put_watchlist(body: WatchlistBody, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db.execute(sa_delete(WatchlistItem).where(WatchlistItem.user_id == current_user.id))
+    seen = set()
+    for t in body.tickers:
+        t = t.upper().strip()
+        if t and t not in seen:
+            db.add(WatchlistItem(user_id=current_user.id, ticker=t))
+            seen.add(t)
+    db.commit()
+    return {"ok": True, "count": len(seen)}
 
 
 @app.get("/")
@@ -504,17 +577,17 @@ def get_ticker(symbol: str):
 # Portfolio endpoint
 # ---------------------------------------------------------------------------
 
-class PortfolioPosition(BaseModel):
+class PortfolioPositionIn(BaseModel):
     ticker: str
     shares: float
     avg_cost: float
 
 class PortfolioRequest(BaseModel):
-    positions: List[PortfolioPosition]
+    positions: List[PortfolioPositionIn]
 
 
 @app.post("/api/portfolio")
-def get_portfolio(req: PortfolioRequest):
+def get_portfolio_analysis(req: PortfolioRequest):
     if not req.positions:
         raise HTTPException(status_code=400, detail="No positions provided.")
 
