@@ -1305,8 +1305,9 @@ def _classify_category(text: str) -> str:
 def _classify_sentiment(text: str) -> str:
     """
     Classify market sentiment from equity-investor perspective.
-    'Rate cut' = Positive (equities love it). 'Rate hike' = Negative.
-    Net score >= +2 → Positive, <= -2 → Negative, else Neutral.
+    Multi-word phrases score ±2; single padded words score ±1.
+    Threshold: net score > 0 → Positive, < 0 → Negative, == 0 → Neutral.
+    A single strong phrase (±2) or two weak words (±1 each) is enough.
     """
     t = " " + text + " "   # pad for clean word-boundary matching
     score = 0
@@ -1322,9 +1323,9 @@ def _classify_sentiment(text: str) -> str:
     for word in _SENT_WORDS_NEG:
         if word in t:
             score -= 1
-    if score >= 2:
+    if score > 0:
         return "Positive"
-    if score <= -2:
+    if score < 0:
         return "Negative"
     return "Neutral"
 
@@ -1417,12 +1418,17 @@ def _claude_filter(articles: list[dict]) -> list[dict]:
         "    Bank failure / credit crunch / systemic risk → Negative\n"
         "    War escalation / sanctions / supply shock → Negative\n"
         "    Recession confirmed / GDP contraction → Negative\n"
-        "  Neutral = genuinely ambiguous; equity impact unclear or mixed.\n"
-        "    In-line data with no surprise, Fed hold with balanced tone → Neutral\n"
-        "CRITICAL: Do NOT use the tone of the headline as a proxy. "
-        "'Unemployment rises' can be Positive if it means the Fed will ease. "
-        "'Fed pauses rate hikes' sounds neutral but is Positive for equities. "
-        "Always reason from the actual equity market impact.\n\n"
+        "  Neutral = ONLY for articles that are genuinely 50/50 with no clear primary direction.\n"
+        "    Example: Fed holds with no guidance change and mixed tone → Neutral\n"
+        "    Example: routine data exactly in-line with consensus → Neutral\n"
+        "CRITICAL RULES:\n"
+        "1. Do NOT use headline tone as proxy. 'Unemployment rises' can be Positive if "
+        "   it signals Fed easing. 'Fed pauses' sounds neutral but IS Positive for equities.\n"
+        "2. Do NOT default to Neutral when unsure. If there is a primary market direction, "
+        "   use Positive or Negative. Reserve Neutral only for truly ambiguous cases.\n"
+        "3. In the current environment (tariffs, geopolitical tension, AI), expect a "
+        "   meaningful share of Negative AND Positive articles. A distribution of "
+        "   0 Positive is almost certainly wrong.\n\n"
         "Return a JSON array where each passing article has:\n"
         "  id (original index), importance_score (1-10), "
         "category (one of: Fed/Monetary Policy, Geopolitics, Commodities, Tech/AI, Markets, Macro Economy), "
@@ -1441,9 +1447,13 @@ def _claude_filter(articles: list[dict]) -> list[dict]:
             messages=[{"role": "user", "content": batch_text}],
         )
         raw = msg.content[0].text.strip()
+        # Strip markdown code fences if model wrapped the JSON
+        if raw.startswith("```"):
+            raw = re.sub(r"^```[a-z]*\n?", "", raw)
+            raw = re.sub(r"\n?```$", "", raw)
         scored = json.loads(raw)
     except Exception:
-        return []
+        return _keyword_filter(articles)  # graceful fallback, not empty list
 
     enriched = []
     for item in scored:
