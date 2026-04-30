@@ -53,7 +53,10 @@ INDEX_HTML = Path(__file__).parent / "index.html"
 # ---------------------------------------------------------------------------
 # Database setup
 # ---------------------------------------------------------------------------
-DB_PATH = Path(__file__).parent / "terminal.db"
+# Use /app/data on Railway (persistent volume) or local dir in dev
+_data_dir = Path(os.environ.get("DB_DIR", str(Path(__file__).parent)))
+_data_dir.mkdir(parents=True, exist_ok=True)
+DB_PATH = _data_dir / "terminal.db"
 engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
