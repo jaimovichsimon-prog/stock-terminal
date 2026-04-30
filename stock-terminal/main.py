@@ -23,6 +23,7 @@ import smtplib
 import threading
 from email.mime.text import MIMEText
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import numpy as np
 import pandas as pd
 import yfinance as yf
@@ -78,6 +79,36 @@ class WatchlistItem(Base):
     user_id = Column(Integer, nullable=False, index=True)
     ticker  = Column(String, nullable=False)
 
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+    id         = Column(Integer, primary_key=True, index=True)
+    user_id    = Column(Integer, nullable=False, index=True)
+    token      = Column(String, unique=True, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    used       = Column(Integer, default=0)
+
+class PriceAlert(Base):
+    __tablename__ = "price_alerts"
+    id           = Column(Integer, primary_key=True, index=True)
+    user_id      = Column(Integer, nullable=False, index=True)
+    ticker       = Column(String, nullable=False)
+    condition    = Column(String, nullable=False)  # 'above' | 'below'
+    target_price = Column(Float, nullable=False)
+    triggered    = Column(Integer, default=0)
+    created_at   = Column(DateTime, default=func.now())
+
+class Transaction(Base):
+    __tablename__ = "transactions"
+    id         = Column(Integer, primary_key=True, index=True)
+    user_id    = Column(Integer, nullable=False, index=True)
+    ticker     = Column(String, nullable=False)
+    tx_type    = Column(String, nullable=False)   # 'buy' | 'sell'
+    shares     = Column(Float, nullable=False)
+    price      = Column(Float, nullable=False)
+    date       = Column(String, nullable=False)   # YYYY-MM-DD
+    notes      = Column(String, default='')
+    created_at = Column(DateTime, default=func.now())
+
 Base.metadata.create_all(bind=engine)
 
 def get_db():
@@ -122,6 +153,100 @@ def _send_signup_email(new_user_email: str):
 
 def notify_new_user(email: str):
     threading.Thread(target=_send_signup_email, args=(email,), daemon=True).start()
+
+_APP_URL = os.environ.get("APP_URL", "http://localhost:8000")
+
+def _send_reset_email(to_email: str, token: str):
+    if not _SMTP_USER or not _SMTP_PASSWORD:
+        return
+    try:
+        reset_url = f"{_APP_URL}/?action=reset&token={token}"
+        msg = MIMEText(
+            f"Someone requested a password reset for your Terminal Pro account.\n\n"
+            f"Click the link below to set a new password (valid for 1 hour):\n\n"
+            f"{reset_url}\n\n"
+            f"If you didn't request this, you can ignore this email.\n",
+            "plain"
+        )
+        msg["Subject"] = "[Terminal Pro] Password Reset"
+        msg["From"]    = _SMTP_USER
+        msg["To"]      = to_email
+        with smtplib.SMTP(_SMTP_HOST, _SMTP_PORT, timeout=10) as smtp:
+            smtp.starttls()
+            smtp.login(_SMTP_USER, _SMTP_PASSWORD)
+            smtp.sendmail(_SMTP_USER, [to_email], msg.as_string())
+    except Exception:
+        pass
+
+def _send_alert_email(to_email: str, ticker: str, condition: str, target: float, current: float):
+    if not _SMTP_USER or not _SMTP_PASSWORD:
+        return
+    try:
+        direction = "above" if condition == "above" else "below"
+        msg = MIMEText(
+            f"Price alert triggered for {ticker}:\n\n"
+            f"  Your alert:    price {direction} ${target:,.2f}\n"
+            f"  Current price: ${current:,.2f}\n"
+            f"  Time: {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC\n\n"
+            f"Log in to Terminal Pro to view your positions.\n",
+            "plain"
+        )
+        msg["Subject"] = f"[Terminal Pro] Alert: {ticker} is {direction} ${target:,.2f}"
+        msg["From"]    = _SMTP_USER
+        msg["To"]      = to_email
+        with smtplib.SMTP(_SMTP_HOST, _SMTP_PORT, timeout=10) as smtp:
+            smtp.starttls()
+            smtp.login(_SMTP_USER, _SMTP_PASSWORD)
+            smtp.sendmail(_SMTP_USER, [to_email], msg.as_string())
+    except Exception:
+        pass
+
+def _run_alert_checks():
+    db = SessionLocal()
+    try:
+        alerts = db.execute(select(PriceAlert).where(PriceAlert.triggered == 0)).scalars().all()
+        if not alerts:
+            return
+        tickers = list({a.ticker for a in alerts})
+        prices: dict = {}
+        for tk in tickers:
+            try:
+                info = yf.Ticker(tk).info
+                p = clean_float(info.get("currentPrice") or info.get("regularMarketPrice"))
+                if p:
+                    prices[tk] = p
+            except Exception:
+                pass
+        for alert in alerts:
+            price = prices.get(alert.ticker)
+            if price is None:
+                continue
+            hit = (alert.condition == "above" and price >= alert.target_price) or \
+                  (alert.condition == "below" and price <= alert.target_price)
+            if hit:
+                alert.triggered = 1
+                db.commit()
+                user = db.execute(select(User).where(User.id == alert.user_id)).scalar_one_or_none()
+                if user:
+                    threading.Thread(
+                        target=_send_alert_email,
+                        args=(user.email, alert.ticker, alert.condition, alert.target_price, price),
+                        daemon=True,
+                    ).start()
+    except Exception:
+        pass
+    finally:
+        db.close()
+
+def _alert_loop():
+    while True:
+        time.sleep(300)
+        try:
+            _run_alert_checks()
+        except Exception:
+            pass
+
+threading.Thread(target=_alert_loop, daemon=True).start()
 
 JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-in-production-please")
 JWT_ALG    = "HS256"
@@ -207,6 +332,46 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
 def me(current_user: User = Depends(get_current_user)):
     return {"user_id": current_user.id, "email": current_user.email}
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+@app.post("/api/auth/forgot-password")
+def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    email = body.email.strip().lower()
+    user = db.execute(select(User).where(User.email == email)).scalar_one_or_none()
+    if user:
+        db.execute(sa_delete(PasswordResetToken).where(PasswordResetToken.user_id == user.id))
+        token = secrets.token_urlsafe(32)
+        expires = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+        db.add(PasswordResetToken(user_id=user.id, token=token, expires_at=expires))
+        db.commit()
+        threading.Thread(target=_send_reset_email, args=(user.email, token), daemon=True).start()
+    return {"ok": True}  # always ok — prevents email enumeration
+
+@app.post("/api/auth/reset-password", response_model=AuthResponse)
+def reset_password_endpoint(body: ResetPasswordRequest, db: Session = Depends(get_db)):
+    if len(body.new_password) < 6:
+        raise HTTPException(400, "Password must be at least 6 characters")
+    rt = db.execute(
+        select(PasswordResetToken).where(
+            PasswordResetToken.token == body.token,
+            PasswordResetToken.used == 0,
+        )
+    ).scalar_one_or_none()
+    if not rt or rt.expires_at < datetime.datetime.utcnow():
+        raise HTTPException(400, "Reset link is invalid or has expired")
+    user = db.execute(select(User).where(User.id == rt.user_id)).scalar_one_or_none()
+    if not user:
+        raise HTTPException(400, "User not found")
+    user.hashed_pw = hash_password(body.new_password)
+    rt.used = 1
+    db.commit()
+    return AuthResponse(token=create_token(user.id, user.email), email=user.email, user_id=user.id)
+
 # ---------------------------------------------------------------------------
 # User data models
 # ---------------------------------------------------------------------------
@@ -220,6 +385,19 @@ class PortfolioBody(BaseModel):
 
 class WatchlistBody(BaseModel):
     tickers: List[str]
+
+class AlertBody(BaseModel):
+    ticker: str
+    condition: str   # 'above' | 'below'
+    target_price: float
+
+class TransactionBody(BaseModel):
+    ticker:  str
+    tx_type: str     # 'buy' | 'sell'
+    shares:  float
+    price:   float
+    date:    str     # YYYY-MM-DD
+    notes:   str = ''
 
 # ---------------------------------------------------------------------------
 # Portfolio endpoints
@@ -266,6 +444,80 @@ def put_watchlist(body: WatchlistBody, current_user: User = Depends(get_current_
     db.commit()
     return {"ok": True, "count": len(seen)}
 
+
+@app.get("/api/user/alerts")
+def get_alerts(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    rows = db.execute(
+        select(PriceAlert).where(PriceAlert.user_id == current_user.id)
+    ).scalars().all()
+    return {"alerts": [
+        {"id": r.id, "ticker": r.ticker, "condition": r.condition,
+         "target_price": r.target_price, "triggered": bool(r.triggered),
+         "created_at": str(r.created_at)} for r in rows
+    ]}
+
+@app.post("/api/user/alerts")
+def create_alert(body: AlertBody, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if body.condition not in ("above", "below"):
+        raise HTTPException(400, "condition must be 'above' or 'below'")
+    db.add(PriceAlert(
+        user_id=current_user.id,
+        ticker=body.ticker.upper().strip(),
+        condition=body.condition,
+        target_price=body.target_price,
+    ))
+    db.commit()
+    return {"ok": True}
+
+@app.delete("/api/user/alerts/{alert_id}")
+def delete_alert(alert_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db.execute(
+        sa_delete(PriceAlert).where(
+            PriceAlert.id == alert_id,
+            PriceAlert.user_id == current_user.id,
+        )
+    )
+    db.commit()
+    return {"ok": True}
+
+@app.get("/api/user/transactions")
+def get_transactions(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    rows = db.execute(
+        select(Transaction).where(Transaction.user_id == current_user.id)
+    ).scalars().all()
+    txs = [
+        {"id": r.id, "ticker": r.ticker, "tx_type": r.tx_type,
+         "shares": r.shares, "price": r.price, "date": r.date, "notes": r.notes}
+        for r in sorted(rows, key=lambda x: x.date, reverse=True)
+    ]
+    return {"transactions": txs}
+
+@app.post("/api/user/transactions")
+def add_transaction(body: TransactionBody, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if body.tx_type not in ("buy", "sell"):
+        raise HTTPException(400, "tx_type must be 'buy' or 'sell'")
+    db.add(Transaction(
+        user_id=current_user.id,
+        ticker=body.ticker.upper().strip(),
+        tx_type=body.tx_type,
+        shares=body.shares,
+        price=body.price,
+        date=body.date,
+        notes=body.notes,
+    ))
+    db.commit()
+    return {"ok": True}
+
+@app.delete("/api/user/transactions/{tx_id}")
+def delete_transaction(tx_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db.execute(
+        sa_delete(Transaction).where(
+            Transaction.id == tx_id,
+            Transaction.user_id == current_user.id,
+        )
+    )
+    db.commit()
+    return {"ok": True}
 
 @app.get("/")
 def index():
@@ -822,13 +1074,25 @@ def get_portfolio_analysis(req: PortfolioRequest):
 # ---------------------------------------------------------------------------
 
 RSS_FEEDS = [
-    ("BBC Business",     "https://feeds.bbci.co.uk/news/business/rss.xml"),
-    ("CNBC Markets",     "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"),
-    ("Yahoo Finance",    "https://finance.yahoo.com/news/rssindex"),
-    ("MarketWatch",      "https://feeds.marketwatch.com/marketwatch/topstories/"),
-    ("The Guardian",     "https://www.theguardian.com/business/rss"),
-    ("Federal Reserve",  "https://www.federalreserve.gov/feeds/press_all.xml"),
-    ("Investing.com",    "https://www.investing.com/rss/news_301.rss"),
+    # Central banks — highest signal
+    ("Federal Reserve",       "https://www.federalreserve.gov/feeds/press_all.xml"),
+    ("ECB",                   "https://www.ecb.europa.eu/rss/fsr.xml"),
+    # Tier-1 wire services
+    ("Reuters Business",      "https://feeds.reuters.com/reuters/businessNews"),
+    ("Reuters Markets",       "https://feeds.reuters.com/reuters/financeNews"),
+    ("AP Business",           "https://apnews.com/hub/business.rss"),
+    # Major financial media
+    ("CNBC Markets",          "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"),
+    ("CNBC Economy",          "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=20910258"),
+    ("MarketWatch",           "https://feeds.marketwatch.com/marketwatch/topstories/"),
+    ("Barrons",               "https://www.barrons.com/xml/rss/3_7514.xml"),
+    ("Investing.com",         "https://www.investing.com/rss/news_301.rss"),
+    # Quality general
+    ("Yahoo Finance",         "https://finance.yahoo.com/news/rssindex"),
+    ("The Economist Finance", "https://www.economist.com/finance-and-economics/rss.xml"),
+    ("NPR Business",          "https://feeds.npr.org/1006/rss.xml"),
+    ("BBC Business",          "https://feeds.bbci.co.uk/news/business/rss.xml"),
+    ("The Guardian Business", "https://www.theguardian.com/business/rss"),
 ]
 
 _news_cache: dict = {"ts": 0.0, "data": None}
@@ -894,6 +1158,8 @@ _EXCLUDE_KEYWORDS = [
     "celebrity", "fashion", "lifestyle", "recipe", "travel", "tourism",
     "movie", "film", "music", "entertainment", "oscars", "grammy",
     "horoscope", "crossword", "puzzle",
+    "podcast", "interview", "opinion", "column", "newsletter",
+    "webinar", "survey", "poll", "quiz", "listicle", "explainer",
 ]
 
 _CAT_KEYWORDS = {
@@ -905,6 +1171,9 @@ _CAT_KEYWORDS = {
         "lagarde", "rate decision", "rate hold", "fed meeting", "fed statement",
         "fed minutes", "beige book", "press conference", "dot plot",
         "fed chair", "fed governor", "fed president",
+        "fed funds rate", "neutral rate", "r-star", "terminal rate",
+        "balance sheet", "reverse repo", "treasury purchases", "yield curve",
+        "2yr", "10yr", "30yr", "hawkish", "dovish", "tightening", "easing",
     ],
     "Geopolitics": [
         "war", "conflict", "military", "sanctions", "sanction", "geopolit",
@@ -950,6 +1219,10 @@ _HIGH_IMPORTANCE = [
     "bank collapse", "bank failure", "systemic",
     "tariff", "trade war",
     "artificial intelligence regulation", "ai regulation",
+    "yield curve inversion", "hawkish", "dovish", "rate unchanged",
+    "basis points", "bps", "emergency meeting", "systemic risk",
+    "contagion", "bank run", "credit crunch", "debt ceiling",
+    "sovereign default", "currency crisis", "flash crash",
 ]
 
 _POSITIVE_WORDS = [
@@ -1001,19 +1274,28 @@ def _keyword_filter(articles: list[dict]) -> list[dict]:
         # Category keyword hits for scoring
         cat_hits = sum(1 for kws in _CAT_KEYWORDS.values() for kw in kws if kw in text)
 
-        # Always include any Fed/Powell article
+        # Always include any Fed/central bank article at score 8+
         is_fed = any(kw in text for kw in [
             "federal reserve", "fomc", "powell", "fed meeting",
-            "rate decision", "rate hike", "rate cut", "fed statement"
+            "rate decision", "rate hike", "rate cut", "fed statement",
+            "ecb", "bank of england", "bank of japan", "central bank",
+            "hawkish", "dovish", "basis points", "bps",
         ])
         if not is_fed and high_hits == 0 and cat_hits < 2:
             continue
 
-        score = 7
-        if high_hits >= 2 or cat_hits >= 5:
+        if is_fed:
+            score = 8
+            if high_hits >= 2:
+                score = 9
+        elif high_hits >= 2 or cat_hits >= 5:
             score = 9
         elif high_hits == 1 or cat_hits >= 3:
             score = 8
+        elif cat_hits >= 5:
+            score = 8
+        else:
+            score = 7
 
         category  = _classify_category(text)
         sentiment = _classify_sentiment(text)
@@ -1027,7 +1309,7 @@ def _keyword_filter(articles: list[dict]) -> list[dict]:
         })
 
     results.sort(key=lambda x: x["importance_score"], reverse=True)
-    return results[:20]
+    return results[:25]
 
 
 def _claude_filter(articles: list[dict]) -> list[dict]:
@@ -1114,6 +1396,32 @@ def get_news():
     _news_cache["data"] = result
     return result
 
+
+@app.get("/api/news/ticker/{symbol}")
+def get_ticker_news(symbol: str, current_user: User = Depends(get_current_user)):
+    symbol = symbol.upper().strip()
+    try:
+        tk = yf.Ticker(symbol)
+        raw = tk.news or []
+        articles = []
+        for item in raw[:20]:
+            pub_ts = item.get("providerPublishTime") or item.get("pubDate")
+            pub_dt = None
+            if pub_ts:
+                try:
+                    pub_dt = datetime.datetime.fromtimestamp(int(pub_ts), tz=datetime.timezone.utc).isoformat()
+                except Exception:
+                    pass
+            articles.append({
+                "title":        item.get("title", ""),
+                "url":          item.get("link", "") or item.get("url", ""),
+                "source":       item.get("publisher", "") or item.get("source", ""),
+                "published_at": pub_dt,
+                "summary":      item.get("summary", "")[:400],
+            })
+        return {"articles": articles, "ticker": symbol}
+    except Exception:
+        return {"articles": [], "ticker": symbol}
 
 # ---------------------------------------------------------------------------
 # Macro Dashboard endpoint
@@ -1272,6 +1580,153 @@ def get_earnings(tickers: str = ""):
     results.sort(key=lambda x: x.get("earnings_date") or "9999-99-99")
     return deep_clean({"earnings": results})
 
+
+SCREENER_UNIVERSE = {
+    "Technology":             ["AAPL","MSFT","NVDA","GOOGL","META","AVGO","ORCL","AMD","QCOM","TXN","NOW","CRM","ADBE","SNOW","PLTR","NET","CRWD","ZS","DDOG","INTU","AMAT","MU","MRVL","FTNT","PANW","SHOP","UBER","ARM","SMCI","ASML"],
+    "Finance":                ["JPM","BAC","WFC","GS","MS","BLK","V","MA","AXP","C","SCHW","USB","PNC","TFC","COF","MCO","SPGI","CME","ICE","PYPL","KKR","APO","BX","CG"],
+    "Healthcare":             ["UNH","JNJ","LLY","ABBV","MRK","TMO","ABT","DHR","AMGN","GILD","ISRG","CVS","MDT","BMY","REGN","VRTX","PFE","BIIB","MRNA","HCA","ELV","CI","HUM","DGX"],
+    "Energy":                 ["XOM","CVX","COP","SLB","EOG","MPC","PSX","VLO","OXY","HAL","BKR","DVN","FANG","MRO","HES","LNG","WMB","KMI","OKE","ET"],
+    "Consumer Discretionary": ["AMZN","TSLA","HD","NKE","SBUX","MCD","TGT","CMG","LULU","TJX","YUM","BKNG","MAR","HLT","GM","F","ROST","ORLY","AZO","RIVN"],
+    "Consumer Staples":       ["WMT","COST","PG","KO","PEP","PM","MO","MDLZ","CL","CHD","GIS","K","SYY","ADM","STZ","MNST","KHC"],
+    "Industrials":            ["CAT","DE","BA","HON","RTX","LMT","GE","UPS","FDX","MMM","EMR","ETN","CSX","UNP","NSC","CARR","OTIS","ROK","PWR","CTAS"],
+    "Communication":          ["META","GOOGL","NFLX","DIS","CMCSA","T","VZ","SNAP","PINS","SPOT","WBD","FOXA","PARA","TTD","ROKU"],
+    "Materials":              ["LIN","APD","ECL","SHW","NEM","FCX","ALB","CF","MOS","DOW","DD","PPG","NUE","STLD","VMC"],
+    "Real Estate":            ["AMT","PLD","CCI","EQIX","SPG","O","PSA","WELL","VTR","DLR","EQR","AVB","INVH","SBA","AMH"],
+    "Utilities":              ["NEE","DUK","SO","D","AEP","EXC","XEL","AWK","PCG","ES","ED","ETR","FE","AES"],
+}
+
+_screener_cache: dict = {}
+SCREENER_CACHE_TTL = 25 * 60  # 25 minutes
+
+def _fetch_screener_stock(sym: str) -> Optional[dict]:
+    try:
+        info = yf.Ticker(sym).info
+        price = clean_float(info.get("currentPrice") or info.get("regularMarketPrice"))
+        if not price:
+            return None
+        return {
+            "ticker":       sym,
+            "company":      info.get("longName") or info.get("shortName") or sym,
+            "sector":       info.get("sector") or "Unknown",
+            "price":        price,
+            "change_pct":   clean_float(info.get("regularMarketChangePercent")),
+            "market_cap":   clean_float(info.get("marketCap")),
+            "pe":           clean_float(info.get("trailingPE")),
+            "forward_pe":   clean_float(info.get("forwardPE")),
+            "volume":       clean_float(info.get("volume") or info.get("regularMarketVolume")),
+            "week52_high":  clean_float(info.get("fiftyTwoWeekHigh")),
+            "week52_low":   clean_float(info.get("fiftyTwoWeekLow")),
+            "beta":         clean_float(info.get("beta")),
+            "div_yield":    clean_float(info.get("dividendYield")),
+        }
+    except Exception:
+        return None
+
+@app.get("/api/screener")
+def get_screener(
+    sector: str = "Technology",
+    min_pe: Optional[float] = None,
+    max_pe: Optional[float] = None,
+    min_change: Optional[float] = None,
+    max_change: Optional[float] = None,
+    min_cap: Optional[float] = None,
+    current_user: User = Depends(get_current_user),
+):
+    sector = sector.strip()
+    tickers = SCREENER_UNIVERSE.get(sector, SCREENER_UNIVERSE["Technology"])
+
+    now = time.time()
+    cached = _screener_cache.get(sector)
+    if cached and (now - cached["ts"]) < SCREENER_CACHE_TTL:
+        results = cached["data"]
+    else:
+        with ThreadPoolExecutor(max_workers=15) as pool:
+            futures = {pool.submit(_fetch_screener_stock, sym): sym for sym in tickers}
+            results = [f.result() for f in as_completed(futures) if f.result()]
+        results.sort(key=lambda x: x.get("market_cap") or 0, reverse=True)
+        _screener_cache[sector] = {"ts": now, "data": results}
+
+    filtered = results
+    if min_pe   is not None: filtered = [r for r in filtered if r["pe"] is not None and r["pe"] >= min_pe]
+    if max_pe   is not None: filtered = [r for r in filtered if r["pe"] is not None and r["pe"] <= max_pe]
+    if min_change is not None: filtered = [r for r in filtered if r["change_pct"] is not None and r["change_pct"] >= min_change]
+    if max_change is not None: filtered = [r for r in filtered if r["change_pct"] is not None and r["change_pct"] <= max_change]
+    if min_cap  is not None: filtered = [r for r in filtered if r["market_cap"] is not None and r["market_cap"] >= min_cap]
+
+    return deep_clean({"results": filtered, "sector": sector, "total": len(filtered), "sectors": list(SCREENER_UNIVERSE.keys())})
+
+_EARNINGS_WATCH = [
+    "AAPL","MSFT","NVDA","GOOGL","META","AMZN","TSLA","AVGO","JPM","V",
+    "UNH","JNJ","XOM","WMT","MA","PG","HD","CVX","BAC","ABBV","LLY","MRK",
+    "COST","KO","PEP","MCD","TMO","CRM","ACN","AMD","TXN","ORCL","CSCO",
+    "QCOM","INTC","IBM","NOW","ADBE","INTU","GS","MS","BLK","RTX","CAT",
+    "DE","HON","UPS","BA","GE","LMT","AMGN","GILD","REGN","VRTX","BMY",
+    "PFE","MRNA","ISRG","MDT","ABT","NFLX","DIS","CMCSA","T","VZ","NEE",
+    "NEM","FCX","LIN","APD","SHW","F","GM","RIVN","PLTR","SNOW","COIN",
+]
+
+_upcoming_earnings_cache: dict = {"ts": 0.0, "data": None}
+UPCOMING_EARNINGS_TTL = 4 * 3600  # 4 hours
+
+def _fetch_one_earnings(sym: str) -> Optional[dict]:
+    try:
+        today = datetime.date.today()
+        cutoff = today + datetime.timedelta(days=60)
+        tk = yf.Ticker(sym)
+        info = tk.info
+        company = info.get("longName") or info.get("shortName") or sym
+        try:
+            ed = tk.earnings_dates
+            if ed is not None and not ed.empty:
+                future = ed[ed.index >= pd.Timestamp(today, tz="America/New_York")]
+                if not future.empty:
+                    row = future.iloc[-1]
+                    edate = future.index[-1].date()
+                    if edate <= cutoff:
+                        return {
+                            "ticker": sym, "company_name": company,
+                            "sector": info.get("sector", ""),
+                            "earnings_date": str(edate),
+                            "eps_estimate": clean_float(row.get("EPS Estimate")),
+                            "market_cap": clean_float(info.get("marketCap")),
+                        }
+        except Exception:
+            pass
+        cal = tk.calendar
+        if cal and isinstance(cal, dict):
+            dates = cal.get("Earnings Date", [])
+            edate = dates[0] if isinstance(dates, list) and dates else dates
+            if hasattr(edate, "date"):
+                edate = edate.date()
+            if edate and isinstance(edate, datetime.date) and edate <= cutoff:
+                return {
+                    "ticker": sym, "company_name": company,
+                    "sector": info.get("sector", ""),
+                    "earnings_date": str(edate),
+                    "eps_estimate": clean_float(cal.get("EPS Estimate")),
+                    "market_cap": clean_float(info.get("marketCap")),
+                }
+    except Exception:
+        pass
+    return None
+
+@app.get("/api/earnings/upcoming")
+def get_upcoming_earnings(current_user: User = Depends(get_current_user)):
+    now = time.time()
+    if _upcoming_earnings_cache["data"] and (now - _upcoming_earnings_cache["ts"]) < UPCOMING_EARNINGS_TTL:
+        return _upcoming_earnings_cache["data"]
+    results = []
+    with ThreadPoolExecutor(max_workers=20) as pool:
+        futures = {pool.submit(_fetch_one_earnings, sym): sym for sym in _EARNINGS_WATCH}
+        for f in as_completed(futures):
+            r = f.result()
+            if r:
+                results.append(r)
+    results.sort(key=lambda x: x.get("earnings_date") or "9999")
+    result = deep_clean({"earnings": results, "fetched_at": datetime.datetime.utcnow().isoformat()})
+    _upcoming_earnings_cache["ts"] = now
+    _upcoming_earnings_cache["data"] = result
+    return result
 
 # ---------------------------------------------------------------------------
 # Options Analytics endpoint

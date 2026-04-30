@@ -1033,6 +1033,98 @@
     .ec-card-head { grid-template-columns: 40px 1fr auto; }
     .ec-chev { display: none; }
   }
+
+  /* Screener */
+  #screener-page { padding: 16px 18px; display: none; }
+  #screener-page.active { display: block; }
+  .screener-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 18px; padding: 16px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
+  .screener-filter-group { display: flex; flex-direction: column; gap: 6px; }
+  .screener-filter-group label { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--label); font-weight: 600; }
+  .screener-filter-group select, .screener-filter-group input { background: var(--bg); border: 1px solid var(--border2); border-radius: 6px; color: var(--text); font-family: 'Inter',sans-serif; font-size: 12px; padding: 6px 10px; outline: none; }
+  .screener-filter-group select:focus, .screener-filter-group input:focus { border-color: var(--accent); }
+  #screener-run-btn { padding: 8px 20px; background: var(--accent); border: none; border-radius: 6px; color: #07090b; font-family: 'Inter',sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; transition: opacity .15s; align-self: flex-end; }
+  #screener-run-btn:hover { opacity: .85; }
+  #screener-run-btn:disabled { opacity: .5; cursor: not-allowed; }
+  #screener-status { font-size: 11px; color: var(--muted); align-self: flex-end; }
+  .screener-table-wrap { overflow-x: auto; }
+  .screener-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .screener-table th { background: var(--panel2); color: var(--label); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap; }
+  .screener-table th:first-child, .screener-table th:nth-child(2) { text-align: left; }
+  .screener-table th:hover { color: var(--text); }
+  .screener-table td { padding: 9px 12px; text-align: right; border-bottom: 1px solid var(--border); color: var(--text); white-space: nowrap; }
+  .screener-table td:first-child, .screener-table td:nth-child(2) { text-align: left; }
+  .screener-table tr { cursor: pointer; transition: background .1s; }
+  .screener-table tr:hover td { background: var(--panel2); }
+  .screener-table .s-ticker { font-weight: 700; color: var(--accent); font-size: 13px; }
+  .screener-table .s-company { color: var(--muted); font-size: 11px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+
+  /* News filters */
+  .news-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .nf-btn { padding: 4px 12px; border: 1px solid var(--border2); border-radius: 999px; background: transparent; color: var(--muted); font-family: 'Inter',sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; transition: all .15s; white-space: nowrap; }
+  .nf-btn:hover { color: var(--text); border-color: var(--border2); }
+  .nf-btn.active { background: var(--accent); border-color: var(--accent); color: #07090b; }
+  .nf-sentiment-btns { display: flex; gap: 6px; margin-left: auto; }
+
+  /* Alerts page */
+  #alerts-page { padding: 16px 18px; display: none; }
+  #alerts-page.active { display: block; }
+  .alerts-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .alerts-header h2 { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: .04em; margin: 0; }
+  #add-alert-btn { padding: 6px 16px; background: var(--accent); border: none; border-radius: 6px; color: #07090b; font-family: 'Inter',sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .alerts-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .alerts-table th { background: var(--panel2); color: var(--label); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  .alerts-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .alerts-table .alert-triggered { color: var(--muted); text-decoration: line-through; }
+  .alert-condition-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: .08em; }
+  .alert-condition-badge.above { background: rgba(0,217,126,.15); color: var(--accent); }
+  .alert-condition-badge.below { background: rgba(255,77,77,.12); color: var(--red); }
+  .alert-del-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 0; transition: color .15s; }
+  .alert-del-btn:hover { color: var(--red); }
+
+  /* Alert modal */
+  #alert-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(4px); z-index: 900; align-items: center; justify-content: center; }
+  #alert-modal-overlay.open { display: flex; }
+  #alert-modal { background: var(--panel); border: 1px solid var(--border2); border-radius: 12px; padding: 28px; width: 340px; }
+  #alert-modal h3 { margin: 0 0 18px; font-size: 14px; font-weight: 700; color: var(--text); }
+
+  /* Transaction history */
+  .tx-header { display: flex; align-items: center; justify-content: space-between; margin: 24px 0 12px; }
+  .tx-header h3 { font-size: 13px; font-weight: 700; color: var(--text); margin: 0; letter-spacing: .04em; }
+  #log-tx-btn { padding: 5px 14px; background: var(--accent); border: none; border-radius: 6px; color: #07090b; font-family: 'Inter',sans-serif; font-size: 11px; font-weight: 700; cursor: pointer; }
+  .tx-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .tx-table th { background: var(--panel2); color: var(--label); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--border); }
+  .tx-table th:first-child,.tx-table th:nth-child(2),.tx-table th:nth-child(3) { text-align: left; }
+  .tx-table td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--border); color: var(--text); }
+  .tx-table td:first-child,.tx-table td:nth-child(2),.tx-table td:nth-child(3) { text-align: left; }
+  .tx-buy { color: var(--accent); font-weight: 700; }
+  .tx-sell { color: var(--red); font-weight: 700; }
+
+  /* Transaction modal */
+  #tx-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(4px); z-index: 900; align-items: center; justify-content: center; }
+  #tx-modal-overlay.open { display: flex; }
+  #tx-modal { background: var(--panel); border: 1px solid var(--border2); border-radius: 12px; padding: 28px; width: 360px; }
+  #tx-modal h3 { margin: 0 0 18px; font-size: 14px; font-weight: 700; }
+  .tx-type-toggle { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
+  .tx-type-btn { flex: 1; padding: 8px; background: transparent; border: none; font-family: 'Inter',sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; color: var(--muted); }
+  .tx-type-btn.active-buy { background: rgba(0,217,126,.2); color: var(--accent); }
+  .tx-type-btn.active-sell { background: rgba(255,77,77,.15); color: var(--red); }
+  .modal-field { margin-bottom: 12px; }
+  .modal-field label { display: block; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--label); margin-bottom: 5px; font-weight: 600; }
+  .modal-field input, .modal-field select, .modal-field textarea { width: 100%; padding: 8px 10px; background: var(--bg); border: 1px solid var(--border2); border-radius: 6px; color: var(--text); font-family: 'Inter',sans-serif; font-size: 13px; outline: none; box-sizing: border-box; transition: border-color .15s; }
+  .modal-field input:focus, .modal-field select:focus { border-color: var(--accent); }
+  .modal-submit-btn { width: 100%; padding: 10px; margin-top: 6px; background: var(--accent); border: none; border-radius: 8px; color: #07090b; font-family: 'Inter',sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+  .modal-submit-btn:hover { opacity: .88; }
+  .modal-cancel-btn { width: 100%; padding: 8px; margin-top: 8px; background: transparent; border: 1px solid var(--border2); border-radius: 8px; color: var(--muted); font-family: 'Inter',sans-serif; font-size: 12px; cursor: pointer; }
+
+  /* Password reset in auth modal */
+  #auth-forgot-view { display: none; }
+  #auth-forgot-view.visible { display: block; }
+  #auth-reset-view { display: none; }
+  #auth-reset-view.visible { display: block; }
+  .auth-back-btn { background: none; border: none; color: var(--muted); font-family: 'Inter',sans-serif; font-size: 11px; cursor: pointer; padding: 0; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; }
+  .auth-back-btn:hover { color: var(--text); }
+  .auth-forgot-link { display: block; text-align: right; font-size: 11px; color: var(--muted); cursor: pointer; margin-top: -8px; margin-bottom: 14px; background: none; border: none; font-family: 'Inter',sans-serif; }
+  .auth-forgot-link:hover { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -1045,6 +1137,8 @@
   <button class="nav-tab" data-page="news">News</button>
   <button class="nav-tab" data-page="watchlist">Watchlist</button>
   <button class="nav-tab" data-page="earnings">Earnings</button>
+  <button class="nav-tab" data-page="screener">Screener</button>
+  <button class="nav-tab" data-page="alerts">Alerts</button>
   <div id="nav-user-area">
     <button id="nav-signin-btn">Sign In</button>
     <div id="nav-user-pill">
@@ -1068,16 +1162,48 @@
       <button class="auth-tab active" data-auth="login">Sign In</button>
       <button class="auth-tab" data-auth="register">Create Account</button>
     </div>
-    <div class="auth-field">
-      <label>Email</label>
-      <input id="auth-email" type="email" placeholder="you@example.com" autocomplete="email">
+    <div id="auth-main-fields">
+      <div class="auth-field">
+        <label>Email</label>
+        <input id="auth-email" type="email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="auth-forgot-link" id="auth-forgot-link">Forgot password?</button>
+      <button id="auth-submit-btn">Sign In</button>
+      <div id="auth-error"></div>
     </div>
-    <div class="auth-field">
-      <label>Password</label>
-      <input id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password">
+
+    <!-- Forgot password view -->
+    <div id="auth-forgot-view">
+      <button class="auth-back-btn" id="auth-forgot-back">← Back to Sign In</button>
+      <div class="auth-field">
+        <label>Your email</label>
+        <input id="forgot-email" type="email" placeholder="you@example.com">
+      </div>
+      <button id="forgot-submit-btn" class="modal-submit-btn">Send Reset Link</button>
+      <div id="forgot-success" style="display:none;margin-top:12px;font-size:12px;color:var(--accent);text-align:center;">
+        Check your email for a reset link (valid 1 hour).
+      </div>
+      <div id="forgot-error" style="margin-top:8px;font-size:12px;color:var(--red);text-align:center;min-height:16px;"></div>
     </div>
-    <button id="auth-submit-btn">Sign In</button>
-    <div id="auth-error"></div>
+
+    <!-- Reset password view -->
+    <div id="auth-reset-view">
+      <div style="font-size:13px;color:var(--text);margin-bottom:16px;font-weight:600;">Set a new password</div>
+      <div class="auth-field">
+        <label>New password</label>
+        <input id="reset-password-input" type="password" placeholder="Min. 6 characters">
+      </div>
+      <div class="auth-field">
+        <label>Confirm password</label>
+        <input id="reset-password-confirm" type="password" placeholder="Repeat password">
+      </div>
+      <button id="reset-submit-btn" class="modal-submit-btn">Update Password</button>
+      <div id="reset-error" style="margin-top:8px;font-size:12px;color:var(--red);text-align:center;min-height:16px;"></div>
+    </div>
   </div>
 </div>
 
@@ -1129,6 +1255,9 @@
       <div style="font-size:10px;color:var(--muted)" id="hdr-updated"></div>
       <button class="ai-btn" id="ai-analyze-btn" style="margin-left:auto">
         <span class="ai-btn-icon">✦</span> AI Analysis
+      </button>
+      <button class="ai-btn" id="ticker-alert-btn" style="margin-left:8px;border-color:rgba(255,200,0,.4);color:#f0c000;background:rgba(255,200,0,.08)">
+        <span>🔔</span> Set Alert
       </button>
     </div>
   </div>
@@ -1487,9 +1616,41 @@
       </table>
     </div>
 
-  </div>
+    <!-- Transaction History -->
+    <div class="tx-header">
+      <h3>Transaction History</h3>
+      <button id="log-tx-btn">+ Log Transaction</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tx-table"><thead><tr>
+        <th>Date</th><th>Ticker</th><th>Type</th>
+        <th>Shares</th><th>Price</th><th>Total</th><th>Notes</th><th></th>
+      </tr></thead><tbody id="tx-tbody"></tbody></table>
+      <div id="tx-empty" style="display:none;text-align:center;color:var(--muted);padding:30px;font-size:13px">No transactions yet. Log your first trade above.</div>
+    </div>
+
+  </div><!-- end #pf-table-section -->
 
 </div><!-- end #portfolio-page -->
+
+<!-- Transaction Modal -->
+<div id="tx-modal-overlay">
+  <div id="tx-modal">
+    <h3>Log Transaction</h3>
+    <div class="tx-type-toggle">
+      <button class="tx-type-btn active-buy" id="tx-buy-btn">BUY</button>
+      <button class="tx-type-btn" id="tx-sell-btn">SELL</button>
+    </div>
+    <div class="modal-field"><label>Ticker</label><input id="tx-ticker" type="text" placeholder="e.g. AAPL" style="text-transform:uppercase"></div>
+    <div class="modal-field"><label>Shares</label><input id="tx-shares" type="number" step="0.001" placeholder="e.g. 10"></div>
+    <div class="modal-field"><label>Price per share ($)</label><input id="tx-price" type="number" step="0.01" placeholder="e.g. 175.50"></div>
+    <div class="modal-field"><label>Date</label><input id="tx-date" type="date"></div>
+    <div class="modal-field"><label>Notes (optional)</label><input id="tx-notes" type="text" placeholder="e.g. Earnings play"></div>
+    <div id="tx-error" style="font-size:12px;color:var(--red);margin-bottom:8px;min-height:16px"></div>
+    <button class="modal-submit-btn" id="tx-submit">Log Transaction</button>
+    <button class="modal-cancel-btn" id="tx-cancel">Cancel</button>
+  </div>
+</div>
 
 <!-- News Page -->
 <div id="news-page">
@@ -1497,6 +1658,20 @@
 
     <!-- Left: article feed -->
     <div>
+      <div class="news-filters" id="news-filters">
+        <button class="nf-btn active" data-cat="all">All</button>
+        <button class="nf-btn" data-cat="Fed/Monetary Policy">Fed / Monetary</button>
+        <button class="nf-btn" data-cat="Geopolitics">Geopolitics</button>
+        <button class="nf-btn" data-cat="Commodities">Commodities</button>
+        <button class="nf-btn" data-cat="Tech/AI">Tech / AI</button>
+        <button class="nf-btn" data-cat="Markets">Markets</button>
+        <button class="nf-btn" data-cat="Macro Economy">Macro</button>
+        <div class="nf-sentiment-btns">
+          <button class="nf-btn active" data-sent="all">All</button>
+          <button class="nf-btn" data-sent="Positive" style="color:var(--accent)">▲ Positive</button>
+          <button class="nf-btn" data-sent="Negative" style="color:var(--red)">▼ Negative</button>
+        </div>
+      </div>
       <div id="news-skeleton">
         <div class="news-sk"></div>
         <div class="news-sk"></div>
@@ -1603,6 +1778,19 @@
     Earnings Calendar — Q2 2026
   </div>
   <div id="ec-countdowns" class="ec-countdowns"></div>
+
+  <!-- Live Upcoming Earnings -->
+  <div style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+      <span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--label);font-weight:600">Live Upcoming Earnings</span>
+      <button id="ec-live-btn" style="padding:4px 14px;background:transparent;border:1px solid var(--border2);border-radius:999px;color:var(--muted);font-family:'Inter',sans-serif;font-size:11px;font-weight:600;cursor:pointer" onclick="ecLoadLive()">Load Live Data</button>
+    </div>
+    <div id="ec-live-results" style="background:var(--panel);border:1px solid var(--border);border-radius:8px;overflow:hidden;min-height:60px"></div>
+  </div>
+  <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">
+    <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--label);font-weight:600;margin-bottom:12px">Q2 2026 Calendar (Static Reference)</div>
+  </div>
+
   <div class="ec-filters">
     <button class="ec-flt active" data-ef="all">ALL</button>
     <button class="ec-flt" data-ef="holdings">★ MY HOLDINGS</button>
@@ -1613,6 +1801,83 @@
   </div>
   <div id="ec-calendar"></div>
 </div><!-- end #earnings-cal-page -->
+
+<!-- Alerts Page -->
+<div id="alerts-page">
+  <div class="alerts-header">
+    <h2>Price Alerts</h2>
+    <button id="add-alert-btn">+ New Alert</button>
+  </div>
+  <table class="alerts-table" id="alerts-tbl">
+    <thead><tr>
+      <th>Ticker</th><th>Condition</th><th>Target</th><th>Status</th><th>Created</th><th></th>
+    </tr></thead>
+    <tbody id="alerts-tbody"></tbody>
+  </table>
+  <div id="alerts-empty" style="display:none;text-align:center;color:var(--muted);padding:40px;font-size:13px">No alerts yet. Create one with "+ New Alert" or from any ticker page.</div>
+</div>
+
+<!-- Alert Modal -->
+<div id="alert-modal-overlay">
+  <div id="alert-modal">
+    <h3>New Price Alert</h3>
+    <div class="modal-field"><label>Ticker</label><input id="al-ticker" type="text" placeholder="e.g. AAPL" style="text-transform:uppercase"></div>
+    <div class="modal-field"><label>Condition</label>
+      <select id="al-cond">
+        <option value="above">Price goes ABOVE</option>
+        <option value="below">Price goes BELOW</option>
+      </select>
+    </div>
+    <div class="modal-field"><label>Target Price ($)</label><input id="al-price" type="number" step="0.01" placeholder="e.g. 200.00"></div>
+    <div id="al-error" style="font-size:12px;color:var(--red);margin-bottom:8px;min-height:16px"></div>
+    <button class="modal-submit-btn" id="al-submit">Create Alert</button>
+    <button class="modal-cancel-btn" id="al-cancel">Cancel</button>
+  </div>
+</div>
+
+<!-- Screener Page -->
+<div id="screener-page">
+  <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px;letter-spacing:.02em">Stock Screener</div>
+  <div class="screener-filters">
+    <div class="screener-filter-group"><label>Sector</label><select id="screener-sector-sel"></select></div>
+    <div class="screener-filter-group"><label>P/E max</label><input id="screener-max-pe" type="number" placeholder="e.g. 30" style="width:90px"></div>
+    <div class="screener-filter-group"><label>Today's move</label>
+      <select id="screener-change-sel">
+        <option value="">All</option>
+        <option value="gainers">Gainers (&gt;0%)</option>
+        <option value="losers">Losers (&lt;0%)</option>
+        <option value="up2">Up &gt;2%</option>
+        <option value="down2">Down &gt;2%</option>
+      </select>
+    </div>
+    <div class="screener-filter-group"><label>Market cap</label>
+      <select id="screener-cap-sel">
+        <option value="">All</option>
+        <option value="large">Large (&gt;$10B)</option>
+        <option value="mid">Mid ($2–10B)</option>
+        <option value="small">Small (&lt;$2B)</option>
+      </select>
+    </div>
+    <button id="screener-run-btn">Run Screener</button>
+    <span id="screener-status"></span>
+  </div>
+  <div class="screener-table-wrap">
+    <table class="screener-table">
+      <thead><tr>
+        <th data-col="ticker">Ticker</th>
+        <th data-col="company">Company</th>
+        <th data-col="price">Price</th>
+        <th data-col="change_pct">Change%</th>
+        <th data-col="market_cap">Mkt Cap</th>
+        <th data-col="pe">P/E</th>
+        <th data-col="forward_pe">Fwd P/E</th>
+        <th data-col="beta">Beta</th>
+        <th data-col="div_yield">Div Yield</th>
+      </tr></thead>
+      <tbody id="screener-tbody"></tbody>
+    </table>
+  </div>
+</div>
 
 <!-- Error -->
 <div id="error-panel">
@@ -2522,9 +2787,18 @@ function renderNewsCards(articles) {
   const feed = document.getElementById('news-feed');
   const empty = document.getElementById('news-empty');
 
-  const filtered = newsActiveFilter === 'All'
+  let filtered = newsActiveFilter === 'All'
     ? articles
     : articles.filter(a => a.category === newsActiveFilter);
+
+  // Apply top-bar category filter (_nfCat from #news-filters buttons)
+  if (typeof _nfCat !== 'undefined' && _nfCat !== 'all') {
+    filtered = filtered.filter(a => (a.category || '').toLowerCase() === _nfCat.toLowerCase());
+  }
+  // Apply top-bar sentiment filter (_nfSent from #news-filters buttons)
+  if (typeof _nfSent !== 'undefined' && _nfSent !== 'all') {
+    filtered = filtered.filter(a => (a.sentiment || '').toLowerCase() === _nfSent.toLowerCase());
+  }
 
   if (filtered.length === 0) {
     feed.classList.add('hidden');
@@ -2645,10 +2919,15 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
     document.getElementById('news-page').style.display          = page === 'news'      ? 'block' : 'none';
     document.getElementById('watchlist-page').style.display     = page === 'watchlist' ? 'block' : 'none';
     document.getElementById('earnings-cal-page').style.display  = page === 'earnings'  ? 'block' : 'none';
+    document.getElementById('alerts-page').style.display        = page === 'alerts'    ? 'block' : 'none';
+    document.getElementById('screener-page').style.display      = page === 'screener'  ? 'block' : 'none';
     if (page === 'portfolio' && pfPositions.length > 0 && !pfData) loadPortfolio();
+    if (page === 'portfolio' && authToken) loadTransactions();
     if (page === 'news'      && !newsLoaded) loadNews();
     if (page === 'watchlist') { loadMacro(); if (!wlLoaded && wlTickers.length > 0) loadWatchlist(); }
     if (page === 'earnings') ecInit();
+    if (page === 'alerts' && authToken) loadAlerts();
+    if (page === 'screener' && authToken) initScreener();
   });
 });
 
@@ -3445,6 +3724,336 @@ function ecInit() {
   ecRenderCountdowns();
   ecRenderCards();
 }
+// ---------------------------------------------------------------------------
+// Price Alerts
+// ---------------------------------------------------------------------------
+let _alerts = [];
+
+async function loadAlerts() {
+  if (!authToken) return;
+  try {
+    const res = await fetch('/api/user/alerts', { headers: { Authorization: `Bearer ${authToken}` } });
+    _alerts = (await res.json()).alerts || [];
+    renderAlerts();
+  } catch {}
+}
+
+function renderAlerts() {
+  const tbody = document.getElementById('alerts-tbody');
+  const empty = document.getElementById('alerts-empty');
+  if (!tbody) return;
+  if (!_alerts.length) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  tbody.innerHTML = _alerts.map(a => `<tr>
+    <td style="font-weight:700;color:var(--accent)">${a.ticker}</td>
+    <td><span class="alert-condition-badge ${a.condition}">${a.condition.toUpperCase()}</span></td>
+    <td>$${a.target_price.toFixed(2)}</td>
+    <td>${a.triggered ? '<span style="color:var(--muted);font-size:11px">Triggered ✓</span>' : '<span style="color:var(--accent);font-size:11px">● Active</span>'}</td>
+    <td style="color:var(--muted);font-size:11px">${(a.created_at || '').slice(0,10)}</td>
+    <td><button class="alert-del-btn" onclick="deleteAlert(${a.id})">×</button></td>
+  </tr>`).join('');
+}
+
+async function deleteAlert(id) {
+  await fetch(`/api/user/alerts/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } }).catch(() => {});
+  _alerts = _alerts.filter(a => a.id !== id);
+  renderAlerts();
+}
+
+function openAlertModal(ticker) {
+  const tickerEl = document.getElementById('al-ticker');
+  const priceEl = document.getElementById('al-price');
+  const errEl = document.getElementById('al-error');
+  if (tickerEl) tickerEl.value = ticker || '';
+  if (priceEl) priceEl.value = '';
+  if (errEl) errEl.textContent = '';
+  document.getElementById('alert-modal-overlay').classList.add('open');
+  setTimeout(() => (ticker ? priceEl : tickerEl)?.focus(), 50);
+}
+
+document.getElementById('add-alert-btn')?.addEventListener('click', () => openAlertModal(''));
+document.getElementById('ticker-alert-btn')?.addEventListener('click', () => openAlertModal(currentSymbol || ''));
+document.getElementById('al-cancel')?.addEventListener('click', () => document.getElementById('alert-modal-overlay').classList.remove('open'));
+document.getElementById('al-submit')?.addEventListener('click', async () => {
+  const ticker = (document.getElementById('al-ticker')?.value || '').trim().toUpperCase();
+  const cond   = document.getElementById('al-cond')?.value;
+  const price  = parseFloat(document.getElementById('al-price')?.value);
+  const errEl  = document.getElementById('al-error');
+  if (!ticker)                { errEl.textContent = 'Enter a ticker symbol.'; return; }
+  if (isNaN(price)||price<=0) { errEl.textContent = 'Enter a valid price.'; return; }
+  const res = await fetch('/api/user/alerts', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+    body: JSON.stringify({ ticker, condition: cond, target_price: price }),
+  }).catch(() => null);
+  if (!res || !res.ok) { errEl.textContent = 'Failed to save alert.'; return; }
+  document.getElementById('alert-modal-overlay').classList.remove('open');
+  await loadAlerts();
+});
+
+// ---------------------------------------------------------------------------
+// Transaction History
+// ---------------------------------------------------------------------------
+let _txs = [];
+let _txType = 'buy';
+
+async function loadTransactions() {
+  if (!authToken) return;
+  try {
+    const res = await fetch('/api/user/transactions', { headers: { Authorization: `Bearer ${authToken}` } });
+    _txs = (await res.json()).transactions || [];
+    renderTxTable();
+  } catch {}
+}
+
+function renderTxTable() {
+  const tbody = document.getElementById('tx-tbody');
+  const empty = document.getElementById('tx-empty');
+  if (!tbody) return;
+  if (!_txs.length) { tbody.innerHTML = ''; if (empty) empty.style.display = 'block'; return; }
+  if (empty) empty.style.display = 'none';
+  tbody.innerHTML = _txs.map(tx => {
+    const total = (tx.shares * tx.price).toFixed(2);
+    return `<tr>
+      <td>${tx.date}</td>
+      <td style="font-weight:700;color:var(--accent)">${tx.ticker}</td>
+      <td class="${tx.tx_type === 'buy' ? 'tx-buy' : 'tx-sell'}">${tx.tx_type.toUpperCase()}</td>
+      <td>${tx.shares}</td><td>$${tx.price.toFixed(2)}</td><td>$${total}</td>
+      <td style="color:var(--muted);font-size:11px">${tx.notes || '—'}</td>
+      <td><button onclick="deleteTx(${tx.id})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">×</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function deleteTx(id) {
+  await fetch(`/api/user/transactions/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } }).catch(() => {});
+  _txs = _txs.filter(t => t.id !== id);
+  renderTxTable();
+}
+
+document.getElementById('tx-buy-btn')?.addEventListener('click', () => {
+  _txType = 'buy';
+  document.getElementById('tx-buy-btn').className = 'tx-type-btn active-buy';
+  document.getElementById('tx-sell-btn').className = 'tx-type-btn';
+});
+document.getElementById('tx-sell-btn')?.addEventListener('click', () => {
+  _txType = 'sell';
+  document.getElementById('tx-sell-btn').className = 'tx-type-btn active-sell';
+  document.getElementById('tx-buy-btn').className = 'tx-type-btn';
+});
+
+function openTxModal() {
+  _txType = 'buy';
+  document.getElementById('tx-buy-btn').className = 'tx-type-btn active-buy';
+  document.getElementById('tx-sell-btn').className = 'tx-type-btn';
+  ['tx-ticker','tx-shares','tx-price','tx-notes'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const dateEl = document.getElementById('tx-date');
+  if (dateEl) dateEl.value = new Date().toISOString().slice(0,10);
+  const errEl = document.getElementById('tx-error');
+  if (errEl) errEl.textContent = '';
+  document.getElementById('tx-modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('tx-ticker')?.focus(), 50);
+}
+
+document.getElementById('log-tx-btn')?.addEventListener('click', openTxModal);
+document.getElementById('tx-cancel')?.addEventListener('click', () => document.getElementById('tx-modal-overlay').classList.remove('open'));
+document.getElementById('tx-submit')?.addEventListener('click', async () => {
+  const ticker = (document.getElementById('tx-ticker')?.value || '').trim().toUpperCase();
+  const shares = parseFloat(document.getElementById('tx-shares')?.value);
+  const price  = parseFloat(document.getElementById('tx-price')?.value);
+  const date   = document.getElementById('tx-date')?.value;
+  const notes  = document.getElementById('tx-notes')?.value || '';
+  const errEl  = document.getElementById('tx-error');
+  if (!ticker)                   { errEl.textContent = 'Enter a ticker.'; return; }
+  if (isNaN(shares)||shares<=0)  { errEl.textContent = 'Enter valid shares.'; return; }
+  if (isNaN(price)||price<=0)    { errEl.textContent = 'Enter valid price.'; return; }
+  if (!date)                     { errEl.textContent = 'Select a date.'; return; }
+  const res = await fetch('/api/user/transactions', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+    body: JSON.stringify({ ticker, tx_type: _txType, shares, price, date, notes }),
+  }).catch(() => null);
+  if (!res || !res.ok) { errEl.textContent = 'Failed to save.'; return; }
+  document.getElementById('tx-modal-overlay').classList.remove('open');
+  await loadTransactions();
+});
+
+// ---------------------------------------------------------------------------
+// Stock Screener
+// ---------------------------------------------------------------------------
+let _scData = [];
+let _scSortCol = 'market_cap';
+let _scSortAsc = false;
+let _scInited = false;
+
+async function initScreener() {
+  if (_scInited) return;
+  try {
+    const res  = await fetch('/api/screener?sector=Technology', { headers: { Authorization: `Bearer ${authToken}` } });
+    const data = await res.json();
+    const sel  = document.getElementById('screener-sector-sel');
+    if (sel && data.sectors) {
+      sel.innerHTML = data.sectors.map(s => `<option value="${s}">${s}</option>`).join('');
+    }
+    _scInited = true;
+    _scData = data.results || [];
+    renderScTable();
+  } catch {}
+}
+
+async function runScreener() {
+  const btn    = document.getElementById('screener-run-btn');
+  const status = document.getElementById('screener-status');
+  const sector = document.getElementById('screener-sector-sel')?.value || 'Technology';
+  const maxPe  = document.getElementById('screener-max-pe')?.value;
+  const change = document.getElementById('screener-change-sel')?.value;
+  const cap    = document.getElementById('screener-cap-sel')?.value;
+
+  let url = `/api/screener?sector=${encodeURIComponent(sector)}`;
+  if (maxPe)               url += `&max_pe=${maxPe}`;
+  if (change === 'gainers') url += '&min_change=0';
+  if (change === 'losers')  url += '&max_change=0';
+  if (change === 'up2')     url += '&min_change=2';
+  if (change === 'down2')   url += '&max_change=-2';
+  if (cap === 'large')      url += '&min_cap=10000000000';
+  if (cap === 'mid')        url += '&min_cap=2000000000&max_cap=10000000000';
+  if (cap === 'small')      url += '&max_cap=2000000000';
+
+  if (btn)    { btn.disabled = true; btn.textContent = 'Loading…'; }
+  if (status) status.textContent = 'Fetching (~20s)…';
+
+  try {
+    const res  = await fetch(url, { headers: { Authorization: `Bearer ${authToken}` } });
+    const data = await res.json();
+    _scData = data.results || [];
+    if (status) status.textContent = `${_scData.length} results`;
+    renderScTable();
+  } catch {
+    if (status) status.textContent = 'Error. Try again.';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Run Screener'; }
+  }
+}
+
+function renderScTable() {
+  const tbody = document.getElementById('screener-tbody');
+  if (!tbody) return;
+  const sorted = [..._scData].sort((a, b) => {
+    const av = a[_scSortCol]; const bv = b[_scSortCol];
+    if (av == null) return 1; if (bv == null) return -1;
+    return _scSortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+  });
+  if (!sorted.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:30px">No results. Adjust filters and run again.</td></tr>';
+    return;
+  }
+  const fmtCap = v => !v ? '—' : v >= 1e12 ? `$${(v/1e12).toFixed(1)}T` : v >= 1e9 ? `$${(v/1e9).toFixed(1)}B` : `$${(v/1e6).toFixed(0)}M`;
+  const fmtPct = v => v == null ? '—' : `<span style="color:${v >= 0 ? 'var(--accent)' : 'var(--red)'}">${v >= 0 ? '+' : ''}${v.toFixed(2)}%</span>`;
+  const fmt2   = v => v == null ? '—' : v.toFixed(2);
+  const fmtDY  = v => v == null ? '—' : `${(v * 100).toFixed(2)}%`;
+  tbody.innerHTML = sorted.map(r => `<tr onclick="scGoTicker('${r.ticker}')">
+    <td><span class="s-ticker">${r.ticker}</span></td>
+    <td><span class="s-company">${r.company}</span></td>
+    <td style="color:var(--text)">$${fmt2(r.price)}</td>
+    <td>${fmtPct(r.change_pct)}</td>
+    <td style="color:var(--muted)">${fmtCap(r.market_cap)}</td>
+    <td style="color:var(--muted)">${r.pe == null ? '—' : r.pe.toFixed(1) + 'x'}</td>
+    <td style="color:var(--muted)">${r.forward_pe == null ? '—' : r.forward_pe.toFixed(1) + 'x'}</td>
+    <td style="color:var(--muted)">${fmt2(r.beta)}</td>
+    <td style="color:var(--muted)">${fmtDY(r.div_yield)}</td>
+  </tr>`).join('');
+}
+
+function scGoTicker(ticker) {
+  const termTab = document.querySelector('.nav-tab[data-page="terminal"]');
+  if (termTab) termTab.click();
+  setTimeout(() => {
+    const inp = document.getElementById('ticker-input');
+    const btn = document.getElementById('search-btn');
+    if (inp && btn) { inp.value = ticker; btn.click(); }
+  }, 80);
+}
+
+document.getElementById('screener-run-btn')?.addEventListener('click', runScreener);
+document.querySelectorAll('.screener-table th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (_scSortCol === col) _scSortAsc = !_scSortAsc;
+    else { _scSortCol = col; _scSortAsc = false; }
+    renderScTable();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Live Earnings Calendar
+// ---------------------------------------------------------------------------
+async function ecLoadLive() {
+  const btn = document.getElementById('ec-live-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+  try {
+    const res  = await fetch('/api/earnings/upcoming', { headers: { Authorization: `Bearer ${authToken}` } });
+    const data = await res.json();
+    const earnings = data.earnings || [];
+    const container = document.getElementById('ec-live-results');
+    if (!container) return;
+    if (!earnings.length) { container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:20px">No upcoming earnings found for the next 60 days.</p>'; return; }
+    const rows = earnings.map(e => {
+      const daysUntil = Math.ceil((new Date(e.earnings_date) - new Date()) / 86400000);
+      const urgency   = daysUntil <= 7 ? 'color:var(--accent)' : daysUntil <= 14 ? 'color:#f0c000' : 'color:var(--muted)';
+      const mcap = e.market_cap ? (e.market_cap >= 1e12 ? `$${(e.market_cap/1e12).toFixed(1)}T` : e.market_cap >= 1e9 ? `$${(e.market_cap/1e9).toFixed(1)}B` : '') : '';
+      return `<tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="ecGoToTicker && ecGoToTicker('${e.ticker}')">
+        <td style="padding:8px 12px;font-weight:700;color:var(--accent)">${e.ticker}</td>
+        <td style="padding:8px 12px;color:var(--text);font-size:12px">${e.company_name}</td>
+        <td style="padding:8px 12px;color:var(--muted);font-size:11px">${e.sector}</td>
+        <td style="padding:8px 12px;font-size:12px;${urgency}">${e.earnings_date}</td>
+        <td style="padding:8px 12px;color:var(--muted);font-size:11px;${urgency}">${daysUntil > 0 ? `in ${daysUntil}d` : 'today'}</td>
+        <td style="padding:8px 12px;color:var(--muted);font-size:11px">${e.eps_estimate != null ? `$${e.eps_estimate.toFixed(2)}` : '—'}</td>
+        <td style="padding:8px 12px;color:var(--muted);font-size:11px">${mcap}</td>
+      </tr>`;
+    }).join('');
+    container.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:var(--panel2)">
+        <th style="padding:8px 12px;text-align:left;color:var(--label);font-size:10px;letter-spacing:.1em;text-transform:uppercase">Ticker</th>
+        <th style="padding:8px 12px;text-align:left;color:var(--label);font-size:10px;letter-spacing:.1em;text-transform:uppercase">Company</th>
+        <th style="padding:8px 12px;text-align:left;color:var(--label);font-size:10px;letter-spacing:.1em;text-transform:uppercase">Sector</th>
+        <th style="padding:8px 12px;text-align:left;color:var(--label);font-size:10px;letter-spacing:.1em;text-transform:uppercase">Date</th>
+        <th style="padding:8px 12px;text-align:left;color:var(--label);font-size:10px;letter-spacing:.1em;text-transform:uppercase">Countdown</th>
+        <th style="padding:8px 12px;text-align:left;color:var(--label);font-size:10px;letter-spacing:.1em;text-transform:uppercase">EPS Est.</th>
+        <th style="padding:8px 12px;text-align:left;color:var(--label);font-size:10px;letter-spacing:.1em;text-transform:uppercase">Mkt Cap</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  } catch(e) {
+    const container = document.getElementById('ec-live-results');
+    if (container) container.innerHTML = '<p style="color:var(--red);text-align:center;padding:20px">Failed to load live data. Check the API.</p>';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↻ Refresh'; }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// News top-bar filters (data-cat / data-sent on nf-btn)
+// ---------------------------------------------------------------------------
+let _nfCat  = 'all';
+let _nfSent = 'all';
+
+document.querySelectorAll('#news-filters .nf-btn[data-cat]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    _nfCat = btn.dataset.cat;
+    document.querySelectorAll('#news-filters .nf-btn[data-cat]').forEach(b => b.classList.toggle('active', b === btn));
+    renderNewsCards(newsArticles);
+  });
+});
+document.querySelectorAll('#news-filters .nf-btn[data-sent]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    _nfSent = btn.dataset.sent;
+    document.querySelectorAll('#news-filters .nf-btn[data-sent]').forEach(b => b.classList.toggle('active', b === btn));
+    renderNewsCards(newsArticles);
+  });
+});
+
 // ── Wire options into ticker load ────────────────────────────────────────────
 const _origLoadTicker = loadTicker;
 loadTicker = async function(symbol, isRefresh = false) {
@@ -3563,6 +4172,8 @@ function setAuth(token, user) {
   unlockApp();
   renderUserPill();
   syncAfterLogin();
+  loadAlerts();
+  loadTransactions();
 }
 
 function clearAuth() {
@@ -3709,6 +4320,67 @@ document.getElementById('nav-logout-btn').addEventListener('click', () => {
   clearAuth();
   document.getElementById('ai-panel').classList.remove('visible');
 });
+
+// ---------------------------------------------------------------------------
+// Password Reset
+// ---------------------------------------------------------------------------
+document.getElementById('auth-forgot-link')?.addEventListener('click', () => {
+  document.getElementById('auth-main-fields').style.display = 'none';
+  document.getElementById('auth-forgot-view').classList.add('visible');
+  document.getElementById('auth-reset-view').classList.remove('visible');
+});
+document.getElementById('auth-forgot-back')?.addEventListener('click', () => {
+  document.getElementById('auth-main-fields').style.display = '';
+  document.getElementById('auth-forgot-view').classList.remove('visible');
+});
+document.getElementById('forgot-submit-btn')?.addEventListener('click', async () => {
+  const email = document.getElementById('forgot-email')?.value.trim();
+  const errEl = document.getElementById('forgot-error');
+  const succEl = document.getElementById('forgot-success');
+  if (!email) { if (errEl) errEl.textContent = 'Enter your email.'; return; }
+  const btn = document.getElementById('forgot-submit-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  if (errEl) errEl.textContent = '';
+  await fetch('/api/auth/forgot-password', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  }).catch(() => {});
+  if (succEl) succEl.style.display = '';
+  btn.disabled = false; btn.textContent = 'Send Reset Link';
+});
+document.getElementById('reset-submit-btn')?.addEventListener('click', async () => {
+  const pw1 = document.getElementById('reset-password-input')?.value;
+  const pw2 = document.getElementById('reset-password-confirm')?.value;
+  const errEl = document.getElementById('reset-error');
+  const token = new URLSearchParams(window.location.search).get('token');
+  if (pw1 !== pw2) { if (errEl) errEl.textContent = 'Passwords do not match.'; return; }
+  if (!pw1 || pw1.length < 6) { if (errEl) errEl.textContent = 'Min. 6 characters.'; return; }
+  const btn = document.getElementById('reset-submit-btn');
+  btn.disabled = true; btn.textContent = 'Updating…';
+  try {
+    const res = await fetch('/api/auth/reset-password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, new_password: pw1 }),
+    });
+    const data = await res.json();
+    if (!res.ok) { if (errEl) errEl.textContent = data.detail || 'Link invalid or expired.'; btn.disabled = false; btn.textContent = 'Update Password'; return; }
+    setAuth(data.token, { email: data.email, user_id: data.user_id });
+    window.history.replaceState({}, '', '/');
+  } catch {
+    if (errEl) errEl.textContent = 'Network error.';
+    btn.disabled = false; btn.textContent = 'Update Password';
+  }
+});
+(function () {
+  const p = new URLSearchParams(window.location.search);
+  if (p.get('action') === 'reset' && p.get('token')) {
+    setTimeout(() => {
+      document.getElementById('auth-overlay')?.classList.add('open');
+      document.getElementById('auth-main-fields').style.display = 'none';
+      document.getElementById('auth-reset-view').classList.add('visible');
+    }, 300);
+  }
+})();
 
 // ---------------------------------------------------------------------------
 // Wire save functions → server push on every change
