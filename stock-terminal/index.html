@@ -167,6 +167,63 @@
   .sma-toggle[data-dataset="3"] { color: var(--pink);  border-color: var(--pink); }
   #chart-wrap { position: relative; height: 280px; }
 
+  /* ---- Split / Compare ---- */
+  #terminal-split-wrap { display: flex; gap: 14px; align-items: flex-start; }
+  #terminal-main { flex: 1; min-width: 0; }
+  #compare-panel {
+    width: 350px; flex-shrink: 0; display: none;
+    position: sticky; top: 54px;
+    max-height: calc(100vh - 66px); overflow-y: auto;
+  }
+  #compare-panel.open { display: block; }
+  #compare-toggle-btn {
+    padding: 6px 13px; background: transparent;
+    border: 1px solid var(--border2); border-radius: 4px;
+    color: var(--muted); font-family: inherit; font-size: 11px;
+    font-weight: 600; cursor: pointer; letter-spacing: .06em;
+    transition: all .15s; white-space: nowrap; margin-left: 8px;
+  }
+  #compare-toggle-btn:hover { color: var(--accent); border-color: var(--accent); }
+  #compare-toggle-btn.active { color: var(--accent); border-color: var(--accent); background: rgba(0,255,136,.06); }
+  #cmp-input {
+    flex: 1; background: var(--panel2); border: 1px solid var(--border2);
+    border-radius: 4px; padding: 7px 10px; color: var(--text);
+    font-family: inherit; font-size: 12px; text-transform: uppercase;
+    outline: none;
+  }
+  #cmp-input:focus { border-color: var(--accent); }
+  #cmp-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+  .cmp-stat { background: var(--panel2); border-radius: 4px; padding: 7px 10px; }
+  .cmp-stat-lbl { font-size: 9px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 2px; }
+  .cmp-stat-val { font-size: 12px; font-weight: 700; color: var(--text); }
+  @media (max-width: 1050px) {
+    #terminal-split-wrap { flex-direction: column; }
+    #compare-panel { width: 100%; position: static; max-height: none; }
+  }
+
+  /* ---- Portfolio impact on news cards ---- */
+  .pf-impact-bar {
+    margin-top: 9px; padding: 8px 10px;
+    background: rgba(0,255,136,0.04);
+    border: 1px solid rgba(0,255,136,0.14);
+    border-radius: 5px;
+  }
+  .pf-impact-hdr {
+    font-size: 9px; color: var(--accent); letter-spacing: .1em;
+    font-weight: 700; opacity: .7; margin-bottom: 6px;
+  }
+  .pf-impact-row { display: flex; gap: 8px; margin-bottom: 5px; align-items: flex-start; }
+  .pf-impact-row:last-child { margin-bottom: 0; }
+  .pf-impact-ticker {
+    font-size: 10px; font-weight: 800; padding: 2px 6px;
+    border-radius: 3px; white-space: nowrap; flex-shrink: 0; letter-spacing: .04em;
+  }
+  .pf-impact-ticker.Positive { background: rgba(0,255,136,.14); color: var(--accent); }
+  .pf-impact-ticker.Negative { background: rgba(255,80,80,.14); color: var(--red); }
+  .pf-impact-ticker.Mixed    { background: rgba(255,200,0,.12); color: #f0c040; }
+  .pf-impact-note { font-size: 10px; color: var(--muted); line-height: 1.45; }
+  .nf-btn.pf-active { background: rgba(0,255,136,.12) !important; border-color: var(--accent) !important; color: var(--accent) !important; }
+
   /* ---- Skeleton ---- */
   #skeleton { padding: 12px 16px; }
   @keyframes pulse {
@@ -346,6 +403,7 @@
   }
   .news-card:hover { border-color: var(--border2); box-shadow: 0 4px 16px rgba(0,0,0,0.3); transform: translateY(-1px); }
   .news-card.critical { border-left: 3px solid var(--red); }
+  .news-card.pf-hit   { border-left: 3px solid rgba(0,255,136,.5); }
   @keyframes fadeInCard { to { opacity: 1; } }
 
   .card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
@@ -1203,11 +1261,13 @@
 
 <!-- Terminal Page -->
 <div id="terminal-page">
+<div id="terminal-split-wrap"><div id="terminal-main">
 
 <!-- Search -->
 <div id="search-bar">
   <input id="ticker-input" type="text" placeholder="Enter ticker symbol..." maxlength="10" autocomplete="off" spellcheck="false">
   <button id="search-btn">Search</button>
+  <button id="compare-toggle-btn" title="Compare two tickers side by side">⊞ Compare</button>
 </div>
 
 <!-- Skeleton -->
@@ -1460,6 +1520,49 @@
 
 </div>
 
+</div><!-- end #terminal-main -->
+
+<!-- ── Compare Panel ──────────────────────────────────────────────────────── -->
+<div id="compare-panel">
+  <div class="panel" style="padding:14px">
+
+    <!-- Search row -->
+    <div style="display:flex;gap:7px;margin-bottom:14px;align-items:center">
+      <input id="cmp-input" type="text" placeholder="Compare ticker…" maxlength="10" autocomplete="off" spellcheck="false">
+      <button id="cmp-go-btn" style="padding:6px 13px;background:var(--accent);color:#07090b;border:none;border-radius:4px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.04em">GO</button>
+      <button id="cmp-close-btn" style="padding:5px 10px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer;font-size:15px;line-height:1">×</button>
+    </div>
+
+    <div id="cmp-empty" style="text-align:center;color:var(--muted);padding:36px 0;font-size:10px;letter-spacing:.12em">ENTER A TICKER TO COMPARE</div>
+    <div id="cmp-loading" style="display:none;text-align:center;color:var(--muted);padding:36px 0;font-size:11px">Loading…</div>
+
+    <div id="cmp-body" style="display:none">
+      <!-- Header -->
+      <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+        <div id="cmp-name" style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+          <div id="cmp-price" style="font-size:24px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums"></div>
+          <div id="cmp-change" style="font-size:12px;font-weight:600"></div>
+        </div>
+        <div id="cmp-meta" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
+      </div>
+
+      <!-- Stats grid -->
+      <div id="cmp-stats"></div>
+
+      <!-- Mini chart -->
+      <div style="position:relative;height:150px;margin-bottom:12px">
+        <canvas id="cmp-chart"></canvas>
+      </div>
+
+      <!-- Actions -->
+      <button id="cmp-load-btn" style="width:100%;padding:7px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);font-size:10px;font-family:inherit;cursor:pointer;letter-spacing:.08em;transition:all .15s">LOAD IN TERMINAL →</button>
+    </div>
+
+  </div>
+</div><!-- end #compare-panel -->
+
+</div><!-- end #terminal-split-wrap -->
 </div><!-- end #terminal-page -->
 
 <!-- Portfolio Page -->
@@ -1672,6 +1775,7 @@
           <button class="nf-btn" data-sent="Positive" style="color:var(--accent)">▲ Positive</button>
           <button class="nf-btn" data-sent="Negative" style="color:var(--red)">▼ Negative</button>
           <button class="nf-btn" data-sent="Neutral" style="color:var(--muted)">● Neutral</button>
+          <button class="nf-btn" id="nf-pf-btn" style="display:none;color:var(--accent)" data-pf="true">◈ My Portfolio</button>
         </div>
       </div>
       <div id="news-skeleton">
@@ -2816,6 +2920,17 @@ function renderNewsCards(articles) {
   if (typeof _nfSent !== 'undefined' && _nfSent !== 'all') {
     filtered = filtered.filter(a => (a.sentiment || '').toLowerCase() === _nfSent.toLowerCase());
   }
+  // Portfolio-only filter
+  if (typeof _nfPfOnly !== 'undefined' && _nfPfOnly) {
+    const affectedIds = new Set((_pfImpacts || []).map(i => i.article_id));
+    filtered = filtered.filter((_, idx) => {
+      // find original index in newsArticles
+      const origIdx = newsArticles.indexOf(articles[idx] ?? filtered[idx]);
+      return affectedIds.has(origIdx);
+    });
+    // simpler: keep any article whose original index appears in _pfImpacts
+    filtered = articles.filter((_, idx) => affectedIds.has(idx));
+  }
 
   if (filtered.length === 0) {
     feed.classList.add('hidden');
@@ -2826,11 +2941,25 @@ function renderNewsCards(articles) {
   feed.classList.remove('hidden');
 
   feed.innerHTML = filtered.map((a, i) => {
-    const catCls  = CAT_CLASS[a.category] || 'cat-macro';
-    const isCrit  = a.importance_score >= 10;
-    const delay   = Math.min(i * 60, 400);
+    const origIdx  = newsArticles.indexOf(a);
+    const impacts  = _articleImpacts(origIdx);
+    const catCls   = CAT_CLASS[a.category] || 'cat-macro';
+    const isCrit   = a.importance_score >= 10;
+    const hasPfHit = impacts.length > 0;
+    const delay    = Math.min(i * 60, 400);
+
+    const impactHtml = hasPfHit ? `
+      <div class="pf-impact-bar">
+        <div class="pf-impact-hdr">▸ YOUR PORTFOLIO</div>
+        ${impacts.map(imp => `
+          <div class="pf-impact-row">
+            <span class="pf-impact-ticker ${imp.direction}">${imp.ticker}</span>
+            <span class="pf-impact-note">${imp.note}</span>
+          </div>`).join('')}
+      </div>` : '';
+
     return `
-      <div class="news-card${isCrit ? ' critical' : ''}" style="animation-delay:${delay}ms">
+      <div class="news-card${isCrit ? ' critical' : ''}${hasPfHit ? ' pf-hit' : ''}" style="animation-delay:${delay}ms">
         <div class="card-top">
           <span class="cat-badge ${catCls}">${a.category}</span>
           <span class="score-dots">${scoreDots(a.importance_score)}</span>
@@ -2843,6 +2972,7 @@ function renderNewsCards(articles) {
           ${a.published_at ? ' &middot; ' + timeAgo(a.published_at) : ''}
         </div>
         ${a.market_impact ? `<div class="card-impact">${a.market_impact}</div>` : ''}
+        ${impactHtml}
       </div>
     `;
   }).join('');
@@ -2882,6 +3012,8 @@ async function loadNews(force = false) {
 
     skeleton.style.display = 'none';
     renderNewsCards(newsArticles);
+    // Async — doesn't block render; re-renders when impact data arrives
+    loadPortfolioNewsImpact();
 
     const ts = data.cached_at ? new Date(data.cached_at) : new Date();
     document.getElementById('news-last-updated').textContent =
@@ -4051,6 +4183,175 @@ async function ecLoadLive() {
 }
 
 // ---------------------------------------------------------------------------
+// ── Compare Panel ────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+let cmpChart  = null;
+let cmpSymbol = null;
+
+function _cmpFmt(v, prefix = '', suffix = '', decimals = 2) {
+  if (v == null) return '—';
+  if (typeof v === 'number') {
+    if (Math.abs(v) >= 1e12) return prefix + (v / 1e12).toFixed(2) + 'T' + suffix;
+    if (Math.abs(v) >= 1e9)  return prefix + (v / 1e9).toFixed(2) + 'B' + suffix;
+    if (Math.abs(v) >= 1e6)  return prefix + (v / 1e6).toFixed(2) + 'M' + suffix;
+    return prefix + v.toFixed(decimals) + suffix;
+  }
+  return String(v);
+}
+
+async function loadCompare(symbol) {
+  symbol = symbol.trim().toUpperCase();
+  if (!symbol) return;
+  cmpSymbol = symbol;
+  document.getElementById('cmp-empty').style.display   = 'none';
+  document.getElementById('cmp-body').style.display    = 'none';
+  document.getElementById('cmp-loading').style.display = 'block';
+
+  try {
+    const res  = await fetch('/api/ticker/' + encodeURIComponent(symbol));
+    if (!res.ok) throw new Error('not found');
+    const data = await res.json();
+
+    // Header
+    const info = data.info || {};
+    const chg  = data.price?.change ?? 0;
+    const chgP = data.price?.change_pct ?? 0;
+    const chgColor = chg >= 0 ? 'var(--accent)' : 'var(--red)';
+    document.getElementById('cmp-name').textContent  = info.company_name || symbol;
+    document.getElementById('cmp-price').textContent = data.price?.current != null ? '$' + data.price.current.toFixed(2) : '—';
+    document.getElementById('cmp-change').innerHTML  =
+      `<span style="color:${chgColor}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)} (${chg >= 0 ? '+' : ''}${chgP.toFixed(2)}%)</span>`;
+    document.getElementById('cmp-meta').textContent  =
+      [symbol, info.exchange, info.sector].filter(Boolean).join(' · ');
+
+    // Stats
+    const val = data.valuation || {};
+    const stats = [
+      { l: 'Market Cap',  v: _cmpFmt(info.market_cap, '$') },
+      { l: 'P/E (TTM)',   v: val.pe_ttm != null ? val.pe_ttm.toFixed(1) : '—' },
+      { l: '52W High',    v: data.price?.week_52_high != null ? '$' + data.price.week_52_high.toFixed(2) : '—' },
+      { l: '52W Low',     v: data.price?.week_52_low  != null ? '$' + data.price.week_52_low.toFixed(2)  : '—' },
+      { l: 'Volume',      v: _cmpFmt(data.price?.volume) },
+      { l: 'Avg Volume',  v: _cmpFmt(data.price?.avg_volume) },
+      { l: 'Div Yield',   v: val.dividend_yield != null ? val.dividend_yield.toFixed(2) + '%' : '—' },
+      { l: 'Beta',        v: data.risk?.beta != null ? data.risk.beta.toFixed(2) : '—' },
+    ];
+    document.getElementById('cmp-stats').innerHTML = stats.map(s => `
+      <div class="cmp-stat">
+        <div class="cmp-stat-lbl">${s.l}</div>
+        <div class="cmp-stat-val">${s.v}</div>
+      </div>`).join('');
+
+    // Mini chart — last 60 days
+    if (data.chart?.dates && data.chart?.prices) {
+      const labels = data.chart.dates.slice(-60);
+      const prices = data.chart.prices.slice(-60);
+      const isUp   = prices.length > 1 && prices[prices.length - 1] >= prices[0];
+      const col    = isUp ? '#00ff88' : '#ff5050';
+      if (cmpChart) { cmpChart.destroy(); cmpChart = null; }
+      const ctx = document.getElementById('cmp-chart').getContext('2d');
+      cmpChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            data: prices, borderColor: col, borderWidth: 1.5,
+            pointRadius: 0, fill: true,
+            backgroundColor: ctx => {
+              const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 150);
+              g.addColorStop(0, isUp ? 'rgba(0,255,136,.18)' : 'rgba(255,80,80,.18)');
+              g.addColorStop(1, 'rgba(0,0,0,0)');
+              return g;
+            },
+            tension: 0.3,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: false,
+          plugins: { legend: { display: false }, tooltip: {
+            callbacks: { label: ctx => '$' + ctx.parsed.y.toFixed(2) }
+          }},
+          scales: {
+            x: { display: false },
+            y: { display: true, position: 'right',
+              ticks: { color: '#555', font: { size: 9 }, maxTicksLimit: 4,
+                callback: v => '$' + v.toFixed(0) },
+              grid: { color: 'rgba(255,255,255,0.04)' }
+            }
+          }
+        }
+      });
+    }
+
+    document.getElementById('cmp-loading').style.display = 'none';
+    document.getElementById('cmp-body').style.display    = 'block';
+  } catch (e) {
+    document.getElementById('cmp-loading').style.display = 'none';
+    document.getElementById('cmp-empty').style.display   = 'block';
+    document.getElementById('cmp-empty').textContent     = 'Ticker not found.';
+  }
+}
+
+// Compare toggle
+document.getElementById('compare-toggle-btn').addEventListener('click', () => {
+  const panel = document.getElementById('compare-panel');
+  const btn   = document.getElementById('compare-toggle-btn');
+  const open  = panel.classList.toggle('open');
+  btn.classList.toggle('active', open);
+  if (open) setTimeout(() => document.getElementById('cmp-input').focus(), 80);
+});
+document.getElementById('cmp-close-btn').addEventListener('click', () => {
+  document.getElementById('compare-panel').classList.remove('open');
+  document.getElementById('compare-toggle-btn').classList.remove('active');
+});
+document.getElementById('cmp-go-btn').addEventListener('click', () => {
+  loadCompare(document.getElementById('cmp-input').value);
+});
+document.getElementById('cmp-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') loadCompare(document.getElementById('cmp-input').value);
+});
+document.getElementById('cmp-load-btn').addEventListener('click', () => {
+  if (cmpSymbol) {
+    document.getElementById('ticker-input').value = cmpSymbol;
+    loadTicker(cmpSymbol);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// ── Portfolio-aware news ─────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+let _pfImpacts    = [];   // [{article_id, ticker, direction, note}]
+let _nfPfOnly     = false;
+
+async function loadPortfolioNewsImpact() {
+  const tickers = (pfPositions || []).map(p => p.ticker).filter(Boolean);
+  if (!tickers.length || !newsArticles.length) return;
+
+  // Show the "My Portfolio" filter button
+  const pfBtn = document.getElementById('nf-pf-btn');
+  if (pfBtn) pfBtn.style.display = '';
+
+  const articles = newsArticles.map((a, i) => ({
+    id: i, title: a.title || '', summary: a.summary || ''
+  }));
+
+  try {
+    const res  = await fetch('/api/news/portfolio-impact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tickers, articles }),
+    });
+    const data = await res.json();
+    _pfImpacts = data.impacts || [];
+    renderNewsCards(newsArticles);   // re-render with badges
+  } catch {}
+}
+
+function _articleImpacts(articleIdx) {
+  return _pfImpacts.filter(i => i.article_id === articleIdx);
+}
+
+// ---------------------------------------------------------------------------
 // News top-bar filters (data-cat / data-sent on nf-btn)
 // ---------------------------------------------------------------------------
 let _nfCat  = 'all';
@@ -4065,10 +4366,24 @@ document.querySelectorAll('#news-filters .nf-btn[data-cat]').forEach(btn => {
 });
 document.querySelectorAll('#news-filters .nf-btn[data-sent]').forEach(btn => {
   btn.addEventListener('click', () => {
-    _nfSent = btn.dataset.sent;
+    _nfSent    = btn.dataset.sent;
+    _nfPfOnly  = false;
     document.querySelectorAll('#news-filters .nf-btn[data-sent]').forEach(b => b.classList.toggle('active', b === btn));
+    document.getElementById('nf-pf-btn')?.classList.remove('pf-active');
     renderNewsCards(newsArticles);
   });
+});
+
+// Portfolio filter button
+document.getElementById('nf-pf-btn')?.addEventListener('click', function() {
+  _nfPfOnly = !_nfPfOnly;
+  this.classList.toggle('pf-active', _nfPfOnly);
+  // deactivate sentiment buttons when portfolio filter is active
+  if (_nfPfOnly) {
+    _nfSent = 'all';
+    document.querySelectorAll('#news-filters .nf-btn[data-sent]').forEach(b => b.classList.toggle('active', b.dataset.sent === 'all'));
+  }
+  renderNewsCards(newsArticles);
 });
 
 // ── Wire options into ticker load ────────────────────────────────────────────

@@ -1472,6 +1472,73 @@ def get_news():
     return result
 
 
+class PortfolioImpactRequest(BaseModel):
+    tickers: List[str]
+    articles: List[dict]   # [{id, title, summary}]
+
+
+def _keyword_portfolio_impact(tickers: list, articles: list) -> dict:
+    """Keyword fallback: flag articles that directly mention a portfolio ticker."""
+    impacts = []
+    for a in articles:
+        text = " " + (a.get("title", "") + " " + a.get("summary", "")).lower() + " "
+        for ticker in tickers:
+            # Word-boundary match so "MS" doesn't match "MSFT"
+            if f" {ticker.lower()} " in text or f"({ticker.lower()})" in text:
+                impacts.append({
+                    "article_id": a["id"],
+                    "ticker": ticker.upper(),
+                    "direction": "Mixed",
+                    "note": f"{ticker.upper()} is directly referenced in this article.",
+                })
+    return {"impacts": impacts}
+
+
+@app.post("/api/news/portfolio-impact")
+def get_portfolio_impact(body: PortfolioImpactRequest):
+    if not body.tickers or not body.articles:
+        return {"impacts": []}
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return _keyword_portfolio_impact(body.tickers, body.articles)
+
+    tickers_str = ", ".join(t.upper() for t in body.tickers[:25])
+    articles_text = "\n\n".join(
+        f'[{a["id"]}] {a.get("title", "")}\n{a.get("summary", "")[:250]}'
+        for a in body.articles[:25]
+    )
+    system = (
+        f"An equity investor holds: {tickers_str}.\n"
+        "Read each numbered news article and identify which holdings are meaningfully affected.\n"
+        "Consider: direct mentions, sector-wide impact, macro factor specific to the business.\n\n"
+        "Return a JSON array where each entry is:\n"
+        '  {"article_id": <int>, "ticker": "<SYMBOL>", '
+        '"direction": "Positive"|"Negative"|"Mixed", '
+        '"note": "<one sentence: how this news specifically impacts this holding>"}\n\n'
+        "Rules:\n"
+        "- Only include entries with a specific, genuine connection — not vague macro.\n"
+        "- Be concrete: 'Tariff on chips raises NVDA input costs' beats 'may affect markets'.\n"
+        "- If an article affects multiple holdings, emit one entry per holding.\n"
+        "- Return only a valid JSON array. No markdown, no preamble."
+    )
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=2048,
+            system=system,
+            messages=[{"role": "user", "content": articles_text}],
+        )
+        raw = msg.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = re.sub(r"^```[a-z]*\n?", "", raw)
+            raw = re.sub(r"\n?```$", "", raw)
+        return {"impacts": json.loads(raw)}
+    except Exception:
+        return _keyword_portfolio_impact(body.tickers, body.articles)
+
+
 @app.get("/api/news/ticker/{symbol}")
 def get_ticker_news(symbol: str):
     symbol = symbol.upper().strip()
