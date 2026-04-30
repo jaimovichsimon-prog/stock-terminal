@@ -1287,11 +1287,17 @@ _SENT_PHRASES_NEG = [
     "recession confirmed", "gdp contraction", "gdp shrinks",
     "yield curve inversion", "sovereign default", "debt ceiling",
     "credit downgrade", "rating downgrade",
-    # Geopolitical
+    # Geopolitical — supply shocks, conflicts, sanctions
     "war escalates", "military invasion", "military strike",
     "nuclear threat", "sanctions imposed", "new sanctions",
     "oil supply disruption", "trade war", "tariff escalation",
     "new tariffs", "tariff hike",
+    "blockade", "oil blockade", "iran blockade", "naval blockade",
+    "supply shock", "supply disruption", "energy crisis",
+    "oil embargo", "oil sanctions",
+    # Oil price spikes driven by supply disruption are macro-negative
+    "oil price rises above", "oil prices above", "crude above",
+    "oil hits", "crude hits", "brent hits",
     # Jobs
     "mass layoffs", "layoffs announced", "job cuts",
 ]
@@ -1631,11 +1637,84 @@ _SECTOR_TOPICS: dict[str, list[str]] = {
 }
 
 
+# Tickers where commodity price movement drives revenue directly.
+# For these, direction is computed from commodity price movement,
+# not from the macro article sentiment.
+_COMMODITY_PRODUCERS = {
+    # Oil & gas
+    "YPF", "XOM", "CVX", "BP", "COP", "OXY", "PSX", "MPC", "HAL", "SLB",
+    "PBR", "USO", "COP", "VLO",
+    # Gold / silver / miners
+    "GLD", "SLV", "GDX", "NEM", "FCX", "AEM", "GOLD",
+    # Argentine energy
+    "CEPU",
+}
+
+# Phrases that indicate rising commodity price in the article text
+_COMMODITY_PRICE_UP = [
+    "oil price rises", "oil prices rise", "oil price up", "oil prices up",
+    "crude rises", "crude surges", "crude up", "crude higher",
+    "brent rises", "brent surges", "brent up", "brent higher",
+    "wti rises", "wti surges", "wti up",
+    "oil hits", "crude hits", "brent hits",
+    "oil above", "crude above", "oil rally", "crude rally",
+    "oil price above", "oil prices above",
+    "natural gas rises", "natural gas surges", "gas prices rise",
+    "gold rises", "gold surges", "gold up", "gold hits", "gold above",
+    "copper rises", "copper surges",
+]
+_COMMODITY_PRICE_DOWN = [
+    "oil price falls", "oil prices fall", "oil price down", "crude falls",
+    "crude drops", "crude down", "crude lower", "brent falls", "brent drops",
+    "wti falls", "oil plunges", "crude plunges", "oil collapses",
+    "oil below", "crude below", "oil drops", "oil declines",
+    "natural gas falls", "gas prices fall",
+    "gold falls", "gold drops", "gold down", "gold declines",
+    "copper falls", "copper drops",
+]
+
+# In-memory cache for yfinance sector lookups (avoids repeated network calls)
+_sector_cache: dict[str, str] = {}
+
+
+def _lookup_sector(ticker: str) -> str:
+    """Fetch sector for a ticker via yfinance; cached to avoid repeat calls."""
+    if ticker in _sector_cache:
+        return _sector_cache[ticker]
+    try:
+        info = yf.Ticker(ticker).fast_info   # fast_info avoids full metadata fetch
+        sector = getattr(info, "sector", "") or ""
+    except Exception:
+        sector = ""
+    if not sector:
+        # fallback to full info if fast_info has no sector
+        try:
+            sector = yf.Ticker(ticker).info.get("sector", "") or ""
+        except Exception:
+            sector = ""
+    _sector_cache[ticker] = sector
+    return sector
+
+
+def _commodity_direction(raw: str) -> str | None:
+    """Return Positive/Negative if article contains commodity price movement; else None."""
+    if any(p in raw for p in _COMMODITY_PRICE_UP):
+        return "Positive"
+    if any(p in raw for p in _COMMODITY_PRICE_DOWN):
+        return "Negative"
+    return None
+
+
 def _keyword_portfolio_impact(tickers: list, articles: list) -> dict:
     """
     Sector/topic-aware fallback for portfolio impact when Claude is unavailable.
     Checks: (1) direct ticker mention, (2) company-specific topic keywords,
-    (3) sector-level topic keywords.
+    (3) sector-level topic keywords (using yfinance sector if not supplied).
+
+    Direction is computed per-ticker:
+    - Commodity producers (oil, gold, miners): direction follows commodity
+      price movement in the article, NOT the macro article sentiment.
+    - All other tickers: direction follows overall article sentiment.
     """
     impacts = []
     for a in articles:
@@ -1646,13 +1725,26 @@ def _keyword_portfolio_impact(tickers: list, articles: list) -> dict:
             # entry may be just a ticker string or a dict {ticker, sector, name}
             if isinstance(entry, dict):
                 ticker = entry.get("ticker", "").upper()
-                sector = entry.get("sector", "")
+                sector = entry.get("sector", "") or ""
             else:
                 ticker = str(entry).upper()
                 sector = ""
 
-            direction = art_sent if art_sent != "Neutral" else "Mixed"
-            note      = None
+            # Auto-lookup sector if not supplied and ticker isn't in _TICKER_TOPICS
+            if not sector and ticker not in _TICKER_TOPICS:
+                sector = _lookup_sector(ticker)
+
+            note = None
+
+            # --- Compute direction per-ticker ---
+            if ticker in _COMMODITY_PRODUCERS:
+                # For commodity producers, direction = commodity price movement
+                commodity_dir = _commodity_direction(raw)
+                direction = commodity_dir if commodity_dir else (
+                    art_sent if art_sent != "Neutral" else "Mixed"
+                )
+            else:
+                direction = art_sent if art_sent != "Neutral" else "Mixed"
 
             # 1. Direct ticker mention (word boundary)
             if re.search(r'\b' + re.escape(ticker) + r'\b', raw, re.IGNORECASE):
@@ -1666,7 +1758,7 @@ def _keyword_portfolio_impact(tickers: list, articles: list) -> dict:
                     note = (f"This article covers {topic}, which directly affects "
                             f"{ticker}'s revenues and valuation.")
 
-            # 3. Sector-level fallback
+            # 3. Sector-level fallback (works even without pfData on frontend)
             elif sector and sector in _SECTOR_TOPICS:
                 matched = [kw for kw in _SECTOR_TOPICS[sector] if kw in raw]
                 if matched:
