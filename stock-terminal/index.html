@@ -668,22 +668,36 @@
   }
   #nav-logout-btn:hover { color: var(--red); }
 
+  /* ── App gate (full-screen lock when not authenticated) ─────────────────── */
+  #app-gate {
+    display: none; position: fixed; inset: 0;
+    background: rgba(7,9,11,0.92); backdrop-filter: blur(12px);
+    z-index: 999;
+  }
+  #app-gate.active { display: block; }
+
   /* ── Auth Modal ──────────────────────────────────────────────────────────── */
   #auth-overlay {
     display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,.7); backdrop-filter: blur(6px);
+    background: transparent;
     z-index: 1000; align-items: center; justify-content: center;
   }
   #auth-overlay.open { display: flex; }
   #auth-modal {
     background: var(--panel); border: 1px solid var(--border2);
     border-radius: 12px; padding: 32px; width: 380px;
-    box-shadow: 0 24px 80px rgba(0,0,0,.6);
+    box-shadow: 0 24px 80px rgba(0,0,0,.8);
     position: relative;
   }
+  .auth-subtitle {
+    font-size: 11px; color: var(--muted); margin: -14px 0 20px;
+    line-height: 1.5;
+  }
+  /* hide close button when modal is a required gate */
+  #auth-overlay.gated #auth-close { display: none; }
   .auth-logo {
     font-size: 11px; letter-spacing: .2em; color: var(--accent);
-    font-weight: 700; text-transform: uppercase; margin-bottom: 20px;
+    font-weight: 700; text-transform: uppercase; margin-bottom: 8px;
     display: flex; align-items: center; gap: 8px;
   }
   .auth-logo::before {
@@ -1041,11 +1055,15 @@
   </div>
 </div>
 
+<!-- Gate overlay (shown when not authenticated) -->
+<div id="app-gate"></div>
+
 <!-- Auth Modal -->
 <div id="auth-overlay">
   <div id="auth-modal">
     <button id="auth-close">×</button>
     <div class="auth-logo">Terminal Pro</div>
+    <p class="auth-subtitle">Sign in to access the terminal.</p>
     <div class="auth-tabs">
       <button class="auth-tab active" data-auth="login">Sign In</button>
       <button class="auth-tab" data-auth="register">Create Account</button>
@@ -3511,13 +3529,40 @@ async function syncAfterLogin() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Gate helpers — lock/unlock the entire app
+// ---------------------------------------------------------------------------
+function lockApp() {
+  document.getElementById('app-gate').classList.add('active');
+  // Open modal in gated mode (close button hidden, backdrop click disabled)
+  const overlay = document.getElementById('auth-overlay');
+  overlay.classList.add('open', 'gated');
+  document.getElementById('auth-error').textContent = '';
+  document.getElementById('auth-email').value = '';
+  document.getElementById('auth-password').value = '';
+  // Show Sign In tab by default
+  authMode = 'login';
+  document.querySelectorAll('.auth-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.auth === 'login')
+  );
+  document.getElementById('auth-submit-btn').textContent = 'Sign In';
+  setTimeout(() => document.getElementById('auth-email').focus(), 80);
+}
+
+function unlockApp() {
+  document.getElementById('app-gate').classList.remove('active');
+  const overlay = document.getElementById('auth-overlay');
+  overlay.classList.remove('open', 'gated');
+}
+
 function setAuth(token, user) {
   authToken = token;
   authUser  = user;
   localStorage.setItem('auth_token', token);
   localStorage.setItem('auth_user', JSON.stringify(user));
+  unlockApp();
   renderUserPill();
-  syncAfterLogin();   // ← pull/push data immediately on login
+  syncAfterLogin();
 }
 
 function clearAuth() {
@@ -3526,6 +3571,7 @@ function clearAuth() {
   localStorage.removeItem('auth_token');
   localStorage.removeItem('auth_user');
   renderUserPill();
+  lockApp();
 }
 
 function renderUserPill() {
@@ -3539,25 +3585,38 @@ function renderUserPill() {
     avatar.textContent = authUser.email[0].toUpperCase();
     emailEl.textContent = authUser.email;
   } else {
-    signInBtn.style.display = '';
+    signInBtn.style.display = 'none'; // always hidden — gate handles sign-in
     pill.classList.remove('visible');
   }
 }
 
-// Verify stored token on load + sync data
+// Verify stored token on load, then gate or unlock
 (async () => {
   if (authToken) {
     try {
       const r = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${authToken}` } });
       if (!r.ok) {
-        clearAuth();
+        // Token invalid — clear and gate
+        authToken = null; authUser = null;
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+        renderUserPill();
+        lockApp();
       } else {
         renderUserPill();
-        syncAfterLogin();  // ← restore server data on page reload
+        unlockApp();
+        syncAfterLogin();
       }
-    } catch { /* offline — keep local state */ }
+    } catch {
+      // Offline — trust stored token, show app
+      renderUserPill();
+      unlockApp();
+    }
+  } else {
+    // No token at all — gate immediately
+    renderUserPill();
+    lockApp();
   }
-  renderUserPill();
 })();
 
 // ---------------------------------------------------------------------------
@@ -3579,13 +3638,19 @@ function openAuthModal(mode = 'login') {
 }
 
 function closeAuthModal() {
-  document.getElementById('auth-overlay').classList.remove('open');
+  const overlay = document.getElementById('auth-overlay');
+  if (overlay.classList.contains('gated')) return; // can't close a required gate
+  overlay.classList.remove('open');
 }
 
 document.getElementById('nav-signin-btn').addEventListener('click', () => openAuthModal('login'));
 document.getElementById('auth-close').addEventListener('click', closeAuthModal);
 document.getElementById('auth-overlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('auth-overlay')) closeAuthModal();
+  // Don't close if the modal is a required gate
+  if (e.target === document.getElementById('auth-overlay') &&
+      !document.getElementById('auth-overlay').classList.contains('gated')) {
+    closeAuthModal();
+  }
 });
 
 document.querySelectorAll('.auth-tab').forEach(tab => {

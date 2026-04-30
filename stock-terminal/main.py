@@ -19,6 +19,9 @@ if _env_file.exists():
 import hashlib
 import secrets
 import base64
+import smtplib
+import threading
+from email.mime.text import MIMEText
 
 import numpy as np
 import pandas as pd
@@ -87,6 +90,39 @@ def get_db():
 # ---------------------------------------------------------------------------
 # Auth utilities
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Email notification (new user sign-up)
+# ---------------------------------------------------------------------------
+_NOTIFY_EMAIL  = os.environ.get("NOTIFY_EMAIL", "jaimovichsimon@gmail.com")
+_SMTP_HOST     = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+_SMTP_PORT     = int(os.environ.get("SMTP_PORT", "587"))
+_SMTP_USER     = os.environ.get("SMTP_USER", "")
+_SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+
+def _send_signup_email(new_user_email: str):
+    """Fire-and-forget email — runs in a background thread so it never blocks the response."""
+    if not _SMTP_USER or not _SMTP_PASSWORD:
+        return  # SMTP not configured, skip silently
+    try:
+        msg = MIMEText(
+            f"New user registered on Stock Terminal:\n\n"
+            f"  Email: {new_user_email}\n"
+            f"  Time:  {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC\n",
+            "plain"
+        )
+        msg["Subject"] = f"[Stock Terminal] New sign-up: {new_user_email}"
+        msg["From"]    = _SMTP_USER
+        msg["To"]      = _NOTIFY_EMAIL
+        with smtplib.SMTP(_SMTP_HOST, _SMTP_PORT, timeout=10) as smtp:
+            smtp.starttls()
+            smtp.login(_SMTP_USER, _SMTP_PASSWORD)
+            smtp.sendmail(_SMTP_USER, [_NOTIFY_EMAIL], msg.as_string())
+    except Exception:
+        pass  # never break registration if email fails
+
+def notify_new_user(email: str):
+    threading.Thread(target=_send_signup_email, args=(email,), daemon=True).start()
+
 JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-in-production-please")
 JWT_ALG    = "HS256"
 JWT_EXPIRE = 60 * 24 * 30  # 30 days in minutes
@@ -156,6 +192,7 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
+    notify_new_user(user.email)   # ← email notification, non-blocking
     return AuthResponse(token=create_token(user.id, user.email), email=user.email, user_id=user.id)
 
 @app.post("/api/auth/login", response_model=AuthResponse)
