@@ -2802,6 +2802,8 @@ async function loadPortfolio() {
     if (pfData.sectors) renderSectorChart(pfData.sectors);
     if (pfData.correlation) renderCorrelation(pfData.correlation);
     if (pfData.chart) renderPfChart(pfData.chart);
+    // Re-run news impact now that we have sector info for each holding
+    if (newsLoaded) loadPortfolioNewsImpact();
   } catch(e) {
     alert('Network error: ' + e.message);
   } finally {
@@ -4318,8 +4320,16 @@ let _pfImpacts    = [];   // [{article_id, ticker, direction, note}]
 let _nfPfOnly     = false;
 
 async function loadPortfolioNewsImpact() {
-  const tickers = (pfPositions || []).map(p => p.ticker).filter(Boolean);
-  if (!tickers.length || !newsArticles.length) return;
+  // Use pfData.positions (has real sector from yfinance) when available,
+  // otherwise fall back to raw pfPositions (no sector info).
+  let tickerObjs;
+  if (pfData && pfData.positions && pfData.positions.length > 0) {
+    tickerObjs = pfData.positions.map(p => ({ ticker: p.ticker, sector: p.sector || '' }));
+  } else {
+    tickerObjs = (pfPositions || []).map(p => ({ ticker: p.ticker, sector: '' }));
+  }
+  tickerObjs = tickerObjs.filter(t => t.ticker);
+  if (!tickerObjs.length || !newsArticles.length) return;
 
   // Show the "My Portfolio" filter button
   const pfBtn = document.getElementById('nf-pf-btn');
@@ -4333,7 +4343,7 @@ async function loadPortfolioNewsImpact() {
     const res  = await fetch('/api/news/portfolio-impact', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tickers, articles }),
+      body: JSON.stringify({ tickers: tickerObjs, articles }),
     });
     const data = await res.json();
     _pfImpacts = data.impacts || [];

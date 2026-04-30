@@ -5,7 +5,7 @@ import os
 import json
 import time
 import re
-from typing import List, Optional, AsyncGenerator
+from typing import Any, List, Optional, AsyncGenerator
 
 # Load .env file if present (local dev)
 _env_file = Path(__file__).parent / ".env"
@@ -1527,8 +1527,8 @@ def get_news():
 
 
 class PortfolioImpactRequest(BaseModel):
-    tickers: List[str]
-    articles: List[dict]   # [{id, title, summary}]
+    tickers: List[Any]   # each item is a ticker string OR {ticker, sector, name}
+    articles: List[dict]  # [{id, title, summary}]
 
 
 # ---------------------------------------------------------------------------
@@ -1694,7 +1694,14 @@ def get_portfolio_impact(body: PortfolioImpactRequest):
     if not api_key:
         return _keyword_portfolio_impact(body.tickers, body.articles)
 
-    tickers_str = ", ".join(t.upper() for t in body.tickers[:25])
+    def _ticker_label(t) -> str:
+        if isinstance(t, dict):
+            sym = t.get("ticker", "").upper()
+            sec = t.get("sector", "")
+            return f"{sym} ({sec})" if sec else sym
+        return str(t).upper()
+
+    tickers_str = ", ".join(_ticker_label(t) for t in body.tickers[:25])
     articles_text = "\n\n".join(
         f'[{a["id"]}] {a.get("title", "")}\n{a.get("summary", "")[:250]}'
         for a in body.articles[:25]
