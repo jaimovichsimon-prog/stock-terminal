@@ -70,9 +70,14 @@ def montecarlo_portfolio(
     portfolio_value: float = 10_000,
 ) -> dict:
     """
-    Correlated GBM Monte Carlo simulation for a multi-asset portfolio.
+    Correlated GBM Monte Carlo for a multi-asset portfolio.
 
-    returns_df : pd.DataFrame — daily returns, columns = ticker symbols
+    Parameters estimated from LOG returns so the drift reflects the
+    geometric (compound) mean, not the arithmetic mean.  Using arithmetic
+    mean as drift overstates expected growth by ≈ σ²/2 per day due to
+    Jensen's inequality (variance drag).
+
+    returns_df : pd.DataFrame — daily arithmetic returns, columns = tickers
     weights    : dict {ticker: fraction} — renormalized internally
     """
     tickers = [t for t in returns_df.columns if t in weights]
@@ -85,18 +90,25 @@ def montecarlo_portfolio(
     w = np.array([weights[t] for t in tickers], dtype=float)
     w /= w.sum()
 
-    mu  = df.mean().to_numpy()
-    cov = df.cov().to_numpy() + np.eye(len(tickers)) * 1e-8
-    L   = np.linalg.cholesky(cov)
+    # Convert to log returns — avoids variance-drag bias in arithmetic mean.
+    # clip(-0.99) guards against log(0) for near-total-loss days.
+    arr     = np.clip(df.to_numpy().astype(float), -0.99, None)
+    log_ret = np.log1p(arr)                                         # (N, k)
+    mu      = log_ret.mean(axis=0)                                  # (k,)
+    cov     = np.cov(log_ret.T) + np.eye(len(tickers)) * 1e-8      # (k, k)
+    if cov.ndim < 2:
+        cov = cov.reshape(1, 1)
+    L = np.linalg.cholesky(cov)
 
     paths = np.empty((n_sims, n_days + 1))
     paths[:, 0] = portfolio_value
 
     rng = np.random.default_rng()
     for d in range(1, n_days + 1):
-        Z      = rng.standard_normal((len(tickers), n_sims))
-        r      = mu[:, None] + L @ Z          # correlated per-asset daily returns
-        port_r = (w[:, None] * r).sum(axis=0) # weighted portfolio daily return
+        Z       = rng.standard_normal((len(tickers), n_sims))
+        log_r   = mu[:, None] + L @ Z               # correlated log returns per asset
+        arith_r = np.expm1(log_r)                   # convert back: exp(x)-1
+        port_r  = (w[:, None] * arith_r).sum(axis=0)
         paths[:, d] = paths[:, d - 1] * (1 + port_r)
 
     pcts  = np.percentile(paths, [5, 25, 50, 75, 95], axis=0)
