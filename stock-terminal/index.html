@@ -617,6 +617,40 @@
   #pf-chart-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
   #pf-chart-wrap { position: relative; height: 280px; }
 
+  /* Monte Carlo panel */
+  #pf-mc-btn {
+    background: transparent; color: var(--accent); border: 1px solid rgba(0,217,126,0.35);
+    font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+    padding: 6px 18px; cursor: pointer; height: 34px; align-self: flex-end; border-radius: 6px;
+    transition: background 0.15s, border-color 0.15s; margin-left: 8px;
+  }
+  #pf-mc-btn:hover { background: var(--accent-dim); border-color: var(--accent); }
+  #pf-mc-panel { margin-bottom: 8px; }
+  .pf-mc-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+  }
+  .pf-mc-tf-group { display: flex; gap: 6px; }
+  .pf-mc-tf {
+    background: transparent; color: var(--muted); border: 1px solid var(--border);
+    font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+    padding: 4px 12px; cursor: pointer; border-radius: 4px;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .pf-mc-tf:hover { color: var(--text); border-color: var(--border2); }
+  .pf-mc-tf.active { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
+  #pf-mc-chart-wrap { position: relative; height: 300px; }
+  .pf-mc-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px;
+  }
+  .pf-mc-stat {
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;
+  }
+  .mc-label { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); }
+  .mc-val { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; color: var(--text); }
+  .mc-val.pos { color: var(--green); }
+  .mc-val.neg { color: var(--red); }
+
   /* Empty state */
   #pf-empty {
     text-align: center; padding: 60px 20px;
@@ -1727,6 +1761,7 @@
     </div>
     <button id="pf-add-btn">+ Add Position</button>
     <button id="pf-load-btn">Refresh Prices</button>
+    <button id="pf-mc-btn" onclick="triggerMonteCarlo()" style="display:none">Run Monte Carlo</button>
   </div>
 
   <!-- Empty state -->
@@ -1839,6 +1874,22 @@
       </div>
       <div id="pf-chart-wrap"><canvas id="pf-chart"></canvas></div>
     </div>
+    <!-- Monte Carlo Simulation -->
+    <div id="pf-mc-panel" class="panel" style="display:none">
+      <div class="pf-mc-header">
+        <span class="panel-title" style="margin-bottom:0;border-bottom:none;padding-bottom:0">Monte Carlo Simulation</span>
+        <div class="pf-mc-tf-group">
+          <button class="pf-mc-tf" data-days="21">1M</button>
+          <button class="pf-mc-tf" data-days="63">3M</button>
+          <button class="pf-mc-tf" data-days="126">6M</button>
+          <button class="pf-mc-tf active" data-days="252">1Y</button>
+          <button class="pf-mc-tf" data-days="504">2Y</button>
+        </div>
+      </div>
+      <div id="pf-mc-chart-wrap"><canvas id="pf-mc-chart"></canvas></div>
+      <div class="pf-mc-stats" id="pf-mc-stats"></div>
+    </div>
+
     <!-- Earnings Calendar -->
     <div id="earnings-panel" class="panel hidden">
       <div class="panel-title">Upcoming Earnings — Portfolio Positions</div>

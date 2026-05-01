@@ -475,9 +475,11 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
 // Portfolio state
 // ---------------------------------------------------------------------------
 let pfPositions = JSON.parse(localStorage.getItem('pf_positions') || '[]');
-let pfChart = null;
+let pfChart     = null;
 let sectorChart = null;
-let pfData = null;
+let pfData      = null;
+let mcChart     = null;
+let mcDays      = 252;
 
 function savePfPositions() {
   localStorage.setItem('pf_positions', JSON.stringify(pfPositions));
@@ -792,6 +794,8 @@ async function loadPortfolio() {
     if (pfData.sectors) renderSectorChart(pfData.sectors);
     if (pfData.correlation) renderCorrelation(pfData.correlation);
     if (pfData.chart) renderPfChart(pfData.chart);
+    const mcBtn = document.getElementById('pf-mc-btn');
+    if (mcBtn) mcBtn.style.display = '';
     // Re-run news impact now that we have sector info for each holding
     if (newsLoaded) loadPortfolioNewsImpact();
   } catch(e) {
@@ -801,6 +805,97 @@ async function loadPortfolio() {
     btn.disabled = false;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Monte Carlo simulation
+// ---------------------------------------------------------------------------
+function triggerMonteCarlo() {
+  const panel = document.getElementById('pf-mc-panel');
+  if (panel) panel.style.display = '';
+  loadMonteCarlo();
+}
+
+async function loadMonteCarlo() {
+  if (!pfPositions.length) return;
+  const btn = document.getElementById('pf-mc-btn');
+  if (btn) { btn.textContent = 'Running…'; btn.disabled = true; }
+  try {
+    const res = await apiFetch('/api/portfolio/montecarlo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ positions: pfPositions, days: mcDays }),
+    }, 90000);
+    const data = await res.json();
+    renderMCChart(data);
+    renderMCStats(data.stats, data.initial_value);
+  } catch (err) {
+    console.warn('Monte Carlo failed:', err);
+  } finally {
+    if (btn) { btn.textContent = 'Run Monte Carlo'; btn.disabled = false; }
+  }
+}
+
+function renderMCChart(data) {
+  if (!data || !data.paths) return;
+  const p      = data.paths;
+  const labels = Array.from({ length: data.days + 1 }, (_, i) => i === 0 ? 'Now' : (i % Math.ceil(data.days / 10) === 0 ? `Day ${i}` : ''));
+  if (mcChart) { mcChart.destroy(); mcChart = null; }
+  const ctx = document.getElementById('pf-mc-chart').getContext('2d');
+  mcChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Best (95th)',   data: p.p95, borderColor: '#00ff88', borderWidth: 1.5, pointRadius: 0, fill: false },
+        { label: '75th Pct',     data: p.p75, borderColor: '#4fc3f7', borderWidth: 1,   pointRadius: 0, fill: '+1', backgroundColor: 'rgba(79,195,247,0.07)' },
+        { label: 'Median (50th)',data: p.p50, borderColor: '#e0e0e0', borderWidth: 2,   pointRadius: 0, fill: false },
+        { label: '25th Pct',     data: p.p25, borderColor: '#ff9800', borderWidth: 1,   pointRadius: 0, fill: '-1', backgroundColor: 'rgba(255,152,0,0.07)' },
+        { label: 'Worst (5th)',  data: p.p5,  borderColor: '#ff5252', borderWidth: 1.5, pointRadius: 0, fill: false },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 400 },
+      plugins: {
+        legend: { labels: { color: '#777', font: { family: 'JetBrains Mono', size: 10 }, boxWidth: 12 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: $${Math.round(ctx.parsed.y).toLocaleString('en-US')}`,
+          },
+        },
+      },
+      scales: {
+        x: { ticks: { color: '#555', font: { family: 'JetBrains Mono', size: 9 }, maxRotation: 0 }, grid: { color: '#1a1a1a' } },
+        y: { ticks: { color: '#555', font: { family: 'JetBrains Mono', size: 9 }, callback: v => '$' + Math.round(v).toLocaleString() }, grid: { color: '#1a1a1a' } },
+      },
+    },
+  });
+}
+
+function renderMCStats(stats, initialValue) {
+  const el = document.getElementById('pf-mc-stats');
+  if (!el || !stats) return;
+  const fmtPct  = v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+  const fmtMoney = v => '$' + Math.round(v).toLocaleString('en-US');
+  el.innerHTML = `
+    <div class="pf-mc-stat"><span class="mc-label">Expected Return</span><span class="mc-val ${stats.expected_return >= 0 ? 'pos' : 'neg'}">${fmtPct(stats.expected_return)}</span></div>
+    <div class="pf-mc-stat"><span class="mc-label">VaR 95%</span><span class="mc-val neg">${fmtPct(stats.var95)}</span></div>
+    <div class="pf-mc-stat"><span class="mc-label">P(Gain)</span><span class="mc-val">${stats.prob_gain}%</span></div>
+    <div class="pf-mc-stat"><span class="mc-label">Median Final</span><span class="mc-val">${fmtMoney(stats.median_final)}</span></div>
+    <div class="pf-mc-stat"><span class="mc-label">Best Case (95th)</span><span class="mc-val pos">${fmtMoney(stats.p95_final)}</span></div>
+    <div class="pf-mc-stat"><span class="mc-label">Worst Case (5th)</span><span class="mc-val neg">${fmtMoney(stats.p5_final)}</span></div>
+  `;
+}
+
+// Timeframe pill wiring
+document.querySelectorAll('.pf-mc-tf').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.pf-mc-tf').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    mcDays = parseInt(btn.dataset.days, 10);
+    loadMonteCarlo();
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Add / delete positions

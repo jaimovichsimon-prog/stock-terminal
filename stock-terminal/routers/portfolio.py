@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from config import logger
 from utils.market_data import clean_float, deep_clean
+from utils.indicators import montecarlo_portfolio
 
 router = APIRouter()
 
@@ -199,3 +200,62 @@ def get_portfolio_analysis(req: PortfolioRequest):
         "chart":       chart_data,
     }
     return deep_clean(response)
+
+
+# ---------------------------------------------------------------------------
+# Monte Carlo simulation
+# ---------------------------------------------------------------------------
+
+class _MCPositionIn(BaseModel):
+    ticker:   str
+    shares:   float
+    avg_cost: float
+
+class MonteCarloRequest(BaseModel):
+    positions: List[_MCPositionIn]
+    days: int = 252
+
+
+@router.post("/portfolio/montecarlo")
+def get_montecarlo(body: MonteCarloRequest):
+    _ALLOWED_DAYS = {21, 63, 126, 252, 504}
+    n_days = body.days if body.days in _ALLOWED_DAYS else 252
+
+    if not body.positions:
+        raise HTTPException(status_code=400, detail="No positions provided")
+
+    returns_map: dict = {}
+    price_map:   dict = {}
+
+    for pos in body.positions:
+        ticker = pos.ticker.upper().strip()
+        try:
+            hist = yf.Ticker(ticker).history(period="2y")["Close"].dropna()
+            if len(hist) > 60:
+                returns_map[ticker] = hist.pct_change().dropna()
+                price_map[ticker]   = float(hist.iloc[-1])
+        except Exception:
+            logger.warning("MC: history fetch failed for %s", ticker, exc_info=True)
+
+    if not returns_map:
+        raise HTTPException(status_code=400, detail="Could not fetch price history for any ticker")
+
+    returns_df = pd.DataFrame(returns_map).dropna()
+
+    mv: dict = {}
+    for pos in body.positions:
+        t = pos.ticker.upper().strip()
+        if t in price_map:
+            mv[t] = pos.shares * price_map[t]
+
+    total_value = sum(mv.values()) or 1.0
+    weights     = {t: v / total_value for t, v in mv.items()}
+
+    result = montecarlo_portfolio(
+        returns_df, weights,
+        n_sims=1000, n_days=n_days,
+        portfolio_value=total_value,
+    )
+    if not result:
+        raise HTTPException(status_code=500, detail="Simulation failed — insufficient price history")
+    return result
