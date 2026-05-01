@@ -103,7 +103,7 @@ function initChart(data) {
         {
           label: 'SMA 20',
           data: data.chart.sma20,
-          borderColor: '#4fc3f7',
+          borderColor: '#58a6ff',
           borderWidth: 1,
           pointRadius: 0,
           tension: 0,
@@ -114,7 +114,7 @@ function initChart(data) {
         {
           label: 'SMA 50',
           data: data.chart.sma50,
-          borderColor: '#ffb74d',
+          borderColor: '#f0b429',
           borderWidth: 1,
           pointRadius: 0,
           tension: 0,
@@ -125,7 +125,7 @@ function initChart(data) {
         {
           label: 'SMA 200',
           data: data.chart.sma200,
-          borderColor: '#f48fb1',
+          borderColor: '#f778ba',
           borderWidth: 1,
           pointRadius: 0,
           tension: 0,
@@ -2444,9 +2444,9 @@ function renderCompare(data) {
         labels: data.chart.dates,
         datasets: [
           { label: cmpSymbol, data: prices, borderColor: col, borderWidth: 1.5, pointRadius: 0, fill: true, backgroundColor: gradFn, tension: 0.3 },
-          mkSMA(data.chart.sma20,  'rgba(0,200,255,0.6)'),
-          mkSMA(data.chart.sma50,  'rgba(255,160,0,0.6)'),
-          mkSMA(data.chart.sma200, 'rgba(200,100,255,0.5)'),
+          mkSMA(data.chart.sma20,  '#58a6ff'),
+          mkSMA(data.chart.sma50,  '#f0b429'),
+          mkSMA(data.chart.sma200, '#f778ba'),
         ].filter(Boolean),
       },
       options: {

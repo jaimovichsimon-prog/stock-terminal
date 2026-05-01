@@ -163,15 +163,27 @@
     text-transform: uppercase; opacity: 0.4; transition: opacity 0.15s;
   }
   .sma-toggle.active { opacity: 1; }
-  .sma-toggle[data-dataset="1"] { color: var(--blue);  border-color: var(--blue); }
-  .sma-toggle[data-dataset="2"] { color: var(--yellow); border-color: var(--yellow); }
-  .sma-toggle[data-dataset="3"] { color: var(--pink);  border-color: var(--pink); }
+  .sma-toggle[data-dataset="1"],
+  .cmp-sma-toggle[data-dataset="1"] { color: var(--blue);   border-color: var(--blue); }
+  .sma-toggle[data-dataset="2"],
+  .cmp-sma-toggle[data-dataset="2"] { color: var(--yellow); border-color: var(--yellow); }
+  .sma-toggle[data-dataset="3"],
+  .cmp-sma-toggle[data-dataset="3"] { color: var(--pink);   border-color: var(--pink); }
+  #cmp-chart-controls {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;
+  }
+  .cmp-sma-toggle {
+    font-family: inherit; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+    padding: 3px 10px; border: 1px solid; cursor: pointer; background: transparent;
+    text-transform: uppercase; opacity: 0.4; transition: opacity 0.15s;
+  }
+  .cmp-sma-toggle.active { opacity: 1; }
   #chart-wrap { position: relative; height: 280px; }
 
   /* ---- Split / Compare ---- */
   #terminal-split-wrap { display: flex; gap: 16px; align-items: flex-start; }
   #terminal-main { flex: 1; min-width: 0; }
-  #compare-panel { flex: 1; min-width: 0; display: none; flex-direction: column; border-left: 1px solid var(--border); padding-left: 16px; }
+  #compare-panel { flex: 1; min-width: 0; display: none; flex-direction: column; border-left: 1px solid var(--border); }
   #compare-panel.open { display: flex; }
 
   /* Compare toggle button */
@@ -232,7 +244,7 @@
 
   @media (max-width: 1100px) {
     #terminal-split-wrap { flex-direction: column; }
-    #compare-panel { width: 100%; border-left: none; padding-left: 0; border-top: 1px solid var(--border); padding-top: 16px; }
+    #compare-panel { width: 100%; border-left: none; border-top: 1px solid var(--border); }
   }
 
   /* ---- Portfolio impact on news cards ---- */
