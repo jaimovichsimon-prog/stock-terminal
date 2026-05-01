@@ -830,6 +830,8 @@ async function loadMonteCarlo() {
     renderMCStats(data.stats, data.initial_value);
   } catch (err) {
     console.warn('Monte Carlo failed:', err);
+    const statsEl = document.getElementById('pf-mc-stats');
+    if (statsEl) statsEl.innerHTML = `<div style="color:var(--red);font-size:11px;padding:8px">Simulation failed: ${err.message || err}</div>`;
   } finally {
     if (btn) { btn.textContent = 'Run Monte Carlo'; btn.disabled = false; }
   }
@@ -838,19 +840,22 @@ async function loadMonteCarlo() {
 function renderMCChart(data) {
   if (!data || !data.paths) return;
   const p      = data.paths;
-  const labels = Array.from({ length: data.days + 1 }, (_, i) => i === 0 ? 'Now' : (i % Math.ceil(data.days / 10) === 0 ? `Day ${i}` : ''));
+  const step   = Math.max(1, Math.ceil(data.days / 10));
+  const labels = Array.from({ length: data.days + 1 }, (_, i) => i === 0 ? 'Now' : (i % step === 0 ? `Day ${i}` : ''));
   if (mcChart) { mcChart.destroy(); mcChart = null; }
-  const ctx = document.getElementById('pf-mc-chart').getContext('2d');
+  const canvas = document.getElementById('pf-mc-chart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
   mcChart = new Chart(ctx, {
     type: 'line',
     data: {
       labels,
       datasets: [
-        { label: 'Best (95th)',   data: p.p95, borderColor: '#00ff88', borderWidth: 1.5, pointRadius: 0, fill: false },
-        { label: '75th Pct',     data: p.p75, borderColor: '#4fc3f7', borderWidth: 1,   pointRadius: 0, fill: '+1', backgroundColor: 'rgba(79,195,247,0.07)' },
-        { label: 'Median (50th)',data: p.p50, borderColor: '#e0e0e0', borderWidth: 2,   pointRadius: 0, fill: false },
-        { label: '25th Pct',     data: p.p25, borderColor: '#ff9800', borderWidth: 1,   pointRadius: 0, fill: '-1', backgroundColor: 'rgba(255,152,0,0.07)' },
-        { label: 'Worst (5th)',  data: p.p5,  borderColor: '#ff5252', borderWidth: 1.5, pointRadius: 0, fill: false },
+        { label: 'Best (95th)',    data: p.p95, borderColor: '#00ff88', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0 },
+        { label: '75th Pct',      data: p.p75, borderColor: '#4fc3f7', borderWidth: 1,   pointRadius: 0, fill: false, tension: 0 },
+        { label: 'Median (50th)', data: p.p50, borderColor: '#e0e0e0', borderWidth: 2,   pointRadius: 0, fill: false, tension: 0 },
+        { label: '25th Pct',      data: p.p25, borderColor: '#ff9800', borderWidth: 1,   pointRadius: 0, fill: false, tension: 0 },
+        { label: 'Worst (5th)',   data: p.p5,  borderColor: '#ff5252', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0 },
       ],
     },
     options: {
@@ -859,6 +864,7 @@ function renderMCChart(data) {
       plugins: {
         legend: { labels: { color: '#777', font: { family: 'JetBrains Mono', size: 10 }, boxWidth: 12 } },
         tooltip: {
+          mode: 'index', intersect: false,
           callbacks: {
             label: ctx => `${ctx.dataset.label}: $${Math.round(ctx.parsed.y).toLocaleString('en-US')}`,
           },
