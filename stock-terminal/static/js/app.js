@@ -197,6 +197,17 @@ document.querySelectorAll('.sma-toggle').forEach(btn => {
     chart.update();
   });
 });
+document.querySelectorAll('.cmp-sma-toggle').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (!cmpChart) return;
+    const idx = parseInt(btn.dataset.dataset);
+    const ds = cmpChart.data.datasets[idx];
+    if (!ds) return;
+    ds.hidden = !ds.hidden;
+    btn.classList.toggle('active', !ds.hidden);
+    cmpChart.update();
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Renderers
@@ -2287,6 +2298,9 @@ async function ecLoadLive() {
 // ---------------------------------------------------------------------------
 let cmpChart  = null;
 let cmpSymbol = null;
+let cmpSmileChart  = null;
+let cmpOptionsData = null;
+let cmpOptionsPanelOpen = false;
 
 function renderCompare(data) {
   // Helper: set textContent on element prefixed with 'cmp-'
@@ -2457,6 +2471,8 @@ async function loadCompare(symbol) {
   document.getElementById('cmp-empty').style.display   = 'none';
   document.getElementById('cmp-body').style.display    = 'none';
   document.getElementById('cmp-loading').style.display = 'block';
+  if (cmpSmileChart) { cmpSmileChart.destroy(); cmpSmileChart = null; }
+  document.getElementById('cmp-options-panel').classList.add('hidden');
   try {
     const res = await apiFetch('/api/ticker/' + encodeURIComponent(symbol));
     if (!res.ok) throw new Error('not found');
@@ -2464,10 +2480,12 @@ async function loadCompare(symbol) {
     renderCompare(data);
     document.getElementById('cmp-loading').style.display = 'none';
     document.getElementById('cmp-body').style.display    = 'block';
+    loadCmpOptions(symbol);
   } catch (e) {
     document.getElementById('cmp-loading').style.display = 'none';
-    document.getElementById('cmp-empty').style.display   = 'block';
-    document.getElementById('cmp-empty').textContent     = 'Ticker not found or no data available.';
+    document.getElementById('cmp-empty').style.display   = '';
+    const emptyMsg = document.getElementById('cmp-empty-msg');
+    if (emptyMsg) emptyMsg.textContent = 'Ticker not found or no data available.';
   }
 }
 
@@ -2482,14 +2500,163 @@ function _closeCompare() {
   document.getElementById('compare-toggle-btn').classList.remove('active');
   document.getElementById('compare-toggle-btn').textContent = '＋ Add Asset';
   document.getElementById('cmp-body').style.display  = 'none';
-  document.getElementById('cmp-empty').style.display = 'block';
-  document.getElementById('cmp-empty').textContent   = 'ENTER A TICKER ABOVE';
-  document.getElementById('cmp-input').value         = '';
+  document.getElementById('cmp-empty').style.display = '';
+  const emptyMsg = document.getElementById('cmp-empty-msg');
+  if (emptyMsg) emptyMsg.innerHTML = 'Enter a ticker above<br>to compare side by side';
+  document.getElementById('cmp-input').value = '';
   if (cmpChart) { cmpChart.destroy(); cmpChart = null; }
+  if (cmpSmileChart) { cmpSmileChart.destroy(); cmpSmileChart = null; }
+  document.getElementById('cmp-options-panel').classList.add('hidden');
+  document.getElementById('cmp-options-body').classList.add('hidden');
+  cmpOptionsPanelOpen = false;
+  cmpOptionsData = null;
   cmpSymbol = null;
   ['cmp-an-bar-buy','cmp-an-bar-hold','cmp-an-bar-sell'].forEach(id => {
     const el = document.getElementById(id); if (el) el.style.width = '0%';
   });
+}
+
+// ── Compare Options Analytics ─────────────────────────────────────────────────
+
+document.getElementById('cmp-options-toggle').addEventListener('click', () => {
+  cmpOptionsPanelOpen = !cmpOptionsPanelOpen;
+  document.getElementById('cmp-options-body').classList.toggle('hidden', !cmpOptionsPanelOpen);
+  document.getElementById('cmp-options-arrow').classList.toggle('open', cmpOptionsPanelOpen);
+});
+
+async function loadCmpOptions(symbol) {
+  const panel = document.getElementById('cmp-options-panel');
+  panel.classList.add('hidden');
+  cmpOptionsData = null;
+  try {
+    const res = await apiFetch('/api/options/' + encodeURIComponent(symbol));
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.available) return;
+    cmpOptionsData = data;
+    panel.classList.remove('hidden');
+    document.getElementById('cmp-options-sparse-warn').classList.toggle('hidden', !data.is_sparse);
+    renderCmpImpliedMoves(data.implied_moves || []);
+    buildCmpSmileSelector(data);
+    if (data.default_smile_exp && data.smiles && data.smiles[data.default_smile_exp]) {
+      renderCmpSmileChart(data.smiles[data.default_smile_exp]);
+    }
+    if (data.surface) renderCmpVolSurface(data.surface);
+  } catch(e) {}
+}
+
+function renderCmpImpliedMoves(moves) {
+  const strip = document.getElementById('cmp-implied-strip');
+  if (!moves.length) { strip.innerHTML = '<span style="color:var(--muted);font-size:11px">No implied move data available.</span>'; return; }
+  strip.innerHTML = moves.map(m => {
+    const pct = m.implied_move_pct;
+    let cls = 'g';
+    if (pct > 10) cls = 'r';
+    else if (pct > 6) cls = 'o';
+    else if (pct > 3) cls = 'y';
+    return `<div class="move-card">
+      <span class="move-pct ${cls}">±${pct != null ? pct.toFixed(1) : '—'}%</span>
+      <span class="move-date">${m.exp_label || m.expiration}</span>
+      <span class="move-dte">${m.days_to_expiry != null ? m.days_to_expiry + 'd' : ''}</span>
+      <div class="move-tooltip">
+        ATM Strike: $${m.atm_strike != null ? m.atm_strike.toFixed(0) : '—'}<br>
+        Call Mid: $${m.atm_call_mid != null ? m.atm_call_mid.toFixed(2) : '—'}<br>
+        Put Mid: $${m.atm_put_mid  != null ? m.atm_put_mid.toFixed(2)  : '—'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function buildCmpSmileSelector(data) {
+  const sel = document.getElementById('cmp-smile-exp-select');
+  sel.innerHTML = '';
+  const exps = data.available_expirations || [];
+  exps.forEach(e => {
+    const opt = document.createElement('option');
+    opt.value = e.expiration;
+    opt.textContent = e.exp_label + (e.days_to_expiry != null ? '  (' + e.days_to_expiry + 'd)' : '');
+    if (e.expiration === data.default_smile_exp) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  sel.onchange = () => {
+    const exp = sel.value;
+    if (data.smiles && data.smiles[exp]) renderCmpSmileChart(data.smiles[exp]);
+  };
+}
+
+function renderCmpSmileChart(smileExp) {
+  if (!smileExp || !smileExp.strikes) return;
+  const strikes   = smileExp.strikes;
+  const labels    = strikes.map(s => s.strike);
+  const callIVs   = strikes.map(s => (s.call_iv != null && s.call_iv > 0) ? s.call_iv : null);
+  const putIVs    = strikes.map(s => (s.put_iv  != null && s.put_iv  > 0) ? s.put_iv  : null);
+  const atmStrike = smileExp.atm_strike;
+
+  const badge = document.getElementById('cmp-smile-skew-badge');
+  if (smileExp.skew_label) {
+    badge.textContent = smileExp.skew_label;
+    badge.className   = 'smile-skew-badge';
+    if (smileExp.skew_label.startsWith('PUT'))       badge.classList.add('put');
+    else if (smileExp.skew_label.startsWith('CALL')) badge.classList.add('call');
+    else badge.classList.add('sym');
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+
+  const ctx = document.getElementById('cmp-smile-chart').getContext('2d');
+  if (cmpSmileChart) { cmpSmileChart.destroy(); cmpSmileChart = null; }
+  cmpSmileChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Call IV', data: callIVs, borderColor: '#4fc3f7', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#4fc3f7', tension: 0.2, fill: false, spanGaps: true },
+        { label: 'Put IV',  data: putIVs,  borderColor: '#ffb74d', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#ffb74d', tension: 0.2, fill: false, spanGaps: true },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, labels: { color: '#7d8590', font: { family: 'Inter', size: 10 }, boxWidth: 12, padding: 14 } },
+        tooltip: {
+          backgroundColor: '#1a1a1a', borderColor: '#2a2a2a', borderWidth: 1,
+          titleColor: '#666', bodyColor: '#e0e0e0', padding: 10,
+          callbacks: {
+            title: items => '$' + items[0].label,
+            label: ctx => { const v = ctx.parsed.y; return v != null ? ' ' + ctx.dataset.label + ': ' + v.toFixed(1) + '%' : null; },
+          },
+        },
+        atmLine: { xValue: atmStrike },
+      },
+      scales: {
+        x: { type: 'linear', grid: { color: '#1a1a1a' }, ticks: { color: '#555', maxTicksLimit: 10, font: { family: 'JetBrains Mono', size: 10 }, callback: v => '$' + v }, title: { display: true, text: 'Strike', color: '#555', font: { size: 10 } } },
+        y: { position: 'right', grid: { color: '#1a1a1a' }, ticks: { color: '#555', font: { family: 'JetBrains Mono', size: 10 }, callback: v => v.toFixed(0) + '%' }, title: { display: true, text: 'Implied Volatility', color: '#555', font: { size: 10 } } },
+      },
+    },
+  });
+}
+
+function renderCmpVolSurface(surface) {
+  const thead = document.getElementById('cmp-surface-thead');
+  const tbody = document.getElementById('cmp-surface-tbody');
+  if (!surface || !surface.rows || !surface.rows.length) { thead.innerHTML = ''; tbody.innerHTML = ''; return; }
+  const { rows, iv_min, iv_max } = surface;
+  const exps = rows[0].cells.map(c => c);
+  thead.innerHTML = '<tr><th>Moneyness</th>' + exps.map(c => `<th>${c.exp_label}</th>`).join('') + '</tr>';
+  tbody.innerHTML = rows.map(row => {
+    const label = `${row.moneyness_label}<br><span style="color:var(--label);font-size:9px">$${row.strike != null ? row.strike.toFixed(0) : '—'}</span>`;
+    const cells = row.cells.map(c => {
+      const iv  = c.avg_iv;
+      const bg  = surfaceColor(iv, iv_min, iv_max);
+      const fg  = surfaceTextColor(iv, iv_min, iv_max);
+      const atm = c.is_atm ? ' atm-cell' : '';
+      const tip = `Strike $${row.strike != null ? row.strike.toFixed(0) : '—'} | ${c.exp_label} | IV: ${iv != null ? iv.toFixed(1) + '%' : '—'} | Call OI: ${c.call_oi != null ? Math.round(c.call_oi).toLocaleString() : '—'} | Put OI: ${c.put_oi != null ? Math.round(c.put_oi).toLocaleString() : '—'}`;
+      return `<td class="${atm}" style="background:${bg};color:${fg}" title="${tip}">${iv != null ? iv.toFixed(1) + '%' : '—'}</td>`;
+    }).join('');
+    return `<tr><td>${label}</td>${cells}</tr>`;
+  }).join('');
 }
 
 // Compare toggle

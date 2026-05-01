@@ -170,7 +170,7 @@
 
   /* ---- Split / Compare ---- */
   #terminal-split-wrap { display: flex; gap: 16px; align-items: flex-start; }
-  #terminal-main { flex: 1.5; min-width: 0; }
+  #terminal-main { flex: 1; min-width: 0; }
   #compare-panel { flex: 1; min-width: 0; display: none; flex-direction: column; border-left: 1px solid var(--border); padding-left: 16px; }
   #compare-panel.open { display: flex; }
 
@@ -1646,7 +1646,7 @@
 
   <div id="cmp-empty">
     <div class="cmp-empty-icon">+</div>
-    <div class="cmp-empty-text">Enter a ticker above<br>to compare side by side</div>
+    <div class="cmp-empty-text" id="cmp-empty-msg">Enter a ticker above<br>to compare side by side</div>
   </div>
   <div id="cmp-loading" style="display:none;padding:60px 20px;text-align:center;color:var(--muted);font-size:11px">Loading…</div>
 
@@ -1768,10 +1768,59 @@
     </div>
 
     <!-- Chart -->
-    <div class="panel">
+    <div id="cmp-chart-panel" class="panel">
       <div class="panel-title" style="margin-bottom:8px">Price Chart — 6 Months</div>
+      <div id="cmp-chart-controls">
+        <span class="ctrl-lbl">Overlay:</span>
+        <button class="cmp-sma-toggle active" data-dataset="1">SMA 20</button>
+        <button class="cmp-sma-toggle active" data-dataset="2">SMA 50</button>
+        <button class="cmp-sma-toggle active" data-dataset="3">SMA 200</button>
+      </div>
       <div style="position:relative;height:280px">
         <canvas id="cmp-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Options Analytics -->
+    <div id="cmp-options-panel" class="panel hidden">
+      <div class="options-toggle-header" id="cmp-options-toggle">
+        <div class="panel-title">Options Analytics</div>
+        <span class="options-arrow" id="cmp-options-arrow">&#9660;</span>
+      </div>
+      <div id="cmp-options-body" class="hidden">
+
+        <div id="cmp-options-sparse-warn" class="opts-sparse-warn hidden">
+          Options data sparse — interpret with caution
+        </div>
+
+        <!-- Implied Move Strip -->
+        <div class="opts-section-lbl">Market-Implied Move (ATM Straddle / Spot)</div>
+        <div class="implied-strip" id="cmp-implied-strip"></div>
+
+        <!-- IV Smile -->
+        <div class="opts-section-lbl">IV Smile / Skew</div>
+        <div class="smile-controls">
+          <select id="cmp-smile-exp-select" class="opts-select"></select>
+          <span id="cmp-smile-skew-badge" class="smile-skew-badge hidden"></span>
+        </div>
+        <div id="cmp-smile-chart-wrap">
+          <canvas id="cmp-smile-chart"></canvas>
+        </div>
+
+        <!-- Vol Surface -->
+        <div class="opts-section-lbl">Volatility Surface</div>
+        <div class="surface-wrap">
+          <table class="surface-table" id="cmp-surface-table">
+            <thead id="cmp-surface-thead"></thead>
+            <tbody id="cmp-surface-tbody"></tbody>
+          </table>
+        </div>
+        <div class="surface-legend-wrap">
+          <span>Low IV</span>
+          <div class="surface-legend-bar"></div>
+          <span>High IV</span>
+        </div>
+
       </div>
     </div>
 
