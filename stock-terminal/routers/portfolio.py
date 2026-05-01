@@ -218,11 +218,17 @@ class MonteCarloRequest(BaseModel):
 
 @router.post("/portfolio/montecarlo")
 def get_montecarlo(body: MonteCarloRequest):
-    _ALLOWED_DAYS = {21, 63, 126, 252, 504}
+    _ALLOWED_DAYS = {21, 63, 126, 252, 504, 1260, 2520}
     n_days = body.days if body.days in _ALLOWED_DAYS else 252
 
     if not body.positions:
         raise HTTPException(status_code=400, detail="No positions provided")
+
+    # Scale historical lookback to the projection horizon: short horizons stay
+    # at 2y (recent regime is most relevant); 5y horizon pulls 10y of history;
+    # 10y horizon pulls all available history. yfinance returns whatever exists
+    # for newer tickers, so the >60 day check below still gates insufficient data.
+    hist_period = "max" if n_days >= 2520 else "10y" if n_days >= 1260 else "2y"
 
     returns_map: dict = {}
     price_map:   dict = {}
@@ -230,7 +236,7 @@ def get_montecarlo(body: MonteCarloRequest):
     for pos in body.positions:
         ticker = pos.ticker.upper().strip()
         try:
-            hist = yf.Ticker(ticker).history(period="2y")["Close"].dropna()
+            hist = yf.Ticker(ticker).history(period=hist_period)["Close"].dropna()
             if len(hist) > 60:
                 returns_map[ticker] = hist.pct_change().dropna()
                 price_map[ticker]   = float(hist.iloc[-1])
@@ -255,7 +261,7 @@ def get_montecarlo(body: MonteCarloRequest):
     # only the *mean* is replaced because recent means are noisy and bias-prone.
     spy_log_ret = None
     try:
-        spy_hist = yf.Ticker("SPY").history(period="2y")["Close"].dropna()
+        spy_hist = yf.Ticker("SPY").history(period=hist_period)["Close"].dropna()
         if len(spy_hist) > 60:
             spy_log_ret = np.log1p(spy_hist.pct_change().dropna())
     except Exception:
