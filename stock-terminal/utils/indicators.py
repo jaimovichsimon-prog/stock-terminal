@@ -85,10 +85,8 @@ def montecarlo_portfolio(
     w = np.array([weights[t] for t in tickers], dtype=float)
     w /= w.sum()
 
-    mu  = df.mean().values
-    cov = df.cov().values
-    # Small regularization so Cholesky doesn't fail on near-singular matrices
-    cov += np.eye(len(tickers)) * 1e-8
+    mu  = df.mean().to_numpy()
+    cov = df.cov().to_numpy() + np.eye(len(tickers)) * 1e-8
     L   = np.linalg.cholesky(cov)
 
     paths = np.empty((n_sims, n_days + 1))
