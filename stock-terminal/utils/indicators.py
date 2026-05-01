@@ -68,17 +68,22 @@ def montecarlo_portfolio(
     n_sims: int = 1000,
     n_days: int = 252,
     portfolio_value: float = 10_000,
+    betas: dict = None,
+    risk_free_rate: float = 0.045,
+    equity_premium: float = 0.055,
+    default_beta: float = 1.0,
 ) -> dict:
     """
     Correlated GBM Monte Carlo for a multi-asset portfolio.
 
-    Parameters estimated from LOG returns so the drift reflects the
-    geometric (compound) mean, not the arithmetic mean.  Using arithmetic
-    mean as drift overstates expected growth by ≈ σ²/2 per day due to
-    Jensen's inequality (variance drag).
+    Drift per asset is CAPM-implied (rf + beta·ERP) rather than the recent
+    historical mean — recent means are noisy and extrapolate bull/bear bias
+    forward. Vol and correlations still come from historical log returns,
+    which is a stable estimator over 2y of daily data.
 
     returns_df : pd.DataFrame — daily arithmetic returns, columns = tickers
     weights    : dict {ticker: fraction} — renormalized internally
+    betas      : dict {ticker: beta_vs_SPY}; missing tickers fall back to default_beta
     """
     tickers = [t for t in returns_df.columns if t in weights]
     if not tickers:
@@ -90,15 +95,23 @@ def montecarlo_portfolio(
     w = np.array([weights[t] for t in tickers], dtype=float)
     w /= w.sum()
 
-    # Convert to log returns — avoids variance-drag bias in arithmetic mean.
+    # Historical log returns drive the covariance (vol + correlations).
     # clip(-0.99) guards against log(0) for near-total-loss days.
     arr     = np.clip(df.to_numpy().astype(float), -0.99, None)
     log_ret = np.log1p(arr)                                         # (N, k)
-    mu      = log_ret.mean(axis=0)                                  # (k,)
     cov     = np.cov(log_ret.T) + np.eye(len(tickers)) * 1e-8      # (k, k)
     if cov.ndim < 2:
         cov = cov.reshape(1, 1)
     L = np.linalg.cholesky(cov)
+
+    # CAPM drift: annual arithmetic expected return per asset = rf + beta·ERP.
+    # Convert to daily log drift so that E[V_T/V_0] ≈ (1 + R_annual)^(T/252).
+    # The −0.5·σ² term is the Itô correction connecting arithmetic and log means.
+    betas = betas or {}
+    betas_arr      = np.array([betas.get(t, default_beta) for t in tickers], dtype=float)
+    mu_capm_annual = risk_free_rate + betas_arr * equity_premium
+    sigma2_daily   = np.diag(cov)
+    mu             = np.log1p(mu_capm_annual) / 252 - 0.5 * sigma2_daily   # (k,)
 
     paths = np.empty((n_sims, n_days + 1))
     paths[:, 0] = portfolio_value
@@ -126,7 +139,7 @@ def montecarlo_portfolio(
         },
         "stats": {
             "expected_return": round(float(np.mean(final) / portfolio_value - 1) * 100, 2),
-            "var95":           round(float(np.percentile(final, 5) / portfolio_value - 1) * 100, 2),
+            "p5_return":       round(float(np.percentile(final, 5) / portfolio_value - 1) * 100, 2),
             "prob_gain":       round(float(np.mean(final > portfolio_value)) * 100, 1),
             "median_final":    round(float(np.median(final)), 2),
             "p95_final":       round(float(np.percentile(final, 95)), 2),

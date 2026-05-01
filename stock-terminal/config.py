@@ -55,3 +55,13 @@ APP_URL       = os.environ.get("APP_URL", "http://localhost:8000")
 # Database
 # ---------------------------------------------------------------------------
 DB_DIR = Path(os.environ.get("DB_DIR", str(Path(__file__).parent)))
+
+# ---------------------------------------------------------------------------
+# Monte Carlo — CAPM drift parameters
+# Forward drift uses CAPM (rf + beta·ERP) instead of recent historical mean,
+# which would extrapolate bull/bear market bias forward. Vol and correlations
+# still come from history (those estimators are stable).
+# ---------------------------------------------------------------------------
+MC_RISK_FREE_RATE = 0.045  # ~10y Treasury proxy
+MC_EQUITY_PREMIUM = 0.055  # historical equity risk premium
+MC_DEFAULT_BETA   = 1.0    # fallback when SPY regression is unavailable

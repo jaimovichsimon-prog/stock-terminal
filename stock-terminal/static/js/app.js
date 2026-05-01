@@ -883,9 +883,10 @@ function renderMCStats(stats, initialValue) {
   if (!el || !stats) return;
   const fmtPct  = v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
   const fmtMoney = v => '$' + Math.round(v).toLocaleString('en-US');
+  const p5ret = stats.p5_return;
   el.innerHTML = `
     <div class="pf-mc-stat"><span class="mc-label">Expected Return</span><span class="mc-val ${stats.expected_return >= 0 ? 'pos' : 'neg'}">${fmtPct(stats.expected_return)}</span></div>
-    <div class="pf-mc-stat"><span class="mc-label">VaR 95%</span><span class="mc-val neg">${fmtPct(stats.var95)}</span></div>
+    <div class="pf-mc-stat"><span class="mc-label">5th %ile Return</span><span class="mc-val ${p5ret >= 0 ? 'pos' : 'neg'}">${fmtPct(p5ret)}</span></div>
     <div class="pf-mc-stat"><span class="mc-label">P(Gain)</span><span class="mc-val">${stats.prob_gain}%</span></div>
     <div class="pf-mc-stat"><span class="mc-label">Median Final</span><span class="mc-val">${fmtMoney(stats.median_final)}</span></div>
     <div class="pf-mc-stat"><span class="mc-label">Best Case (95th)</span><span class="mc-val pos">${fmtMoney(stats.p95_final)}</span></div>

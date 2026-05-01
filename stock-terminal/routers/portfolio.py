@@ -8,7 +8,7 @@ import yfinance as yf
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from config import logger
+from config import logger, MC_RISK_FREE_RATE, MC_EQUITY_PREMIUM, MC_DEFAULT_BETA
 from utils.market_data import clean_float, deep_clean
 from utils.indicators import montecarlo_portfolio
 
@@ -251,11 +251,40 @@ def get_montecarlo(body: MonteCarloRequest):
     total_value = sum(mv.values()) or 1.0
     weights     = {t: v / total_value for t, v in mv.items()}
 
+    # Beta vs SPY for CAPM-implied drift. Vol/correlations come from history;
+    # only the *mean* is replaced because recent means are noisy and bias-prone.
+    spy_log_ret = None
+    try:
+        spy_hist = yf.Ticker("SPY").history(period="2y")["Close"].dropna()
+        if len(spy_hist) > 60:
+            spy_log_ret = np.log1p(spy_hist.pct_change().dropna())
+    except Exception:
+        logger.warning("MC: SPY fetch failed", exc_info=True)
+
+    betas: dict = {}
+    for ticker, ret_series in returns_map.items():
+        beta = MC_DEFAULT_BETA
+        if spy_log_ret is not None:
+            try:
+                asset_log = np.log1p(ret_series)
+                aligned   = pd.concat([asset_log, spy_log_ret], axis=1, join="inner").dropna()
+                if len(aligned) > 60:
+                    cm = np.cov(aligned.iloc[:, 0], aligned.iloc[:, 1])
+                    if cm[1, 1] > 0:
+                        beta = float(cm[0, 1] / cm[1, 1])
+            except Exception:
+                logger.warning("MC: beta calc failed for %s", ticker, exc_info=True)
+        betas[ticker] = beta
+
     try:
         result = montecarlo_portfolio(
             returns_df, weights,
             n_sims=1000, n_days=n_days,
             portfolio_value=total_value,
+            betas=betas,
+            risk_free_rate=MC_RISK_FREE_RATE,
+            equity_premium=MC_EQUITY_PREMIUM,
+            default_beta=MC_DEFAULT_BETA,
         )
     except Exception as exc:
         logger.error("MC simulation raised an exception", exc_info=True)
