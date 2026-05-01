@@ -251,11 +251,17 @@ def get_montecarlo(body: MonteCarloRequest):
     total_value = sum(mv.values()) or 1.0
     weights     = {t: v / total_value for t, v in mv.items()}
 
-    result = montecarlo_portfolio(
-        returns_df, weights,
-        n_sims=1000, n_days=n_days,
-        portfolio_value=total_value,
-    )
+    try:
+        result = montecarlo_portfolio(
+            returns_df, weights,
+            n_sims=1000, n_days=n_days,
+            portfolio_value=total_value,
+        )
+    except Exception:
+        logger.error("MC simulation raised an exception", exc_info=True)
+        raise HTTPException(status_code=500, detail="Simulation error — check server logs")
+
     if not result:
-        raise HTTPException(status_code=500, detail="Simulation failed — insufficient price history")
-    return result
+        raise HTTPException(status_code=422, detail="Simulation failed — insufficient price history (need >30 trading days)")
+
+    return deep_clean(result)
