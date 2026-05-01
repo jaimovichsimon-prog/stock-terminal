@@ -364,6 +364,7 @@ function showSkeleton() {
   document.getElementById('skeleton').classList.remove('hidden');
   document.getElementById('app-body').style.display = 'none';
   document.getElementById('error-panel').style.display = 'none';
+  document.getElementById('terminal-empty').style.display = 'none';
 }
 
 function hideSkeleton() {
@@ -372,13 +373,20 @@ function hideSkeleton() {
 
 function showTerminal() {
   document.getElementById('app-body').style.display = 'block';
+  document.getElementById('terminal-empty').style.display = 'none';
 }
 
 function showError(msg) {
   document.getElementById('error-msg').textContent = msg;
   document.getElementById('error-panel').style.display = 'block';
   document.getElementById('app-body').style.display = 'none';
+  document.getElementById('terminal-empty').style.display = '';
   hideSkeleton();
+}
+
+function loadChip(ticker) {
+  document.getElementById('ticker-input').value = ticker;
+  loadTicker(ticker);
 }
 
 // ---------------------------------------------------------------------------

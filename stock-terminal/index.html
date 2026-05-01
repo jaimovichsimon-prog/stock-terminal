@@ -170,8 +170,8 @@
 
   /* ---- Split / Compare ---- */
   #terminal-split-wrap { display: flex; gap: 16px; align-items: flex-start; }
-  #terminal-main { flex: 1; min-width: 0; }
-  #compare-panel { flex: 1; min-width: 0; display: none; flex-direction: column; }
+  #terminal-main { flex: 1.5; min-width: 0; }
+  #compare-panel { flex: 1; min-width: 0; display: none; flex-direction: column; border-left: 1px solid var(--border); padding-left: 16px; }
   #compare-panel.open { display: flex; }
 
   /* Compare toggle button */
@@ -232,7 +232,7 @@
 
   @media (max-width: 1100px) {
     #terminal-split-wrap { flex-direction: column; }
-    #compare-panel { width: 100%; }
+    #compare-panel { width: 100%; border-left: none; padding-left: 0; border-top: 1px solid var(--border); padding-top: 16px; }
   }
 
   /* ---- Portfolio impact on news cards ---- */
@@ -271,6 +271,34 @@
   .sk-row2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px; }
   .sk-row2 .sk { height: 200px; }
   .sk-chart { height: 320px; }
+
+  /* ---- Terminal empty state ---- */
+  #terminal-empty {
+    padding: 80px 20px 60px;
+    text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+  }
+  .te-tagline {
+    font-family: 'JetBrains Mono', monospace; font-size: 15px; color: var(--text);
+    letter-spacing: 1px;
+  }
+  .te-sub { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--label); }
+  .te-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .te-chip {
+    background: var(--panel2); border: 1px solid var(--border2); color: var(--accent);
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
+    padding: 6px 16px; border-radius: 20px; cursor: pointer; letter-spacing: 1px;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  }
+  .te-chip:hover {
+    border-color: var(--accent); background: var(--accent-dim);
+    box-shadow: 0 0 12px rgba(0,217,126,0.2);
+  }
+
+  /* ---- Compare empty state ---- */
+  #cmp-empty { padding: 80px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .cmp-empty-icon { font-size: 32px; color: var(--border2); font-weight: 300; line-height: 1; }
+  .cmp-empty-text { font-size: 12px; color: var(--muted); letter-spacing: 0.5px; line-height: 1.8; }
 
   /* ---- Error ---- */
   #error-panel {
@@ -1346,6 +1374,22 @@
   <div class="sk sk-chart"></div>
 </div>
 
+<!-- Empty state (shown until first search) -->
+<div id="terminal-empty">
+  <div class="te-tagline">Enter a ticker to begin</div>
+  <div class="te-sub">Popular symbols</div>
+  <div class="te-chips">
+    <button class="te-chip" onclick="loadChip('AAPL')">AAPL</button>
+    <button class="te-chip" onclick="loadChip('MSFT')">MSFT</button>
+    <button class="te-chip" onclick="loadChip('NVDA')">NVDA</button>
+    <button class="te-chip" onclick="loadChip('TSLA')">TSLA</button>
+    <button class="te-chip" onclick="loadChip('SPY')">SPY</button>
+    <button class="te-chip" onclick="loadChip('AMZN')">AMZN</button>
+    <button class="te-chip" onclick="loadChip('META')">META</button>
+    <button class="te-chip" onclick="loadChip('BRK.B')">BRK.B</button>
+  </div>
+</div>
+
 <!-- Terminal (hidden until data loads) -->
 <div id="app-body">
 
@@ -1600,7 +1644,10 @@
     <button id="cmp-close-btn">✕ Remove Asset</button>
   </div>
 
-  <div id="cmp-empty" style="padding:60px 20px;text-align:center;color:var(--muted);font-size:10px;letter-spacing:.12em">ENTER A TICKER ABOVE</div>
+  <div id="cmp-empty">
+    <div class="cmp-empty-icon">+</div>
+    <div class="cmp-empty-text">Enter a ticker above<br>to compare side by side</div>
+  </div>
   <div id="cmp-loading" style="display:none;padding:60px 20px;text-align:center;color:var(--muted);font-size:11px">Loading…</div>
 
   <div id="cmp-body" style="display:none;padding:14px 18px">
