@@ -499,9 +499,11 @@ let sectorChart = null;
 let pfData      = null;
 let mcChart     = null;
 let mcDays      = 252;
+const mcCache   = new Map();   // keyed by `days`; cleared on explicit re-run or position change
 
 function savePfPositions() {
   localStorage.setItem('pf_positions', JSON.stringify(pfPositions));
+  mcCache.clear();
 }
 
 // ---------------------------------------------------------------------------
@@ -829,6 +831,7 @@ async function loadPortfolio() {
 // Monte Carlo simulation
 // ---------------------------------------------------------------------------
 function triggerMonteCarlo() {
+  mcCache.clear();   // explicit re-run: drop all cached timeframes for fresh paths
   const panel = document.getElementById('pf-mc-panel');
   if (panel) panel.style.display = '';
   loadMonteCarlo();
@@ -836,6 +839,12 @@ function triggerMonteCarlo() {
 
 async function loadMonteCarlo() {
   if (!pfPositions.length) return;
+  if (mcCache.has(mcDays)) {
+    const cached = mcCache.get(mcDays);
+    renderMCChart(cached);
+    renderMCStats(cached.stats, cached.initial_value, cached.model_inputs);
+    return;
+  }
   const btn = document.getElementById('pf-mc-btn');
   if (btn) { btn.textContent = 'Running…'; btn.disabled = true; }
   try {
@@ -845,6 +854,7 @@ async function loadMonteCarlo() {
       body: JSON.stringify({ positions: pfPositions, days: mcDays }),
     }, 90000);
     const data = await res.json();
+    mcCache.set(mcDays, data);
     renderMCChart(data);
     renderMCStats(data.stats, data.initial_value, data.model_inputs);
   } catch (err) {
