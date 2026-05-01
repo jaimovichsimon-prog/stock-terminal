@@ -97,8 +97,11 @@ def montecarlo_portfolio(
 
     # Historical log returns drive the covariance (vol + correlations).
     # clip(-0.99) guards against log(0) for near-total-loss days.
+    # Winsorize at ±25% (~5σ for typical equities) so single-day data errors,
+    # halts, or one-off events don't blow up σ. Real ±25% days survive in the
+    # bulk of the distribution; only the tail is trimmed.
     arr     = np.clip(df.to_numpy().astype(float), -0.99, None)
-    log_ret = np.log1p(arr)                                         # (N, k)
+    log_ret = np.clip(np.log1p(arr), -0.25, 0.25)                   # (N, k)
     cov     = np.cov(log_ret.T) + np.eye(len(tickers)) * 1e-8      # (k, k)
     if cov.ndim < 2:
         cov = cov.reshape(1, 1)
@@ -127,6 +130,9 @@ def montecarlo_portfolio(
     pcts  = np.percentile(paths, [5, 25, 50, 75, 95], axis=0)
     final = paths[:, -1]
 
+    sigma_annual_per_asset = np.sqrt(np.diag(cov) * 252)
+    sigma_annual_portfolio = float(np.sqrt(w @ cov @ w * 252))
+
     return {
         "days":          n_days,
         "initial_value": round(float(portfolio_value), 2),
@@ -144,5 +150,17 @@ def montecarlo_portfolio(
             "median_final":    round(float(np.median(final)), 2),
             "p95_final":       round(float(np.percentile(final, 95)), 2),
             "p5_final":        round(float(np.percentile(final, 5)), 2),
+        },
+        "model_inputs": {
+            "sigma_annual_portfolio": round(sigma_annual_portfolio * 100, 1),
+            "per_asset": [
+                {
+                    "ticker":       tickers[i],
+                    "sigma_annual": round(float(sigma_annual_per_asset[i]) * 100, 1),
+                    "beta":         round(float(betas_arr[i]), 2),
+                    "weight":       round(float(w[i]) * 100, 1),
+                }
+                for i in range(len(tickers))
+            ],
         },
     }

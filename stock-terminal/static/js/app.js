@@ -846,7 +846,7 @@ async function loadMonteCarlo() {
     }, 90000);
     const data = await res.json();
     renderMCChart(data);
-    renderMCStats(data.stats, data.initial_value);
+    renderMCStats(data.stats, data.initial_value, data.model_inputs);
   } catch (err) {
     console.warn('Monte Carlo failed:', err);
     const statsEl = document.getElementById('pf-mc-stats');
@@ -897,20 +897,48 @@ function renderMCChart(data) {
   });
 }
 
-function renderMCStats(stats, initialValue) {
+function renderMCStats(stats, initialValue, modelInputs) {
   const el = document.getElementById('pf-mc-stats');
   if (!el || !stats) return;
   const fmtPct  = v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
   const fmtMoney = v => '$' + Math.round(v).toLocaleString('en-US');
   const p5ret = stats.p5_return;
-  el.innerHTML = `
-    <div class="pf-mc-stat"><span class="mc-label">Expected Return</span><span class="mc-val ${stats.expected_return >= 0 ? 'pos' : 'neg'}">${fmtPct(stats.expected_return)}</span></div>
-    <div class="pf-mc-stat"><span class="mc-label">5th %ile Return</span><span class="mc-val ${p5ret >= 0 ? 'pos' : 'neg'}">${fmtPct(p5ret)}</span></div>
-    <div class="pf-mc-stat"><span class="mc-label">P(Gain)</span><span class="mc-val">${stats.prob_gain}%</span></div>
-    <div class="pf-mc-stat"><span class="mc-label">Median Final</span><span class="mc-val">${fmtMoney(stats.median_final)}</span></div>
-    <div class="pf-mc-stat"><span class="mc-label">Best Case (95th)</span><span class="mc-val pos">${fmtMoney(stats.p95_final)}</span></div>
-    <div class="pf-mc-stat"><span class="mc-label">Worst Case (5th)</span><span class="mc-val neg">${fmtMoney(stats.p5_final)}</span></div>
+
+  const statsGrid = `
+    <div class="pf-mc-stats-grid">
+      <div class="pf-mc-stat"><span class="mc-label">Expected Return</span><span class="mc-val ${stats.expected_return >= 0 ? 'pos' : 'neg'}">${fmtPct(stats.expected_return)}</span></div>
+      <div class="pf-mc-stat"><span class="mc-label">5th %ile Return</span><span class="mc-val ${p5ret >= 0 ? 'pos' : 'neg'}">${fmtPct(p5ret)}</span></div>
+      <div class="pf-mc-stat"><span class="mc-label">P(Gain)</span><span class="mc-val">${stats.prob_gain}%</span></div>
+      <div class="pf-mc-stat"><span class="mc-label">Median Final</span><span class="mc-val">${fmtMoney(stats.median_final)}</span></div>
+      <div class="pf-mc-stat"><span class="mc-label">Best Case (95th)</span><span class="mc-val pos">${fmtMoney(stats.p95_final)}</span></div>
+      <div class="pf-mc-stat"><span class="mc-label">Worst Case (5th)</span><span class="mc-val neg">${fmtMoney(stats.p5_final)}</span></div>
+    </div>
   `;
+
+  let warnHtml = '';
+  let modelHtml = '';
+  if (modelInputs && typeof modelInputs.sigma_annual_portfolio === 'number') {
+    const sigmaP = modelInputs.sigma_annual_portfolio;
+    if (sigmaP > 70) {
+      warnHtml = `
+        <div class="pf-mc-warn">
+          High-volatility portfolio (σ ≈ ${sigmaP.toFixed(1)}% annualized). Under GBM, median and mean can diverge substantially: the Itô correction (−½σ²) pulls the median down while the right tail lifts the mean. This is a property of the model, not an error.
+        </div>
+      `;
+    }
+    const rows = (modelInputs.per_asset || []).map(a => {
+      const tk = safeTicker(a.ticker);
+      return `<div class="mi-row"><span class="mi-tk">${tk}</span><span>σ ${a.sigma_annual.toFixed(1)}%</span><span>β ${a.beta.toFixed(2)}</span><span>w ${a.weight.toFixed(1)}%</span></div>`;
+    }).join('');
+    modelHtml = `
+      <div class="pf-mc-model-inputs">
+        <div class="mi-head">Model inputs · portfolio σ ${sigmaP.toFixed(1)}% annualized</div>
+        ${rows}
+      </div>
+    `;
+  }
+
+  el.innerHTML = statsGrid + warnHtml + modelHtml;
 }
 
 // Timeframe pill wiring
