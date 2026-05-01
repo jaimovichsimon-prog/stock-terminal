@@ -257,9 +257,9 @@ def get_montecarlo(body: MonteCarloRequest):
             n_sims=1000, n_days=n_days,
             portfolio_value=total_value,
         )
-    except Exception:
+    except Exception as exc:
         logger.error("MC simulation raised an exception", exc_info=True)
-        raise HTTPException(status_code=500, detail="Simulation error — check server logs")
+        raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}")
 
     if not result:
         raise HTTPException(status_code=422, detail="Simulation failed — insufficient price history (need >30 trading days)")
