@@ -15,21 +15,37 @@ from services.claude_service import claude_filter, claude_portfolio_impact
 router = APIRouter()
 
 RSS_FEEDS = [
+    # US Central Banks & Official
     ("Federal Reserve",       "https://www.federalreserve.gov/feeds/press_all.xml"),
     ("ECB",                   "https://www.ecb.europa.eu/rss/fsr.xml"),
+    # US Wire Services
     ("Reuters Business",      "https://feeds.reuters.com/reuters/businessNews"),
     ("Reuters Markets",       "https://feeds.reuters.com/reuters/financeNews"),
     ("AP Business",           "https://apnews.com/hub/business.rss"),
+    ("AP Economy",            "https://apnews.com/hub/economy.rss"),
+    # US Financial TV / Wire
     ("CNBC Markets",          "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114"),
     ("CNBC Economy",          "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=20910258"),
     ("MarketWatch",           "https://feeds.marketwatch.com/marketwatch/topstories/"),
     ("Barrons",               "https://www.barrons.com/xml/rss/3_7514.xml"),
     ("Investing.com",         "https://www.investing.com/rss/news_301.rss"),
     ("Yahoo Finance",         "https://finance.yahoo.com/news/rssindex"),
-    ("The Economist Finance", "https://www.economist.com/finance-and-economics/rss.xml"),
+    # US Quality Press
+    ("NYT Business",          "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml"),
+    ("NYT Economy",           "https://rss.nytimes.com/services/xml/rss/nyt/Economy.xml"),
+    ("Washington Post Econ",  "https://feeds.washingtonpost.com/rss/business/economy"),
     ("NPR Business",          "https://feeds.npr.org/1006/rss.xml"),
+    # US Magazines / Journals
+    ("The Economist Finance", "https://www.economist.com/finance-and-economics/rss.xml"),
+    ("The Economist Business","https://www.economist.com/business/rss.xml"),
+    # UK / Europe
     ("BBC Business",          "https://feeds.bbci.co.uk/news/business/rss.xml"),
     ("The Guardian Business", "https://www.theguardian.com/business/rss"),
+    ("Financial Times",       "https://www.ft.com/rss/home"),
+    # Macro data & think tanks
+    ("Brookings Economy",     "https://www.brookings.edu/topic/economy/feed/"),
+    ("Peterson Institute",    "https://www.piie.com/rss.xml"),
+    ("Calculated Risk",       "https://feeds.feedburner.com/CalculatedRisk"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -263,10 +279,11 @@ def _keyword_portfolio_impact(tickers: list, articles: list) -> dict:
 # Endpoints
 # ---------------------------------------------------------------------------
 @router.get("/news")
-def get_news():
-    cached = news_cache.get("main")
-    if cached is not None:
-        return cached
+def get_news(refresh: bool = False):
+    if not refresh:
+        cached = news_cache.get("main")
+        if cached is not None:
+            return cached
 
     articles = _fetch_articles()
     filtered = claude_filter(articles)

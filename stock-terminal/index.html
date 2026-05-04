@@ -270,7 +270,6 @@
   .pf-impact-ticker.Negative { background: rgba(255,80,80,.14); color: var(--red); }
   .pf-impact-ticker.Mixed    { background: rgba(255,200,0,.12); color: #f0c040; }
   .pf-impact-note { font-size: 10px; color: var(--muted); line-height: 1.45; }
-  .nf-btn.pf-active { background: rgba(0,255,136,.12) !important; border-color: var(--accent) !important; color: var(--accent) !important; }
 
   /* ---- Skeleton ---- */
   #skeleton { padding: 12px 16px; }
@@ -505,7 +504,6 @@
     font-size: 9px; font-weight: 700; letter-spacing: 2px; color: var(--red);
     text-transform: uppercase;
   }
-  .sentiment-tag { font-size: 10px; margin-left: auto; white-space: nowrap; }
 
   .card-headline {
     font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.5;
@@ -537,12 +535,6 @@
   }
   .filter-btn:hover { border-color: var(--border2); color: var(--text); background: rgba(255,255,255,0.03); }
   .filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
-
-  .sentiment-panel { background: var(--panel); border: 1px solid var(--border); padding: 14px 16px; border-radius: 8px; }
-  .sent-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 11px; }
-  .sent-row:last-child { margin-bottom: 0; }
-  .sent-bar-wrap { width: 60px; height: 4px; background: #1e1e1e; border-radius: 2px; }
-  .sent-bar { height: 100%; border-radius: 2px; transition: width 0.3s; }
 
   .news-refresh-panel { background: var(--panel); border: 1px solid var(--border); padding: 12px 14px; }
   #news-last-updated { font-size: 10px; color: #444; margin-bottom: 8px; }
@@ -1236,13 +1228,6 @@
   .screener-table tr:hover td { background: var(--panel2); }
   .screener-table .s-ticker { font-weight: 700; color: var(--accent); font-size: 13px; }
   .screener-table .s-company { color: var(--muted); font-size: 11px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
-
-  /* News filters */
-  .news-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-  .nf-btn { padding: 4px 12px; border: 1px solid var(--border2); border-radius: 999px; background: transparent; color: var(--muted); font-family: 'Inter',sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; transition: all .15s; white-space: nowrap; }
-  .nf-btn:hover { color: var(--text); border-color: var(--border2); }
-  .nf-btn.active { background: var(--accent); border-color: var(--accent); color: #07090b; }
-  .nf-sentiment-btns { display: flex; gap: 6px; margin-left: auto; }
 
   /* Alerts page */
   #alerts-page { padding: 16px 18px; display: none; }
@@ -2127,7 +2112,7 @@
 <div class="gate-overlay">
   <div class="gate-overlay-icon">🔒</div>
   <div class="gate-overlay-title">Sign in to read curated news</div>
-  <div class="gate-overlay-text">Real-time market headlines from 15 sources, filtered and ranked by AI for relevance to your watchlist and holdings.</div>
+  <div class="gate-overlay-text">Real-time market headlines from 24 sources, filtered and ranked by AI for relevance to your watchlist and holdings.</div>
   <button class="gate-overlay-btn" onclick="openAuthModal('register')">Create free account</button>
   <button class="gate-overlay-secondary" onclick="openAuthModal('login')">Already have an account? Sign in</button>
 </div>
@@ -2135,22 +2120,6 @@
 
     <!-- Left: article feed -->
     <div>
-      <div class="news-filters" id="news-filters">
-        <button class="nf-btn active" data-cat="all">All</button>
-        <button class="nf-btn" data-cat="Fed/Monetary Policy">Fed / Monetary</button>
-        <button class="nf-btn" data-cat="Geopolitics">Geopolitics</button>
-        <button class="nf-btn" data-cat="Commodities">Commodities</button>
-        <button class="nf-btn" data-cat="Tech/AI">Tech / AI</button>
-        <button class="nf-btn" data-cat="Markets">Markets</button>
-        <button class="nf-btn" data-cat="Macro Economy">Macro</button>
-        <div class="nf-sentiment-btns">
-          <button class="nf-btn active" data-sent="all">All</button>
-          <button class="nf-btn" data-sent="Positive" style="color:var(--accent)">▲ Positive</button>
-          <button class="nf-btn" data-sent="Negative" style="color:var(--red)">▼ Negative</button>
-          <button class="nf-btn" data-sent="Neutral" style="color:var(--muted)">● Neutral</button>
-          <button class="nf-btn" id="nf-pf-btn" style="display:none;color:var(--accent)" data-pf="true">◈ My Portfolio</button>
-        </div>
-      </div>
       <div id="news-skeleton">
         <div class="news-sk"></div>
         <div class="news-sk"></div>
@@ -2165,7 +2134,7 @@
     <div class="news-sidebar">
 
       <div class="filter-panel">
-        <div class="filter-title">Category Filter</div>
+        <div class="filter-title">Category</div>
         <div class="filter-btns">
           <button class="filter-btn active" data-cat="All">All</button>
           <button class="filter-btn" data-cat="Fed/Monetary Policy">Fed / Monetary</button>
@@ -2177,22 +2146,18 @@
         </div>
       </div>
 
-      <div class="sentiment-panel">
-        <div class="filter-title">Macro Sentiment</div>
-        <div class="sent-row">
-          <span style="color:var(--green)">🟢 Positive</span>
-          <div class="sent-bar-wrap"><div class="sent-bar" id="sent-pos-bar" style="background:var(--green);width:0%"></div></div>
-          <span id="sent-pos-count" style="color:var(--muted);font-size:11px">0</span>
+      <div class="filter-panel">
+        <div class="filter-title">Sort By</div>
+        <div class="filter-btns">
+          <button class="filter-btn active" id="sort-date">⏱ Newest First</button>
+          <button class="filter-btn" id="sort-score">★ Importance</button>
         </div>
-        <div class="sent-row">
-          <span style="color:var(--red)">🔴 Negative</span>
-          <div class="sent-bar-wrap"><div class="sent-bar" id="sent-neg-bar" style="background:var(--red);width:0%"></div></div>
-          <span id="sent-neg-count" style="color:var(--muted);font-size:11px">0</span>
-        </div>
-        <div class="sent-row">
-          <span style="color:var(--muted)">⚪ Neutral</span>
-          <div class="sent-bar-wrap"><div class="sent-bar" id="sent-neu-bar" style="background:#444;width:0%"></div></div>
-          <span id="sent-neu-count" style="color:var(--muted);font-size:11px">0</span>
+      </div>
+
+      <div class="filter-panel" id="pf-filter-panel" style="display:none">
+        <div class="filter-title">Portfolio</div>
+        <div class="filter-btns">
+          <button class="filter-btn" id="nf-pf-btn" data-pf="true">◈ My Holdings</button>
         </div>
       </div>
 

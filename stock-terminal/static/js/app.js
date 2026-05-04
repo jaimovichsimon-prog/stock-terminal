@@ -1014,6 +1014,7 @@ renderPfTable(null);
 // ---------------------------------------------------------------------------
 // News
 // ---------------------------------------------------------------------------
+let newsSortMode = 'date'; // 'date' | 'score'
 let newsLoaded = false;
 let newsArticles = [];
 let newsActiveFilter = 'All';
@@ -1032,8 +1033,7 @@ function scoreDots(score) {
   if (score >= 10) {
     return Array(5).fill('<span class="score-dot dot-red"></span>').join('');
   } else if (score >= 8) {
-    const dots = Array(4).fill('<span class="score-dot dot-orange"></span>').join('');
-    return dots;
+    return Array(4).fill('<span class="score-dot dot-orange"></span>').join('');
   } else {
     return Array(3).fill('<span class="score-dot dot-gray"></span>').join('');
   }
@@ -1049,12 +1049,6 @@ function timeAgo(isoStr) {
   } catch(e) { return ''; }
 }
 
-function sentimentTag(s) {
-  if (s === 'Positive') return '<span class="sentiment-tag">🟢 Positive</span>';
-  if (s === 'Negative') return '<span class="sentiment-tag">🔴 Negative</span>';
-  return '<span class="sentiment-tag" style="color:#555">⚪ Neutral</span>';
-}
-
 function renderNewsCards(articles) {
   const feed = document.getElementById('news-feed');
   const empty = document.getElementById('news-empty');
@@ -1063,19 +1057,27 @@ function renderNewsCards(articles) {
     ? articles
     : articles.filter(a => a.category === newsActiveFilter);
 
-  // Apply top-bar category filter (_nfCat from #news-filters buttons)
-  if (typeof _nfCat !== 'undefined' && _nfCat !== 'all') {
-    filtered = filtered.filter(a => (a.category || '').toLowerCase() === _nfCat.toLowerCase());
-  }
-  // Apply top-bar sentiment filter (_nfSent from #news-filters buttons)
-  if (typeof _nfSent !== 'undefined' && _nfSent !== 'all') {
-    filtered = filtered.filter(a => (a.sentiment || '').toLowerCase() === _nfSent.toLowerCase());
-  }
   // Portfolio-only filter
   if (typeof _nfPfOnly !== 'undefined' && _nfPfOnly) {
     const affectedIds = new Set((_pfImpacts || []).map(i => i.article_id));
     filtered = filtered.filter(a => affectedIds.has(newsArticles.indexOf(a)));
   }
+
+  // Sort by user-selected mode
+  filtered = [...filtered].sort((a, b) => {
+    if (newsSortMode === 'score') {
+      const sd = (b.importance_score || 0) - (a.importance_score || 0);
+      if (sd !== 0) return sd;
+      const ta = a.published_at ? new Date(a.published_at).getTime() : 0;
+      const tb = b.published_at ? new Date(b.published_at).getTime() : 0;
+      return tb - ta;
+    }
+    // default: newest first, tiebreak by score
+    const ta = a.published_at ? new Date(a.published_at).getTime() : 0;
+    const tb = b.published_at ? new Date(b.published_at).getTime() : 0;
+    if (tb !== ta) return tb - ta;
+    return (b.importance_score || 0) - (a.importance_score || 0);
+  });
 
   if (filtered.length === 0) {
     feed.classList.add('hidden');
@@ -1109,7 +1111,6 @@ function renderNewsCards(articles) {
           <span class="cat-badge ${catCls}">${a.category}</span>
           <span class="score-dots">${scoreDots(a.importance_score)}</span>
           ${isCrit ? '<span class="critical-label">CRITICAL</span>' : ''}
-          ${sentimentTag(a.sentiment)}
         </div>
         <a class="card-headline" href="${a.url || '#'}" target="_blank" rel="noopener">${a.title}</a>
         <div class="card-meta">
@@ -1121,22 +1122,6 @@ function renderNewsCards(articles) {
       </div>
     `;
   }).join('');
-
-  updateSentimentPanel(filtered);
-}
-
-function updateSentimentPanel(articles) {
-  const pos = articles.filter(a => a.sentiment === 'Positive').length;
-  const neg = articles.filter(a => a.sentiment === 'Negative').length;
-  const neu = articles.filter(a => a.sentiment === 'Neutral').length;
-  const total = articles.length || 1;
-
-  document.getElementById('sent-pos-count').textContent = pos;
-  document.getElementById('sent-neg-count').textContent = neg;
-  document.getElementById('sent-neu-count').textContent = neu;
-  document.getElementById('sent-pos-bar').style.width = (pos / total * 100) + '%';
-  document.getElementById('sent-neg-bar').style.width = (neg / total * 100) + '%';
-  document.getElementById('sent-neu-bar').style.width = (neu / total * 100) + '%';
 }
 
 async function loadNews(force = false) {
@@ -1149,7 +1134,8 @@ async function loadNews(force = false) {
   empty.classList.add('hidden');
 
   try {
-    const res = await apiFetch('/api/news');
+    const url = force ? '/api/news?refresh=true' : '/api/news';
+    const res = await apiFetch(url, {}, 60000);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     newsArticles = data.articles || [];
@@ -1166,7 +1152,10 @@ async function loadNews(force = false) {
 
     // auto-refresh every 15 min
     if (newsRefreshTimer) clearTimeout(newsRefreshTimer);
-    newsRefreshTimer = setTimeout(() => { newsLoaded = false; if (document.getElementById('news-page').style.display !== 'none') loadNews(); }, 15 * 60 * 1000);
+    newsRefreshTimer = setTimeout(() => {
+      newsLoaded = false;
+      if (document.getElementById('news-page').style.display !== 'none') loadNews();
+    }, 15 * 60 * 1000);
 
   } catch(e) {
     skeleton.style.display = 'none';
@@ -1175,19 +1164,40 @@ async function loadNews(force = false) {
   }
 }
 
-// Category filter
-document.querySelectorAll('.filter-btn').forEach(btn => {
+// Category filter — scoped to [data-cat] only so sort buttons keep their active state
+document.querySelectorAll('.filter-btn[data-cat]').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.filter-btn[data-cat]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     newsActiveFilter = btn.dataset.cat;
     renderNewsCards(newsArticles);
   });
 });
 
-document.getElementById('news-refresh-btn').addEventListener('click', () => {
+// Sort buttons
+document.getElementById('sort-date')?.addEventListener('click', function() {
+  newsSortMode = 'date';
+  document.querySelectorAll('#sort-date, #sort-score').forEach(b => b.classList.remove('active'));
+  this.classList.add('active');
+  renderNewsCards(newsArticles);
+});
+document.getElementById('sort-score')?.addEventListener('click', function() {
+  newsSortMode = 'score';
+  document.querySelectorAll('#sort-date, #sort-score').forEach(b => b.classList.remove('active'));
+  this.classList.add('active');
+  renderNewsCards(newsArticles);
+});
+
+// Refresh button — disables itself while fetching, shows progress text
+document.getElementById('news-refresh-btn').addEventListener('click', function() {
   newsLoaded = false;
-  loadNews(true);
+  const btn = this;
+  btn.disabled = true;
+  btn.textContent = '↻ Refreshing…';
+  loadNews(true).finally(() => {
+    btn.disabled = false;
+    btn.textContent = '↻ Refresh';
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -2747,9 +2757,9 @@ async function loadPortfolioNewsImpact() {
   tickerObjs = tickerObjs.filter(t => t.ticker);
   if (!tickerObjs.length || !newsArticles.length) return;
 
-  // Show the "My Portfolio" filter button
-  const pfBtn = document.getElementById('nf-pf-btn');
-  if (pfBtn) pfBtn.style.display = '';
+  // Reveal the Portfolio sidebar panel (hidden until holdings are loaded)
+  const pfPanel = document.getElementById('pf-filter-panel');
+  if (pfPanel) pfPanel.style.display = '';
 
   const articles = newsArticles.map((a, i) => ({
     id: i, title: a.title || '', summary: a.summary || ''
@@ -2771,38 +2781,10 @@ function _articleImpacts(articleIdx) {
   return _pfImpacts.filter(i => i.article_id === articleIdx);
 }
 
-// ---------------------------------------------------------------------------
-// News top-bar filters (data-cat / data-sent on nf-btn)
-// ---------------------------------------------------------------------------
-let _nfCat  = 'all';
-let _nfSent = 'all';
-
-document.querySelectorAll('#news-filters .nf-btn[data-cat]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    _nfCat = btn.dataset.cat;
-    document.querySelectorAll('#news-filters .nf-btn[data-cat]').forEach(b => b.classList.toggle('active', b === btn));
-    renderNewsCards(newsArticles);
-  });
-});
-document.querySelectorAll('#news-filters .nf-btn[data-sent]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    _nfSent    = btn.dataset.sent;
-    _nfPfOnly  = false;
-    document.querySelectorAll('#news-filters .nf-btn[data-sent]').forEach(b => b.classList.toggle('active', b === btn));
-    document.getElementById('nf-pf-btn')?.classList.remove('pf-active');
-    renderNewsCards(newsArticles);
-  });
-});
-
-// Portfolio filter button
+// Portfolio filter button (sidebar)
 document.getElementById('nf-pf-btn')?.addEventListener('click', function() {
   _nfPfOnly = !_nfPfOnly;
-  this.classList.toggle('pf-active', _nfPfOnly);
-  // deactivate sentiment buttons when portfolio filter is active
-  if (_nfPfOnly) {
-    _nfSent = 'all';
-    document.querySelectorAll('#news-filters .nf-btn[data-sent]').forEach(b => b.classList.toggle('active', b.dataset.sent === 'all'));
-  }
+  this.classList.toggle('active', _nfPfOnly);
   renderNewsCards(newsArticles);
 });
 

@@ -3,7 +3,7 @@ import json
 from typing import Optional, List
 import anthropic
 from config import ANTHROPIC_API_KEY, CLAUDE_MODEL, logger
-from services.sentiment import classify_sentiment, EXCLUDE_KEYWORDS, HIGH_IMPORTANCE, CAT_KEYWORDS
+from services.sentiment import EXCLUDE_KEYWORDS, HIGH_IMPORTANCE, CAT_KEYWORDS, classify_category
 
 
 def _make_client() -> anthropic.Anthropic:
@@ -40,16 +40,15 @@ def _keyword_filter(articles: list[dict]) -> list[dict]:
         else:
             score = 7
 
-        from services.sentiment import classify_category
         results.append({
             **a,
             "importance_score": score,
             "category":         classify_category(text),
             "market_impact":    "",
-            "sentiment":        classify_sentiment(text),
+            "reasoning":        "",
         })
     results.sort(key=lambda x: x["importance_score"], reverse=True)
-    return results[:25]
+    return results[:40]
 
 
 def claude_filter(articles: list[dict]) -> list[dict]:
@@ -59,31 +58,68 @@ def claude_filter(articles: list[dict]) -> list[dict]:
     if not ANTHROPIC_API_KEY:
         return _keyword_filter(articles)
 
-    batch_text = "\n".join(
-        f'[{i}] TITLE: {a["title"]}\nSUMMARY: {a["summary"]}'
-        for i, a in enumerate(articles)
+    batch_text = "\n\n".join(
+        '[{}] TITLE: {}\nSOURCE: {}\nSUMMARY: {}'.format(
+            i, a["title"], a.get("source", ""), (a.get("summary") or "")[:600]
+        )
+        for i, a in enumerate(articles[:120])
     )
-    system = (
-        "You are a financial news filter for a professional equity trading terminal.\n"
-        "Your job: identify macro-relevant, market-moving news articles.\n\n"
-        "INCLUDE: Fed/central bank decisions, inflation data, jobs reports, GDP surprises, "
-        "geopolitical conflicts, oil/gas disruptions, wars, sanctions, major AI regulation, "
-        "systemic financial risk, sovereign events, major elections or political instability.\n"
-        "EXCLUDE: individual company earnings (unless systemic), crypto minor moves, "
-        "sports, lifestyle, celebrity, regional politics with no macro impact, "
-        "routine data exactly in-line with forecasts.\n\n"
-        "Return a JSON array. Each passing article must have:\n"
-        "  id            — original index (integer)\n"
-        "  importance_score — 1-10 (10 = market-moving event; only include >= 7)\n"
-        "  category      — one of: Fed/Monetary Policy, Geopolitics, Commodities, Tech/AI, Markets, Macro Economy\n"
-        "  market_impact — 2 sentences explaining the potential equity market impact, written for a trader\n"
-        "Return only a valid JSON array. No markdown, no extra text."
-    )
+
+    system = "\n".join([
+        "You are a senior macro analyst filtering news for a professional equity trading terminal.",
+        "Your job: read every article and return ALL that are relevant to macro markets and equities.",
+        "Be GENEROUS -- include anything touching monetary policy, geopolitics, commodities,",
+        "tech regulation, or macro economy. Only exclude pure sports, celebrity, lifestyle,",
+        "recipes, entertainment, or local news with zero macro relevance.",
+        "",
+        "IMPORTANCE SCORING -- use the full range, not just 7:",
+        "  10: Systemic shock -- Fed emergency rate move, major war declaration, nuclear threat,",
+        "      global financial crisis, sovereign default",
+        "  9:  Highly market-moving -- Fed rate decision, CPI/PCE beat or miss, NFP blowout or miss,",
+        "      active conflict escalation, major sanctions package, OPEC supply announcement",
+        "  8:  Significant macro -- GDP release, central bank speech with clear signal,",
+        "      major election result, notable tariff announcement, commodity move >3%,",
+        "      systemic bank stress, major AI regulation",
+        "  7:  Relevant macro -- Fed official commentary, trade policy updates, geopolitical tensions,",
+        "      commodity price trends, economic indicator releases (PMI, retail sales, etc.)",
+        "  6:  Notable but lower-impact -- analyst macro calls, policy discussions, market technicals,",
+        "      sector-wide trends, preliminary data",
+        "",
+        "Include articles scoring 7 and above. Use the FULL scale -- do not compress into 7.",
+        "",
+        "CATEGORY DEFINITIONS -- assign the best fit:",
+        "  Fed/Monetary Policy: central bank decisions, interest rates, inflation policy,",
+        "      Fed/ECB/BOJ/BOE speeches and minutes, quantitative easing/tightening",
+        "  Geopolitics: wars, military conflicts, sanctions, diplomatic crises, elections with",
+        "      geopolitical consequences, NATO, territorial disputes",
+        "  Commodities: oil, gas, gold, copper, agricultural prices, OPEC, energy supply/demand",
+        "  Tech/AI: artificial intelligence regulation or breakthroughs, semiconductors,",
+        "      big tech antitrust, chip exports, data centers",
+        "  Markets: stock market moves, bond yields, credit spreads, IPOs, M&A, hedge funds,",
+        "      dollar/FX, market volatility, sector rallies or selloffs",
+        "  Macro Economy: GDP growth/contraction, recession signals, jobs/unemployment/payrolls,",
+        "      consumer spending, retail sales, housing data, PMI/ISM, trade balances,",
+        "      tariffs as economic policy, inflation data (CPI/PCE as economic readings),",
+        "      fiscal policy, government spending, debt, cost of living",
+        "",
+        "Tariff and trade stories go in Macro Economy unless primarily a geopolitical conflict.",
+        "GDP, jobs, and inflation data releases always go in Macro Economy.",
+        "",
+        "Return a JSON array. Each passing article must have these exact fields:",
+        "  id               - original index (integer)",
+        "  importance_score - integer 7-10",
+        "  category         - one of: Fed/Monetary Policy, Geopolitics, Commodities, Tech/AI, Markets, Macro Economy",
+        "  reasoning        - 1-2 sentences: what is happening and why it matters to markets",
+        "  market_impact    - 2 sentences of equity market impact written for a trader",
+        "",
+        "Return ONLY a valid JSON array. No markdown, no extra text.",
+    ])
+
     try:
         client = _make_client()
         msg = client.messages.create(
             model=CLAUDE_MODEL,
-            max_tokens=4096,
+            max_tokens=6000,
             system=system,
             messages=[{"role": "user", "content": batch_text}],
         )
@@ -108,13 +144,11 @@ def claude_filter(articles: list[dict]) -> list[dict]:
         art["importance_score"] = score
         art["category"]         = item.get("category", "Markets")
         art["market_impact"]    = item.get("market_impact", "")
-        art["sentiment"] = classify_sentiment(
-            (art.get("title", "") + " " + art.get("summary", "")).lower()
-        )
+        art["reasoning"]        = item.get("reasoning", "")
         enriched.append(art)
 
     enriched.sort(key=lambda x: x["importance_score"], reverse=True)
-    return enriched[:20]
+    return enriched[:40]
 
 
 # ---------------------------------------------------------------------------
