@@ -1304,6 +1304,49 @@
   .auth-back-btn:hover { color: var(--text); }
   .auth-forgot-link { display: block; text-align: right; font-size: 11px; color: var(--muted); cursor: pointer; margin-top: -8px; margin-bottom: 14px; background: none; border: none; font-family: 'Inter',sans-serif; }
   .auth-forgot-link:hover { color: var(--accent); }
+
+  /* Guest gate — when not signed in, blur gated pages and show overlay */
+  .gated-page { position: relative; min-height: 480px; }
+  body.guest .gated-page > :not(.gate-overlay) {
+    filter: blur(7px);
+    pointer-events: none;
+    user-select: none;
+    transition: filter 0.25s ease;
+  }
+  body.authed .gated-page > :not(.gate-overlay) { filter: none; pointer-events: auto; user-select: auto; }
+  .gate-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 32px;
+    z-index: 50;
+    background: rgba(7, 10, 15, 0.45);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    border-radius: 8px;
+    text-align: center;
+  }
+  body.guest .gate-overlay { display: flex; }
+  .gate-overlay-icon { font-size: 38px; line-height: 1; opacity: 0.9; }
+  .gate-overlay-title { font-size: 15px; color: var(--text); font-weight: 600; letter-spacing: -0.01em; }
+  .gate-overlay-text { font-size: 12px; color: var(--muted); max-width: 360px; line-height: 1.6; }
+  .gate-overlay-btn {
+    padding: 10px 26px; background: var(--accent); color: var(--bg);
+    border: none; border-radius: 6px; font-family: 'Inter', sans-serif;
+    font-weight: 600; cursor: pointer; font-size: 13px;
+    transition: opacity 0.15s;
+  }
+  .gate-overlay-btn:hover { opacity: 0.88; }
+  .gate-overlay-secondary {
+    background: none; border: none; color: var(--muted);
+    font-family: 'Inter', sans-serif; font-size: 11px; cursor: pointer;
+    padding: 0; margin-top: -4px;
+  }
+  .gate-overlay-secondary:hover { color: var(--text); }
 </style>
 </head>
 <body>
@@ -1863,7 +1906,14 @@
 </div><!-- end #terminal-page -->
 
 <!-- Portfolio Page -->
-<div id="portfolio-page">
+<div id="portfolio-page" class="gated-page">
+<div class="gate-overlay">
+  <div class="gate-overlay-icon">🔒</div>
+  <div class="gate-overlay-title">Sign in to track your portfolio</div>
+  <div class="gate-overlay-text">Log positions, see live P&amp;L, sector breakdown, beta, Sharpe, Monte Carlo projections, and tax-lot accounting — all in one dashboard.</div>
+  <button class="gate-overlay-btn" onclick="openAuthModal('register')">Create free account</button>
+  <button class="gate-overlay-secondary" onclick="openAuthModal('login')">Already have an account? Sign in</button>
+</div>
 
   <!-- Guest banner (hidden when logged in) -->
   <div id="pf-guest-banner" style="display:none;margin:0 0 14px;padding:10px 14px;background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.12);border-radius:6px;font-size:11px;color:var(--muted)">
@@ -2073,7 +2123,14 @@
 </div>
 
 <!-- News Page -->
-<div id="news-page">
+<div id="news-page" class="gated-page">
+<div class="gate-overlay">
+  <div class="gate-overlay-icon">🔒</div>
+  <div class="gate-overlay-title">Sign in to read curated news</div>
+  <div class="gate-overlay-text">Real-time market headlines from 15 sources, filtered and ranked by AI for relevance to your watchlist and holdings.</div>
+  <button class="gate-overlay-btn" onclick="openAuthModal('register')">Create free account</button>
+  <button class="gate-overlay-secondary" onclick="openAuthModal('login')">Already have an account? Sign in</button>
+</div>
   <div class="news-layout">
 
     <!-- Left: article feed -->
@@ -2149,7 +2206,14 @@
 </div><!-- end #news-page -->
 
 <!-- Watchlist Page -->
-<div id="watchlist-page">
+<div id="watchlist-page" class="gated-page">
+<div class="gate-overlay">
+  <div class="gate-overlay-icon">🔒</div>
+  <div class="gate-overlay-title">Sign in to build your watchlist</div>
+  <div class="gate-overlay-text">Track any ticker with live prices, daily changes, and a unified macro dashboard — synced across devices.</div>
+  <button class="gate-overlay-btn" onclick="openAuthModal('register')">Create free account</button>
+  <button class="gate-overlay-secondary" onclick="openAuthModal('login')">Already have an account? Sign in</button>
+</div>
 
   <!-- Macro Dashboard -->
   <div id="macro-last-updated">—</div>
@@ -2201,7 +2265,14 @@
 </div><!-- end #watchlist-page -->
 
 <!-- Earnings Calendar Page -->
-<div id="earnings-cal-page">
+<div id="earnings-cal-page" class="gated-page">
+<div class="gate-overlay">
+  <div class="gate-overlay-icon">🔒</div>
+  <div class="gate-overlay-title">Sign in to view the earnings calendar</div>
+  <div class="gate-overlay-text">Upcoming reports for the next 4 weeks, with EPS estimates, revenue forecasts, and price reaction history.</div>
+  <button class="gate-overlay-btn" onclick="openAuthModal('register')">Create free account</button>
+  <button class="gate-overlay-secondary" onclick="openAuthModal('login')">Already have an account? Sign in</button>
+</div>
   <div class="ec-page-title">
     <span class="ec-dot-live"></span>
     Earnings Calendar — Q2 2026
@@ -2232,7 +2303,14 @@
 </div><!-- end #earnings-cal-page -->
 
 <!-- Alerts Page -->
-<div id="alerts-page">
+<div id="alerts-page" class="gated-page">
+<div class="gate-overlay">
+  <div class="gate-overlay-icon">🔒</div>
+  <div class="gate-overlay-title">Sign in to set price alerts</div>
+  <div class="gate-overlay-text">Get an email when any ticker crosses your target — whether you're tracking earnings, breakouts, or stop-loss levels.</div>
+  <button class="gate-overlay-btn" onclick="openAuthModal('register')">Create free account</button>
+  <button class="gate-overlay-secondary" onclick="openAuthModal('login')">Already have an account? Sign in</button>
+</div>
   <div class="alerts-header">
     <h2>Price Alerts</h2>
     <button id="add-alert-btn">+ New Alert</button>
@@ -2273,7 +2351,14 @@
 </div>
 
 <!-- Screener Page -->
-<div id="screener-page">
+<div id="screener-page" class="gated-page">
+<div class="gate-overlay">
+  <div class="gate-overlay-icon">🔒</div>
+  <div class="gate-overlay-title">Sign in to use the screener</div>
+  <div class="gate-overlay-text">Filter the entire S&amp;P 500 by sector, valuation, growth, profitability, and momentum to find your next idea.</div>
+  <button class="gate-overlay-btn" onclick="openAuthModal('register')">Create free account</button>
+  <button class="gate-overlay-secondary" onclick="openAuthModal('login')">Already have an account? Sign in</button>
+</div>
   <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px;letter-spacing:.02em">Stock Screener</div>
   <div class="screener-filters">
     <div class="screener-filter-group"><label>Sector</label><select id="screener-sector-sel"></select></div>

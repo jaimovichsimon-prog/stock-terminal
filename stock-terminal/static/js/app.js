@@ -2919,6 +2919,8 @@ function _applySession(session) {
     authToken = null;
     authUser  = null;
   }
+  document.body.classList.toggle('authed', !!authUser);
+  document.body.classList.toggle('guest',  !authUser);
   renderUserPill();
   _updateGuestBanners();
 }
@@ -2933,7 +2935,9 @@ function setAuth() {
 }
 
 function clearAuth() {
-  sbClient.auth.signOut().catch(() => {});
+  if (typeof sbClient !== 'undefined' && sbClient && sbClient.auth) {
+    sbClient.auth.signOut().catch(() => {});
+  }
   authToken = null;
   authUser  = null;
   _alerts = [];
@@ -2975,25 +2979,32 @@ function _updateGuestBanners() {
 
 // Subscribe to Supabase auth state. Fires INITIAL_SESSION on load with current
 // session (or null), then SIGNED_IN / SIGNED_OUT / TOKEN_REFRESHED / PASSWORD_RECOVERY.
-sbClient.auth.onAuthStateChange((event, session) => {
-  _applySession(session);
-  if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
-    syncAfterLogin();
-    loadAlerts();
-    loadTransactions();
-  } else if (event === 'SIGNED_OUT') {
-    _alerts = [];
-    _txs = [];
-    if (typeof renderAlerts === 'function') renderAlerts();
-    if (typeof renderTxTable === 'function') renderTxTable();
-  } else if (event === 'PASSWORD_RECOVERY') {
-    document.getElementById('auth-overlay')?.classList.add('open');
-    document.getElementById('auth-main-fields').style.display = 'none';
-    document.getElementById('auth-reset-view').classList.add('visible');
-  }
-});
+// Guarded so the rest of the page still works if SUPABASE_URL/ANON_KEY weren't
+// injected (e.g. local dev without .env) — in that case the app stays in guest mode.
+if (typeof sbClient !== 'undefined' && sbClient && sbClient.auth) {
+  sbClient.auth.onAuthStateChange((event, session) => {
+    _applySession(session);
+    if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+      syncAfterLogin();
+      loadAlerts();
+      loadTransactions();
+    } else if (event === 'SIGNED_OUT') {
+      _alerts = [];
+      _txs = [];
+      if (typeof renderAlerts === 'function') renderAlerts();
+      if (typeof renderTxTable === 'function') renderTxTable();
+    } else if (event === 'PASSWORD_RECOVERY') {
+      document.getElementById('auth-overlay')?.classList.add('open');
+      document.getElementById('auth-main-fields').style.display = 'none';
+      document.getElementById('auth-reset-view').classList.add('visible');
+    }
+  });
+} else {
+  console.warn('Supabase client not initialized — app running in guest-only mode');
+}
 
-// Initial paint before INITIAL_SESSION fires
+// Initial paint before INITIAL_SESSION fires — assume guest until SDK reports
+document.body.classList.add('guest');
 renderUserPill();
 _updateGuestBanners();
 
