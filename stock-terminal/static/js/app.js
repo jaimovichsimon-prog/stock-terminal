@@ -2024,12 +2024,20 @@ function ecInit() {
 let _alerts = [];
 
 async function loadAlerts() {
-  if (!authToken) { _updateGuestBanners(); return; }
+  if (!authUser) { _updateGuestBanners(); return; }
   try {
-    const res = await apiFetch('/api/user/alerts', { headers: { Authorization: `Bearer ${authToken}` } });
-    _alerts = (await res.json()).alerts || [];
+    const { data, error } = await sbClient
+      .from('price_alerts')
+      .select('id, ticker, condition, target_price, triggered, created_at')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    _alerts = (data || []).map(r => ({
+      id: r.id, ticker: r.ticker, condition: r.condition,
+      target_price: Number(r.target_price), triggered: !!r.triggered,
+      created_at: r.created_at,
+    }));
     renderAlerts();
-  } catch {}
+  } catch (e) { console.warn('loadAlerts failed:', e); }
 }
 
 function renderAlerts() {
@@ -2054,8 +2062,9 @@ function renderAlerts() {
 
 async function deleteAlert(id) {
   try {
-    await apiFetch(`/api/user/alerts/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } });
-  } catch (e) { console.warn('Delete alert failed:', e.message); }
+    const { error } = await sbClient.from('price_alerts').delete().eq('id', id);
+    if (error) console.warn('Delete alert failed:', error);
+  } catch (e) { console.warn('Delete alert failed:', e); }
   _alerts = _alerts.filter(a => a.id !== id);
   renderAlerts();
 }
@@ -2081,11 +2090,11 @@ document.getElementById('al-submit')?.addEventListener('click', async () => {
   const errEl  = document.getElementById('al-error');
   if (!ticker)                { errEl.textContent = 'Enter a ticker symbol.'; return; }
   if (isNaN(price)||price<=0) { errEl.textContent = 'Enter a valid price.'; return; }
-  const res = await apiFetch('/api/user/alerts', {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-    body: JSON.stringify({ ticker, condition: cond, target_price: price }),
-  }).catch(() => null);
-  if (!res || !res.ok) { errEl.textContent = 'Failed to save alert.'; return; }
+  if (!authUser)              { errEl.textContent = 'Sign in to save alerts.'; return; }
+  const { error } = await sbClient.from('price_alerts').insert({
+    user_id: authUser.id, ticker, condition: cond, target_price: price,
+  });
+  if (error) { errEl.textContent = error.message || 'Failed to save alert.'; return; }
   document.getElementById('alert-modal-overlay').classList.remove('open');
   await loadAlerts();
 });
@@ -2097,12 +2106,20 @@ let _txs = [];
 let _txType = 'buy';
 
 async function loadTransactions() {
-  if (!authToken) return;
+  if (!authUser) return;
   try {
-    const res = await apiFetch('/api/user/transactions', { headers: { Authorization: `Bearer ${authToken}` } });
-    _txs = (await res.json()).transactions || [];
+    const { data, error } = await sbClient
+      .from('transactions')
+      .select('id, ticker, transaction_type, shares, price, transaction_date, notes')
+      .order('transaction_date', { ascending: false });
+    if (error) throw error;
+    _txs = (data || []).map(r => ({
+      id: r.id, ticker: r.ticker, tx_type: r.transaction_type,
+      shares: Number(r.shares), price: Number(r.price),
+      date: r.transaction_date, notes: r.notes || '',
+    }));
     renderTxTable();
-  } catch {}
+  } catch (e) { console.warn('loadTransactions failed:', e); }
 }
 
 function renderTxTable() {
@@ -2126,8 +2143,9 @@ function renderTxTable() {
 
 async function deleteTx(id) {
   try {
-    await apiFetch(`/api/user/transactions/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${authToken}` } });
-  } catch (e) { console.warn('Delete transaction failed:', e.message); }
+    const { error } = await sbClient.from('transactions').delete().eq('id', id);
+    if (error) console.warn('Delete transaction failed:', error);
+  } catch (e) { console.warn('Delete transaction failed:', e); }
   _txs = _txs.filter(t => t.id !== id);
   renderTxTable();
 }
@@ -2169,11 +2187,12 @@ document.getElementById('tx-submit')?.addEventListener('click', async () => {
   if (isNaN(shares)||shares<=0)  { errEl.textContent = 'Enter valid shares.'; return; }
   if (isNaN(price)||price<=0)    { errEl.textContent = 'Enter valid price.'; return; }
   if (!date)                     { errEl.textContent = 'Select a date.'; return; }
-  const res = await apiFetch('/api/user/transactions', {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-    body: JSON.stringify({ ticker, tx_type: _txType, shares, price, date, notes }),
-  }).catch(() => null);
-  if (!res || !res.ok) { errEl.textContent = 'Failed to save.'; return; }
+  if (!authUser)                 { errEl.textContent = 'Sign in to save transactions.'; return; }
+  const { error } = await sbClient.from('transactions').insert({
+    user_id: authUser.id, ticker, transaction_type: _txType,
+    shares, price, transaction_date: date, notes,
+  });
+  if (error) { errEl.textContent = error.message || 'Failed to save.'; return; }
   document.getElementById('tx-modal-overlay').classList.remove('open');
   await loadTransactions();
 });
@@ -2800,57 +2819,73 @@ loadTicker = async function(symbol, isRefresh = false) {
 };
 
 // ---------------------------------------------------------------------------
-// Auth state
+// Auth state — synced with Supabase session via onAuthStateChange below
 // ---------------------------------------------------------------------------
-let authToken = localStorage.getItem('auth_token') || null;
-let authUser  = JSON.parse(localStorage.getItem('auth_user') || 'null');
+let authToken = null;
+let authUser  = null;
+
+// One-time cleanup of legacy JWT-era localStorage keys
+localStorage.removeItem('auth_token');
+localStorage.removeItem('auth_user');
 
 // ---------------------------------------------------------------------------
-// Server sync helpers (portfolio + watchlist)
+// Server sync helpers (portfolio + watchlist) — direct to Supabase with RLS
 // ---------------------------------------------------------------------------
 async function pushPortfolioToServer() {
-  if (!authToken || !pfPositions) return;
+  if (!authUser || !pfPositions) return;
   try {
-    await apiFetch('/api/user/portfolio', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-      body: JSON.stringify({ positions: pfPositions }),
-    });
+    const userId = authUser.id;
+    await sbClient.from('portfolio_holdings').delete().eq('user_id', userId);
+    if (pfPositions.length > 0) {
+      const seen = new Set();
+      const rows = [];
+      for (const p of pfPositions) {
+        const tk = (p.ticker || '').toUpperCase().trim();
+        if (!tk || seen.has(tk)) continue;
+        seen.add(tk);
+        rows.push({ user_id: userId, ticker: tk, shares: p.shares, avg_cost: p.avg_cost });
+      }
+      if (rows.length) await sbClient.from('portfolio_holdings').insert(rows);
+    }
   } catch (_) { /* offline — local state is the source of truth */ }
 }
 
 async function pushWatchlistToServer() {
-  if (!authToken || !wlTickers) return;
+  if (!authUser || !wlTickers) return;
   try {
-    await apiFetch('/api/user/watchlist', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-      body: JSON.stringify({ tickers: wlTickers }),
-    });
+    const userId = authUser.id;
+    await sbClient.from('watchlist').delete().eq('user_id', userId);
+    const seen = new Set();
+    const rows = [];
+    for (const t of wlTickers) {
+      const tk = (t || '').toUpperCase().trim();
+      if (!tk || seen.has(tk)) continue;
+      seen.add(tk);
+      rows.push({ user_id: userId, ticker: tk });
+    }
+    if (rows.length) await sbClient.from('watchlist').insert(rows);
   } catch (_) { /* offline */ }
 }
 
 async function syncAfterLogin() {
-  if (!authToken) return;
+  if (!authUser) return;
   try {
     const [pfRes, wlRes] = await Promise.all([
-      fetch('/api/user/portfolio', { headers: { Authorization: `Bearer ${authToken}` } }),
-      fetch('/api/user/watchlist', { headers: { Authorization: `Bearer ${authToken}` } }),
+      sbClient.from('portfolio_holdings').select('ticker, shares, avg_cost'),
+      sbClient.from('watchlist').select('ticker').order('created_at', { ascending: true }),
     ]);
-    if (!pfRes.ok || !wlRes.ok) return;
+    if (pfRes.error) { console.warn('portfolio fetch:', pfRes.error); return; }
+    if (wlRes.error) { console.warn('watchlist fetch:', wlRes.error); return; }
 
-    const pfServer = await pfRes.json();
-    const wlServer = await wlRes.json();
-
-    const serverPositions = pfServer.positions || [];
-    const serverTickers   = wlServer.tickers   || [];
+    const serverPositions = (pfRes.data || []).map(r => ({
+      ticker: r.ticker, shares: Number(r.shares), avg_cost: Number(r.avg_cost),
+    }));
+    const serverTickers = (wlRes.data || []).map(r => r.ticker);
 
     if (serverPositions.length > 0) {
-      // Server has data — use it (authoritative)
       pfPositions = serverPositions;
       localStorage.setItem('pf_positions', JSON.stringify(pfPositions));
     } else if (pfPositions.length > 0) {
-      // Server empty but local has data — upload local to server
       await pushPortfolioToServer();
     }
 
@@ -2861,7 +2896,6 @@ async function syncAfterLogin() {
       await pushWatchlistToServer();
     }
 
-    // Re-render both views
     renderPfTable(null);
     pfData = null;
     renderWlTable([]);
@@ -2877,11 +2911,20 @@ async function syncAfterLogin() {
 function lockApp()   { /* removed — app is public */ }
 function unlockApp() { /* removed */ }
 
-function setAuth(token, user) {
-  authToken = token;
-  authUser  = user;
-  localStorage.setItem('auth_token', token);
-  localStorage.setItem('auth_user', JSON.stringify(user));
+function _applySession(session) {
+  if (session) {
+    authToken = session.access_token;
+    authUser  = { id: session.user.id, email: session.user.email };
+  } else {
+    authToken = null;
+    authUser  = null;
+  }
+  renderUserPill();
+  _updateGuestBanners();
+}
+
+// Kept for backwards compat — the UI flow now goes through onAuthStateChange.
+function setAuth() {
   renderUserPill();
   _updateGuestBanners();
   syncAfterLogin();
@@ -2890,14 +2933,15 @@ function setAuth(token, user) {
 }
 
 function clearAuth() {
+  sbClient.auth.signOut().catch(() => {});
   authToken = null;
   authUser  = null;
-  localStorage.removeItem('auth_token');
-  localStorage.removeItem('auth_user');
   _alerts = [];
   _txs = [];
   renderUserPill();
   _updateGuestBanners();
+  if (typeof renderAlerts === 'function') renderAlerts();
+  if (typeof renderTxTable === 'function') renderTxTable();
 }
 
 function renderUserPill() {
@@ -2929,25 +2973,29 @@ function _updateGuestBanners() {
   if (el('add-alert-btn'))    el('add-alert-btn').style.display     = loggedIn ? ''     : 'none';
 }
 
-// On load: verify token silently — never block the UI
-(async () => {
-  if (authToken) {
-    try {
-      const r = await apiFetch('/api/auth/me', { headers: { Authorization: `Bearer ${authToken}` } });
-      if (!r.ok) {
-        authToken = null; authUser = null;
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
-      } else {
-        syncAfterLogin();
-        loadAlerts();
-        loadTransactions();
-      }
-    } catch { /* offline — keep stored session */ }
+// Subscribe to Supabase auth state. Fires INITIAL_SESSION on load with current
+// session (or null), then SIGNED_IN / SIGNED_OUT / TOKEN_REFRESHED / PASSWORD_RECOVERY.
+sbClient.auth.onAuthStateChange((event, session) => {
+  _applySession(session);
+  if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+    syncAfterLogin();
+    loadAlerts();
+    loadTransactions();
+  } else if (event === 'SIGNED_OUT') {
+    _alerts = [];
+    _txs = [];
+    if (typeof renderAlerts === 'function') renderAlerts();
+    if (typeof renderTxTable === 'function') renderTxTable();
+  } else if (event === 'PASSWORD_RECOVERY') {
+    document.getElementById('auth-overlay')?.classList.add('open');
+    document.getElementById('auth-main-fields').style.display = 'none';
+    document.getElementById('auth-reset-view').classList.add('visible');
   }
-  renderUserPill();
-  _updateGuestBanners();
-})();
+});
+
+// Initial paint before INITIAL_SESSION fires
+renderUserPill();
+_updateGuestBanners();
 
 // ---------------------------------------------------------------------------
 // Auth modal
@@ -3004,26 +3052,34 @@ document.getElementById('auth-submit-btn').addEventListener('click', async () =>
 
   btn.disabled = true;
   btn.textContent = authMode === 'login' ? 'Signing in…' : 'Creating account…';
+  errorEl.style.color = '';
   errorEl.textContent = '';
 
   try {
-    const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
-    const res = await apiFetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      errorEl.textContent = data.detail || 'Something went wrong.';
-      btn.disabled = false;
-      btn.textContent = authMode === 'login' ? 'Sign In' : 'Create Account';
-      return;
+    if (authMode === 'login') {
+      const { error } = await sbClient.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      // onAuthStateChange handles sync + render
+      closeAuthModal();
+    } else {
+      const { data, error } = await sbClient.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: window.location.origin + '/' },
+      });
+      if (error) throw error;
+      // If email confirmation is required, no session is returned yet.
+      if (!data.session) {
+        errorEl.style.color = 'var(--accent)';
+        errorEl.textContent = 'Account created. Check your email to confirm.';
+        btn.disabled = false;
+        btn.textContent = 'Create Account';
+        return;
+      }
+      closeAuthModal();
     }
-    setAuth(data.token, { email: data.email, user_id: data.user_id });
-    closeAuthModal();
   } catch (err) {
-    errorEl.textContent = 'Network error. Please try again.';
+    errorEl.textContent = (err && err.message) || 'Something went wrong.';
     btn.disabled = false;
     btn.textContent = authMode === 'login' ? 'Sign In' : 'Create Account';
   }
@@ -3055,11 +3111,10 @@ document.getElementById('forgot-submit-btn')?.addEventListener('click', async ()
   btn.disabled = true; btn.textContent = 'Sending…';
   if (errEl) errEl.textContent = '';
   try {
-    await apiFetch('/api/auth/forgot-password', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+    await sbClient.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/',
     });
-  } catch (e) { console.warn('Forgot password request failed:', e.message); }
+  } catch (e) { console.warn('Forgot password request failed:', e); }
   if (succEl) succEl.style.display = '';
   btn.disabled = false; btn.textContent = 'Send Reset Link';
 });
@@ -3067,35 +3122,27 @@ document.getElementById('reset-submit-btn')?.addEventListener('click', async () 
   const pw1 = document.getElementById('reset-password-input')?.value;
   const pw2 = document.getElementById('reset-password-confirm')?.value;
   const errEl = document.getElementById('reset-error');
-  const token = new URLSearchParams(window.location.search).get('token');
   if (pw1 !== pw2) { if (errEl) errEl.textContent = 'Passwords do not match.'; return; }
   if (!pw1 || pw1.length < 6) { if (errEl) errEl.textContent = 'Min. 6 characters.'; return; }
   const btn = document.getElementById('reset-submit-btn');
   btn.disabled = true; btn.textContent = 'Updating…';
   try {
-    const res = await apiFetch('/api/auth/reset-password', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, new_password: pw1 }),
-    });
-    const data = await res.json();
-    if (!res.ok) { if (errEl) errEl.textContent = data.detail || 'Link invalid or expired.'; btn.disabled = false; btn.textContent = 'Update Password'; return; }
-    setAuth(data.token, { email: data.email, user_id: data.user_id });
+    const { error } = await sbClient.auth.updateUser({ password: pw1 });
+    if (error) {
+      if (errEl) errEl.textContent = error.message || 'Could not update password.';
+      btn.disabled = false; btn.textContent = 'Update Password';
+      return;
+    }
+    closeAuthModal();
+    document.getElementById('auth-main-fields').style.display = '';
+    document.getElementById('auth-reset-view').classList.remove('visible');
     window.history.replaceState({}, '', '/');
   } catch {
     if (errEl) errEl.textContent = 'Network error.';
     btn.disabled = false; btn.textContent = 'Update Password';
   }
 });
-(function () {
-  const p = new URLSearchParams(window.location.search);
-  if (p.get('action') === 'reset' && p.get('token')) {
-    setTimeout(() => {
-      document.getElementById('auth-overlay')?.classList.add('open');
-      document.getElementById('auth-main-fields').style.display = 'none';
-      document.getElementById('auth-reset-view').classList.add('visible');
-    }, 300);
-  }
-})();
+// PASSWORD_RECOVERY event from onAuthStateChange handles the recovery-link entry point.
 
 // ---------------------------------------------------------------------------
 // Wire save functions → server push on every change

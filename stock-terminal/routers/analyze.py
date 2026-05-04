@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse
 from jose import JWTError
 
 from config import ANTHROPIC_API_KEY, CLAUDE_MODEL, logger
-from routers.auth import decode_token
+from services.supabase_auth import verify_supabase_jwt
 from utils.market_data import clean_float
 from utils.indicators import calc_rsi
 
@@ -23,7 +23,7 @@ async def analyze_ticker(symbol: str, authorization: Optional[str] = Header(None
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Sign in to use AI Analysis")
     try:
-        decode_token(authorization.split(" ", 1)[1])
+        verify_supabase_jwt(authorization.split(" ", 1)[1])
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 

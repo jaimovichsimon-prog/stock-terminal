@@ -2,17 +2,13 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from config import ALLOWED_ORIGINS, logger
-from database import Base, engine
+from config import ALLOWED_ORIGINS, SUPABASE_URL, SUPABASE_ANON_KEY, logger
 from services.alerts_daemon import start_alert_daemon
 
-from routers import auth, user_data, market, portfolio, news, earnings, screener, analyze
-
-# Create tables on startup
-Base.metadata.create_all(bind=engine)
+from routers import market, portfolio, news, earnings, screener, analyze
 
 app = FastAPI(title="Stock Terminal")
 
@@ -28,10 +24,8 @@ _static_dir = Path(__file__).parent / "static"
 if _static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
-# Register all routers
+# Register all routers (auth + per-user data now live in Supabase)
 for _router in [
-    auth.router,
-    user_data.router,
     market.router,
     portfolio.router,
     news.router,
@@ -41,9 +35,22 @@ for _router in [
 ]:
     app.include_router(_router, prefix="/api")
 
-@app.get("/")
+
+_INDEX_HTML_PATH = Path(__file__).parent / "index.html"
+
+
+def _render_index() -> str:
+    html = _INDEX_HTML_PATH.read_text()
+    inject = (
+        f'<script>window.SUPABASE_URL="{SUPABASE_URL}";'
+        f'window.SUPABASE_ANON_KEY="{SUPABASE_ANON_KEY}";</script>'
+    )
+    return html.replace("<!-- SUPABASE_CONFIG_INJECT -->", inject)
+
+
+@app.get("/", response_class=HTMLResponse)
 def index():
-    return FileResponse(str(Path(__file__).parent / "index.html"))
+    return HTMLResponse(_render_index())
 
 
 # Start background alert checker

@@ -21,18 +21,20 @@ logging.basicConfig(
 logger = logging.getLogger("stock_terminal")
 
 # ---------------------------------------------------------------------------
-# Auth
+# Supabase
 # ---------------------------------------------------------------------------
-JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-in-production-please")
-JWT_ALG    = "HS256"
-JWT_EXPIRE = 60 * 24 * 30  # 30 days in minutes
+SUPABASE_URL              = os.environ.get("SUPABASE_URL", "")
+SUPABASE_ANON_KEY         = os.environ.get("SUPABASE_ANON_KEY", "")
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+SUPABASE_DB_URL           = os.environ.get("SUPABASE_DB_URL", "")
+SUPABASE_JWT_ALG          = os.environ.get("SUPABASE_JWT_ALG", "ES256")
+ADMIN_EMAIL               = os.environ.get("ADMIN_EMAIL", "")
 
 # ---------------------------------------------------------------------------
 # AI / Claude
 # ---------------------------------------------------------------------------
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-# Single constant — override per call if you need different model per feature
-CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
+CLAUDE_MODEL      = os.environ.get("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 
 # ---------------------------------------------------------------------------
 # CORS
@@ -42,19 +44,12 @@ ALLOWED_ORIGINS = os.environ.get(
 ).split(",")
 
 # ---------------------------------------------------------------------------
-# Email / SMTP
+# Email / SMTP (alert notifications only — auth emails handled by Supabase)
 # ---------------------------------------------------------------------------
-NOTIFY_EMAIL  = os.environ.get("NOTIFY_EMAIL", "jaimovichsimon@gmail.com")
 SMTP_HOST     = os.environ.get("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT     = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_USER     = os.environ.get("SMTP_USER", "")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
-APP_URL       = os.environ.get("APP_URL", "http://localhost:8000")
-
-# ---------------------------------------------------------------------------
-# Database
-# ---------------------------------------------------------------------------
-DB_DIR = Path(os.environ.get("DB_DIR", str(Path(__file__).parent)))
 
 # ---------------------------------------------------------------------------
 # Monte Carlo — CAPM drift parameters
