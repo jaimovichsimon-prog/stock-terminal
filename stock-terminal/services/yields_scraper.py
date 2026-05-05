@@ -1,20 +1,22 @@
 """Sovereign yield curves: bundled snapshot + live FRED overrides.
 
 Strategy:
-  1. Load `static/data/yields_snapshot.json` (curve shapes + benchmark levels for 40
-     countries, dated). This is the always-available fallback.
-  2. Pull live data from FRED (no API key needed for fredgraph.csv):
+  1. `fetch_all_yields()` returns the bundled snapshot immediately (fast path).
+  2. A background daemon thread (`start_yields_refresher`) periodically pulls live
+     data from FRED (no API key needed for fredgraph.csv) and updates the in-memory
+     enriched copy:
        - US: full daily curve (DGS1MO ... DGS30)
        - OECD members with `fred_10y` series ID: monthly 10Y benchmark
   3. For OECD countries we have a live 10Y but no live curve, rescale the snapshot
-     curve to the live 10Y (preserves shape). Mark `source: "fred-rescaled"`.
+     curve to the live 10Y (additive shift preserves shape). Mark `source: "fred-rescaled"`.
   4. For countries with no FRED series, return snapshot as-is. Mark `source: "snapshot"`.
-  5. Persist each successful refresh to `data/yields_history.json` so we can compute
-     1d / 1w changes in bps. History trims entries older than 30 days.
+  5. Each refresh persists to `data/yields_history.json` (30d retention) so the
+     router can compute 1d / 1w changes in bps.
 """
 from __future__ import annotations
 
 import json
+import threading
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -111,21 +113,21 @@ def _rescale_curve(snap_yields: list, snap_10y: float, live_10y: float) -> list:
     return [round(y + shift, 4) for y in snap_yields]
 
 
-def fetch_all_yields() -> dict:
-    """Returns the full snapshot dict with `live_yields` populated where possible."""
+_REFRESHED_LOCK = threading.Lock()
+_REFRESHED:      Optional[dict] = None        # most recent FRED-enriched payload
+_REFRESHER_RUNNING = False
+
+
+def _build_payload(us_live: Optional[list], foreign_live: dict) -> dict:
     snap = _load_snapshot()
-    us_live      = _fetch_us_curve()
-    foreign_live = _fetch_foreign_10y()
-
     countries_out: dict = {}
-    snapshot_idx_10y = snap["tenors"].index("10Y")
-
+    idx_10y = snap["tenors"].index("10Y")
     for code, c in snap["countries"].items():
         if code == "US" and us_live is not None:
             yields = [round(y, 4) for y in us_live]
             source = "fred-live"
         elif code in foreign_live:
-            yields = _rescale_curve(c["yields"], c["yields"][snapshot_idx_10y], foreign_live[code])
+            yields = _rescale_curve(c["yields"], c["yields"][idx_10y], foreign_live[code])
             source = "fred-rescaled"
         else:
             yields = list(c["yields"])
@@ -137,15 +139,51 @@ def fetch_all_yields() -> dict:
             "yields": yields,
             "source": source,
         }
-
-    out = {
-        "as_of":        snap["as_of"],
-        "tenors":       snap["tenors"],
-        "countries":    countries_out,
-        "last_update":  datetime.now(timezone.utc).isoformat(),
+    return {
+        "as_of":       snap["as_of"],
+        "tenors":      snap["tenors"],
+        "countries":   countries_out,
+        "last_update": datetime.now(timezone.utc).isoformat(),
     }
-    _persist_history(out)
-    return out
+
+
+def fetch_all_yields() -> dict:
+    """Returns the latest payload — FRED-enriched if a refresh has completed,
+    otherwise pure snapshot. Always fast (no network in the hot path)."""
+    with _REFRESHED_LOCK:
+        if _REFRESHED is not None:
+            return _REFRESHED
+    return _build_payload(us_live=None, foreign_live={})
+
+
+def _refresh_once() -> None:
+    """Pulls live FRED data (slow, ~30-60s) and stores the enriched payload."""
+    global _REFRESHED
+    try:
+        us_live      = _fetch_us_curve()
+        foreign_live = _fetch_foreign_10y()
+        payload      = _build_payload(us_live, foreign_live)
+        with _REFRESHED_LOCK:
+            _REFRESHED = payload
+        _persist_history(payload)
+        logger.info("Yields refreshed: %d FRED-live, %d FRED-rescaled",
+                    sum(1 for c in payload["countries"].values() if c["source"] == "fred-live"),
+                    sum(1 for c in payload["countries"].values() if c["source"] == "fred-rescaled"))
+    except Exception:
+        logger.warning("Yields FRED refresh failed", exc_info=True)
+
+
+def start_yields_refresher() -> None:
+    """Daemon thread that refreshes FRED data on startup and every hour after."""
+    global _REFRESHER_RUNNING
+    if _REFRESHER_RUNNING:
+        return
+    _REFRESHER_RUNNING = True
+    def _loop():
+        while True:
+            _refresh_once()
+            time.sleep(3600)
+    threading.Thread(target=_loop, daemon=True, name="yields-refresher").start()
 
 
 # ---------------------------------------------------------------------------

@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from config import ALLOWED_ORIGINS, SUPABASE_URL, SUPABASE_ANON_KEY, logger
 from services.alerts_daemon import start_alert_daemon
+from services.yields_scraper import start_yields_refresher
 
 from routers import market, portfolio, news, earnings, screener, analyze, yields
 
@@ -56,6 +57,8 @@ def index():
 
 # Start background alert checker
 start_alert_daemon()
+# Start background yields refresher (snapshot served immediately; FRED loads in bg)
+start_yields_refresher()
 logger.info("Stock Terminal started")
 
 

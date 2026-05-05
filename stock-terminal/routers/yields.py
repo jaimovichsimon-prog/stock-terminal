@@ -1,10 +1,9 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 
 from config import logger
 from services.cache import yields_cache
-from services.supabase_auth import require_user
 from services.yields_scraper import (
     derive_metrics,
     fetch_all_yields,
@@ -30,8 +29,12 @@ def _get_cached_or_fetch() -> dict:
 
 
 @router.get("/yields/countries")
-def get_countries(_: dict = Depends(require_user)):
-    """Light list for the world map: 10Y level + 2-10 slope per country."""
+def get_countries():
+    """Light list for the world map: 10Y level + 2-10 slope per country.
+
+    Public endpoint — the tab is gated client-side via the gate-overlay pattern,
+    matching how Portfolio/News/Watchlist work.
+    """
     data    = _get_cached_or_fetch()
     tenors  = data["tenors"]
     idx_10  = tenors.index("10Y")
@@ -57,7 +60,7 @@ def get_countries(_: dict = Depends(require_user)):
 
 
 @router.get("/yields/{country_code}")
-def get_country_curve(country_code: str, _: dict = Depends(require_user)):
+def get_country_curve(country_code: str):
     """Full curve + bps changes + spreads + classification for one country."""
     code = country_code.upper().strip()
     data = _get_cached_or_fetch()

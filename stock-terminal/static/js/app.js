@@ -1233,7 +1233,7 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
     if (page === 'earnings') ecInit();
     if (page === 'alerts' && authToken) loadAlerts();
     if (page === 'screener') initScreener();
-    if (page === 'yields' && authToken) yieldsInit();
+    if (page === 'yields') yieldsInit();
   });
 });
 
@@ -3283,7 +3283,7 @@ async function yieldsInit() {
   if (status) status.textContent = 'Loading map and yield data…';
   try {
     const [countriesRes, geoRes] = await Promise.all([
-      apiFetch('/api/yields/countries', { headers: { Authorization: `Bearer ${authToken}` } }),
+      apiFetch('/api/yields/countries'),
       fetch('/static/data/world-110m.json'),
     ]);
     const countriesPayload = await countriesRes.json();
@@ -3314,9 +3314,29 @@ async function yieldsInit() {
 function yieldsRenderMap() {
   const wrap = document.getElementById('yields-map');
   if (!wrap) return;
+  // The first render right after the tab becomes visible can read a stale
+  // clientWidth. Re-check after the next frame and re-run if it grew.
+  const measuredW = wrap.clientWidth || 320;
+  if (!yieldsState._didLayoutSettle) {
+    yieldsState._didLayoutSettle = true;
+    setTimeout(() => {
+      const trueW = document.getElementById('yields-map')?.clientWidth || 0;
+      if (trueW > measuredW + 8) yieldsRenderMap();
+    }, 50);
+  }
   wrap.innerHTML = '';
-  const w = wrap.clientWidth || 700;
+  const w = measuredW;
   const h = 520;
+  if (!yieldsState._resizeObs && typeof ResizeObserver !== 'undefined') {
+    let lastW = w;
+    yieldsState._resizeObs = new ResizeObserver(entries => {
+      const cw = entries[0].contentRect.width;
+      if (Math.abs(cw - lastW) < 4) return;
+      lastW = cw;
+      if (yieldsState.countries && yieldsState.worldGeo) yieldsRenderMap();
+    });
+    yieldsState._resizeObs.observe(wrap);
+  }
   const svg = d3.select(wrap)
     .append('svg')
     .attr('viewBox', `0 0 ${w} ${h}`)
@@ -3469,7 +3489,7 @@ async function yieldsSelectCountry(code) {
 
 async function yieldsLoadDetail(code) {
   if (yieldsState.detailCache[code]) return yieldsState.detailCache[code];
-  const res = await apiFetch(`/api/yields/${code}`, { headers: { Authorization: `Bearer ${authToken}` } });
+  const res = await apiFetch(`/api/yields/${code}`);
   const data = await res.json();
   yieldsState.detailCache[code] = data;
   return data;
