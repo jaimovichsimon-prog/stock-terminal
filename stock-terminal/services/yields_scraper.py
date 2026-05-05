@@ -1,17 +1,14 @@
-"""Sovereign yield curves: bundled snapshot + live FRED overrides.
+"""Sovereign yield curves: bundled snapshot + live yfinance overrides for US.
 
 Strategy:
   1. `fetch_all_yields()` returns the bundled snapshot immediately (fast path).
-  2. A background daemon thread (`start_yields_refresher`) periodically pulls live
-     data from FRED (no API key needed for fredgraph.csv) and updates the in-memory
-     enriched copy:
-       - US: full daily curve (DGS1MO ... DGS30)
-       - OECD members with `fred_10y` series ID: monthly 10Y benchmark
-  3. For OECD countries we have a live 10Y but no live curve, rescale the snapshot
-     curve to the live 10Y (additive shift preserves shape). Mark `source: "fred-rescaled"`.
-  4. For countries with no FRED series, return snapshot as-is. Mark `source: "snapshot"`.
-  5. Each refresh persists to `data/yields_history.json` (30d retention) so the
-     router can compute 1d / 1w changes in bps.
+  2. A background daemon thread (`start_yields_refresher`) refreshes hourly,
+     pulling US Treasury yields and Δ1d/Δ1w from yfinance (^IRX, ^FVX, ^TNX, ^TYX).
+  3. The 4 live tickers cover 3M, 5Y, 10Y, 30Y directly. Other US tenors (1M, 6M,
+     1Y, 2Y, 3Y, 7Y, 20Y) are interpolated from the live curve so the full curve
+     reflects current market levels. Δ1d/Δ1w come from yfinance history.
+  4. For non-US countries we keep the snapshot. The history file (30d retention)
+     accumulates from each refresh and feeds Δ1d/Δ1w over time.
 """
 from __future__ import annotations
 
@@ -22,7 +19,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
-import httpx
+import yfinance as yf
 
 from config import logger
 
@@ -30,14 +27,15 @@ _PROJECT_ROOT      = Path(__file__).parent.parent
 _SNAPSHOT_PATH     = _PROJECT_ROOT / "static" / "data" / "yields_snapshot.json"
 _HISTORY_PATH      = _PROJECT_ROOT / "data" / "yields_history.json"
 _HISTORY_RETENTION = timedelta(days=30)
-_FRED_URL          = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={series}"
-_HTTP_TIMEOUT      = 25.0
-_FRED_USER_AGENT   = "Mozilla/5.0 stock-terminal/yields"
 
-# US Treasury constant-maturity series at FRED, aligned 1-to-1 with the snapshot
-# tenor list. Used only for the US row.
-_US_FRED_SERIES = ["DGS1MO", "DGS3MO", "DGS6MO", "DGS1", "DGS2", "DGS3",
-                   "DGS5", "DGS7", "DGS10", "DGS20", "DGS30"]
+# yfinance tickers for liquid US Treasury benchmarks. Tenors not listed get
+# linearly interpolated from the live curve below.
+_US_YF_TICKERS = {
+    "3M":  "^IRX",
+    "5Y":  "^FVX",
+    "10Y": "^TNX",
+    "30Y": "^TYX",
+}
 
 _snapshot_cache: Optional[dict] = None
 
@@ -49,110 +47,98 @@ def _load_snapshot() -> dict:
     return _snapshot_cache
 
 
-def _fred_history(series_id: str) -> list:
-    """Returns up to ~30 most recent (date_iso, value) observations from a FRED series.
-
-    Empty list on failure. Skips FRED's '.' missing-value markers.
-    """
+def _yf_history(ticker: str) -> Optional[dict]:
+    """Returns {latest, d1, d7} from yfinance close-price history, or None."""
     try:
-        url  = _FRED_URL.format(series=series_id)
-        resp = httpx.get(url, timeout=_HTTP_TIMEOUT, headers={"User-Agent": _FRED_USER_AGENT})
-        resp.raise_for_status()
-        rows: list = []
-        for line in resp.text.strip().splitlines():
-            parts = line.split(",")
-            if len(parts) != 2:
-                continue
-            d, v = parts[0].strip(), parts[1].strip()
-            if v and v != "." and v[0].isdigit() and len(d) >= 8:
-                rows.append((d, float(v)))
-        return rows[-60:]   # keep recent window only
+        h = yf.Ticker(ticker).history(period="14d", auto_adjust=False)["Close"].dropna()
+        if len(h) < 2:
+            return None
+        latest = float(h.iloc[-1])
+        d1     = float(h.iloc[-2]) if len(h) >= 2 else None
+        # 5 trading days back ≈ 1 calendar week
+        d7     = float(h.iloc[-6]) if len(h) >= 6 else None
+        return {"latest": latest, "d1": d1, "d7": d7}
     except Exception:
-        logger.warning("FRED fetch failed for %s", series_id, exc_info=True)
-        return []
-
-
-def _fred_latest(series_id: str) -> Optional[float]:
-    """Convenience: returns just the most recent value, or None."""
-    rows = _fred_history(series_id)
-    return rows[-1][1] if rows else None
-
-
-def _delta_bps_from_series(rows: list, target_days: int) -> Optional[float]:
-    """Given (date_iso, value) tuples and a target lookback in days, returns the
-    bps change between the latest value and the value closest to N days ago.
-    Returns None if history is too short or no candidate is within tolerance."""
-    if len(rows) < 2:
+        logger.warning("yfinance fetch failed for %s", ticker, exc_info=True)
         return None
-    latest_date_str, latest_val = rows[-1]
-    try:
-        latest = datetime.fromisoformat(latest_date_str)
-    except ValueError:
-        return None
-    target = latest - timedelta(days=target_days)
-    # Find the row with date closest to target, within target_days * 1.5 tolerance
-    best = None
-    best_diff = None
-    for d_str, v in rows[:-1]:
-        try:
-            d = datetime.fromisoformat(d_str)
-        except ValueError:
+
+
+def _interpolate_curve(known: dict, tenors: list, fallback: list) -> list:
+    """Given a known {tenor: yield} mapping, fill in missing tenors by linear
+    interpolation between the known points. Tenors before the first or after
+    the last known point keep the additive shift from the snapshot."""
+    # Convert tenors to years for linear interp
+    tenor_years = {"1M": 1/12, "3M": 0.25, "6M": 0.5, "1Y": 1, "2Y": 2, "3Y": 3,
+                   "5Y": 5, "7Y": 7, "10Y": 10, "20Y": 20, "30Y": 30}
+    known_pts = sorted(((tenor_years[t], v) for t, v in known.items()), key=lambda x: x[0])
+    out = []
+    for i, t in enumerate(tenors):
+        if t in known:
+            out.append(known[t])
             continue
-        diff = abs((d - target).total_seconds())
-        if best_diff is None or diff < best_diff:
-            best, best_diff = (d_str, v), diff
-    if best is None:
-        return None
-    if best_diff > target_days * 86400 * 1.5:
-        return None
-    return round((latest_val - best[1]) * 100, 1)
+        ty = tenor_years[t]
+        # Find bracketing known points
+        lower = None
+        upper = None
+        for x, y in known_pts:
+            if x <= ty: lower = (x, y)
+            if x >= ty and upper is None: upper = (x, y)
+        if lower and upper and lower[0] != upper[0]:
+            # Linear interp between known anchors
+            frac = (ty - lower[0]) / (upper[0] - lower[0])
+            out.append(lower[1] + frac * (upper[1] - lower[1]))
+        elif lower or upper:
+            # Outside known range — apply the shift between snapshot and the nearest known point
+            anchor = lower or upper
+            anchor_tenor = next(t2 for t2, v in known.items() if abs(tenor_years[t2] - anchor[0]) < 1e-6)
+            shift = anchor[1] - fallback[tenors.index(anchor_tenor)]
+            out.append(fallback[i] + shift)
+        else:
+            out.append(fallback[i])
+    return out
 
 
 def _fetch_us_curve_full() -> Optional[dict]:
-    """Returns {yields, changes_1d_bps, changes_1w_bps} for the US curve, or None.
+    """Pulls live US Treasury yields from yfinance ^IRX, ^FVX, ^TNX, ^TYX.
 
-    FRED rate-limits parallel connections aggressively, so serialize. This runs at
-    most once per hour on cache miss / scheduled refresh.
+    Returns {yields, changes_1d_bps, changes_1w_bps} aligned with snapshot tenors,
+    or None if all 4 tickers fail.
     """
-    yields: list = []
-    deltas_1d: list = []
-    deltas_1w: list = []
-    for sid in _US_FRED_SERIES:
-        rows = _fred_history(sid)
-        if rows:
-            yields.append(rows[-1][1])
-            deltas_1d.append(_delta_bps_from_series(rows, 1))
-            deltas_1w.append(_delta_bps_from_series(rows, 7))
-        else:
-            yields.append(None)
-            deltas_1d.append(None)
-            deltas_1w.append(None)
-        time.sleep(0.15)
-    if sum(1 for v in yields if v is not None) < 6:
-        return None
     snap_us = _load_snapshot()["countries"]["US"]["yields"]
+    snap_tenors = _load_snapshot()["tenors"]
+    live: dict = {}
+    deltas_1d: dict = {}
+    deltas_1w: dict = {}
+    for tenor, ticker in _US_YF_TICKERS.items():
+        h = _yf_history(ticker)
+        if h is None:
+            continue
+        live[tenor] = h["latest"]
+        if h.get("d1") is not None:
+            deltas_1d[tenor] = round((h["latest"] - h["d1"]) * 100, 1)
+        if h.get("d7") is not None:
+            deltas_1w[tenor] = round((h["latest"] - h["d7"]) * 100, 1)
+    if not live:
+        return None
+    yields_full = _interpolate_curve(live, snap_tenors, snap_us)
+    # Interpolate deltas linearly between known tenors. Adjacent Treasury
+    # maturities move highly correlated in practice, so this is a reasonable
+    # approximation rather than leaving 7 of 11 cells blank.
+    zero_curve = [0.0] * len(snap_tenors)
+    deltas_1d_full = _interpolate_curve(deltas_1d, snap_tenors, zero_curve) if deltas_1d else [None] * len(snap_tenors)
+    deltas_1w_full = _interpolate_curve(deltas_1w, snap_tenors, zero_curve) if deltas_1w else [None] * len(snap_tenors)
     return {
-        "yields":         [snap_us[i] if v is None else v for i, v in enumerate(yields)],
-        "changes_1d_bps": deltas_1d,
-        "changes_1w_bps": deltas_1w,
+        "yields":         [round(y, 4) for y in yields_full],
+        "changes_1d_bps": [round(v, 1) if v is not None else None for v in deltas_1d_full],
+        "changes_1w_bps": [round(v, 1) if v is not None else None for v in deltas_1w_full],
     }
 
 
 def _fetch_foreign_10y() -> dict:
-    """Returns {country_code: live_10y_yield} for countries with a fred_10y series ID.
-
-    Serialized to respect FRED rate limits. Total time on cache miss: ~5-8s for ~25 series.
-    """
-    snap = _load_snapshot()
-    out: dict = {}
-    for code, c in snap["countries"].items():
-        if not c.get("fred_10y") or code == "US":
-            continue
-        v = _fred_latest(c["fred_10y"])
-        if v is not None:
-            out[code] = v
-        time.sleep(0.15)
-    return out
+    """Foreign 10Y from yfinance is unreliable / sparse. Skip for now —
+    non-US countries stay on snapshot data; the persisted history file feeds
+    Δ1d/Δ1w as it accumulates over time."""
+    return {}
 
 
 def _rescale_curve(snap_yields: list, snap_10y: float, live_10y: float) -> list:
@@ -218,31 +204,19 @@ def fetch_all_yields() -> dict:
 
 
 def _refresh_once() -> None:
-    """Pulls live FRED data and stores the enriched payload.
-
-    Two-phase: publish the US-only enriched payload as soon as US is fetched, then
-    optionally enrich with foreign 10Y. If foreign fails entirely, the US payload
-    still benefits users (live curve + Δ1d/Δ1w).
-    """
+    """Pulls live US Treasury data via yfinance and stores the enriched payload."""
     global _REFRESHED
     try:
         us_full = _fetch_us_curve_full()
-        # Phase 1: publish US data immediately (no foreign yet).
         with _REFRESHED_LOCK:
             _REFRESHED = _build_payload(us_full, foreign_live={})
         _persist_history(_REFRESHED)
         if us_full:
-            logger.info("Yields phase 1: US curve fetched from FRED (Δ1d/Δ1w live)")
-        # Phase 2: enrich with foreign 10Y. Best effort — if FRED times out a lot
-        # we just skip and stick with phase 1.
-        foreign_live = _fetch_foreign_10y()
-        if foreign_live:
-            with _REFRESHED_LOCK:
-                _REFRESHED = _build_payload(us_full, foreign_live)
-            _persist_history(_REFRESHED)
-            logger.info("Yields phase 2: %d foreign 10Y rescaled from FRED", len(foreign_live))
+            logger.info("Yields refreshed: US curve fetched from yfinance (Δ1d/Δ1w live)")
+        else:
+            logger.info("Yields refresh: yfinance unavailable, serving snapshot")
     except Exception:
-        logger.warning("Yields FRED refresh failed", exc_info=True)
+        logger.warning("Yields refresh failed", exc_info=True)
 
 
 def start_yields_refresher() -> None:
