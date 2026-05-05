@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from config import ALLOWED_ORIGINS, SUPABASE_URL, SUPABASE_ANON_KEY, logger
 from services.alerts_daemon import start_alert_daemon
 
-from routers import market, portfolio, news, earnings, screener, analyze
+from routers import market, portfolio, news, earnings, screener, analyze, yields
 
 app = FastAPI(title="Stock Terminal")
 
@@ -32,6 +32,7 @@ for _router in [
     earnings.router,
     screener.router,
     analyze.router,
+    yields.router,
 ]:
     app.include_router(_router, prefix="/api")
 

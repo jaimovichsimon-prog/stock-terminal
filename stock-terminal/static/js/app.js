@@ -1225,6 +1225,7 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
     document.getElementById('earnings-cal-page').style.display  = page === 'earnings'  ? 'block' : 'none';
     document.getElementById('alerts-page').style.display        = page === 'alerts'    ? 'block' : 'none';
     document.getElementById('screener-page').style.display      = page === 'screener'  ? 'block' : 'none';
+    document.getElementById('yields-page').style.display        = page === 'yields'    ? 'block' : 'none';
     if (page === 'portfolio' && pfPositions.length > 0 && !pfData) loadPortfolio();
     if (page === 'portfolio' && authToken) loadTransactions();
     if (page === 'news'      && !newsLoaded) loadNews();
@@ -1232,6 +1233,7 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
     if (page === 'earnings') ecInit();
     if (page === 'alerts' && authToken) loadAlerts();
     if (page === 'screener') initScreener();
+    if (page === 'yields' && authToken) yieldsInit();
   });
 });
 
@@ -3251,3 +3253,440 @@ document.getElementById('ai-analyze-btn').addEventListener('click', async () => 
     btn.innerHTML = '<span class="ai-btn-icon">✦</span> Re-analyze';
   }
 });
+
+// ---------------------------------------------------------------------------
+// Global Yields page — D3 world map + Chart.js sovereign yield curves
+// ---------------------------------------------------------------------------
+const yieldsState = {
+  countries:   null,           // { code: {code, name, iso_n3, yield_10y, slope_2_10, source} }
+  byIso:       null,           // map iso_n3 string -> country obj
+  worldGeo:    null,           // topojson FeatureCollection
+  selected:    null,           // currently selected country code
+  compare:     [],             // additional country codes
+  detailCache: {},             // code -> full curve response
+  curveChart:  null,
+  mode:        'picker',       // 'picker' | 'heatmap-10y' | 'heatmap-slope'
+  status:      'pending',
+};
+const YIELDS_COMPARE_MAX  = 4;
+const YIELDS_PALETTE      = ['#00d97e', '#58a6ff', '#f0b429', '#f778ba', '#a371f7'];
+const YIELDS_HEATMAP_LO   = '#1d3a5f';
+const YIELDS_HEATMAP_HI   = '#f0b429';
+const YIELDS_INVERTED_COL = '#f85149';
+
+async function yieldsInit() {
+  if (yieldsState.countries && yieldsState.worldGeo) {
+    yieldsRenderMap();
+    return;
+  }
+  const status = document.getElementById('yields-status');
+  if (status) status.textContent = 'Loading map and yield data…';
+  try {
+    const [countriesRes, geoRes] = await Promise.all([
+      apiFetch('/api/yields/countries', { headers: { Authorization: `Bearer ${authToken}` } }),
+      fetch('/static/data/world-110m.json'),
+    ]);
+    const countriesPayload = await countriesRes.json();
+    const geo              = await geoRes.json();
+    yieldsState.countries  = {};
+    yieldsState.byIso      = {};
+    for (const c of countriesPayload.countries) {
+      yieldsState.countries[c.code] = c;
+      yieldsState.byIso[c.iso_n3]   = c;
+    }
+    yieldsState.worldGeo = geo;
+    if (status) {
+      const fresh = countriesPayload.countries.filter(c => c.source.startsWith('fred')).length;
+      const total = countriesPayload.countries.length;
+      status.textContent = `${total} countries · ${fresh} live from FRED · snapshot ${countriesPayload.as_of}`;
+    }
+    yieldsRenderMap();
+    yieldsBindToolbar();
+    yieldsBindCompareModal();
+    // Restore last selection
+    const last = localStorage.getItem('yields_last');
+    if (last && yieldsState.countries[last]) yieldsSelectCountry(last);
+  } catch (e) {
+    if (status) status.textContent = 'Failed to load yield data. Try again.';
+  }
+}
+
+function yieldsRenderMap() {
+  const wrap = document.getElementById('yields-map');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  const w = wrap.clientWidth || 700;
+  const h = 520;
+  const svg = d3.select(wrap)
+    .append('svg')
+    .attr('viewBox', `0 0 ${w} ${h}`)
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
+  const projection = d3.geoNaturalEarth1()
+    .fitSize([w, h - 20], topojson.feature(yieldsState.worldGeo, yieldsState.worldGeo.objects.countries));
+  const path = d3.geoPath(projection);
+
+  const features = topojson.feature(yieldsState.worldGeo, yieldsState.worldGeo.objects.countries).features;
+
+  svg.selectAll('path.yields-country')
+    .data(features)
+    .join('path')
+    .attr('class', d => {
+      const c = yieldsState.byIso[d.id];
+      return c ? 'yields-country supported' : 'yields-country';
+    })
+    .attr('d', path)
+    .style('fill', d => yieldsCountryFill(d))
+    .on('mouseenter', (evt, d) => yieldsOnHover(evt, d, true))
+    .on('mousemove',  (evt, d) => yieldsOnHover(evt, d, false))
+    .on('mouseleave', () => yieldsHideTooltip())
+    .on('click', (evt, d) => {
+      const c = yieldsState.byIso[d.id];
+      if (c) yieldsSelectCountry(c.code);
+    });
+
+  yieldsRenderLegend();
+  yieldsRefreshSelectionMarks();
+}
+
+function yieldsCountryFill(feature) {
+  const c = yieldsState.byIso[feature.id];
+  if (!c) return '#0d1117';                       // unsupported
+  if (yieldsState.mode === 'picker') return '#1e2530';
+  if (yieldsState.mode === 'heatmap-10y') {
+    const v = c.yield_10y;
+    if (v == null) return '#1e2530';
+    return yieldsHeatmapColor(v, yieldsState._range10y);
+  }
+  if (yieldsState.mode === 'heatmap-slope') {
+    const s = c.slope_2_10;          // bps
+    if (s == null) return '#1e2530';
+    if (s < -10) return YIELDS_INVERTED_COL;
+    return yieldsHeatmapColor(s, yieldsState._rangeSlope);
+  }
+  return '#1e2530';
+}
+
+function yieldsHeatmapColor(v, range) {
+  if (!range) return '#1e2530';
+  const t = Math.max(0, Math.min(1, (v - range[0]) / (range[1] - range[0] || 1)));
+  // Interpolate between LO and HI colors via d3
+  return d3.interpolateRgb(YIELDS_HEATMAP_LO, YIELDS_HEATMAP_HI)(t);
+}
+
+function yieldsRenderLegend() {
+  const legend = document.getElementById('yields-map-legend');
+  if (!legend) return;
+  if (yieldsState.mode === 'picker') {
+    legend.style.display = 'none';
+    return;
+  }
+  legend.style.display = 'block';
+  const isSlope = yieldsState.mode === 'heatmap-slope';
+  // Compute range
+  const vals = Object.values(yieldsState.countries)
+    .map(c => isSlope ? c.slope_2_10 : c.yield_10y)
+    .filter(v => v != null);
+  const lo = Math.min(...vals);
+  const hi = Math.max(...vals);
+  if (isSlope) yieldsState._rangeSlope = [Math.max(lo, -100), hi];
+  else         yieldsState._range10y   = [lo, hi];
+  document.getElementById('yields-legend-title').textContent = isSlope
+    ? '2-10 Slope (bps) · red = inverted'
+    : '10Y Yield (%)';
+  // Build gradient bar with 10 stops
+  const bar = document.getElementById('yields-legend-bar');
+  bar.innerHTML = '';
+  for (let i = 0; i < 10; i++) {
+    const t = i / 9;
+    const v = lo + t * (hi - lo);
+    const div = document.createElement('div');
+    div.style.background = (isSlope && v < -10) ? YIELDS_INVERTED_COL : d3.interpolateRgb(YIELDS_HEATMAP_LO, YIELDS_HEATMAP_HI)(t);
+    bar.appendChild(div);
+  }
+  document.getElementById('yields-legend-min').textContent = isSlope ? `${lo.toFixed(0)} bps` : `${lo.toFixed(2)}%`;
+  document.getElementById('yields-legend-max').textContent = isSlope ? `${hi.toFixed(0)} bps` : `${hi.toFixed(2)}%`;
+}
+
+function yieldsRefreshFills() {
+  d3.select('#yields-map svg').selectAll('path.yields-country')
+    .style('fill', d => yieldsCountryFill(d));
+}
+
+function yieldsRefreshSelectionMarks() {
+  d3.select('#yields-map svg').selectAll('path.yields-country')
+    .classed('selected', d => {
+      const c = yieldsState.byIso[d.id];
+      return c && c.code === yieldsState.selected;
+    })
+    .classed('compared', d => {
+      const c = yieldsState.byIso[d.id];
+      return c && yieldsState.compare.includes(c.code);
+    });
+}
+
+function yieldsOnHover(evt, feature, fadeIn) {
+  const c = yieldsState.byIso[feature.id];
+  if (!c) { yieldsHideTooltip(); return; }
+  const tt = document.getElementById('yields-tooltip');
+  if (!tt) return;
+  const slope = c.slope_2_10;
+  const slopeLabel = slope == null ? '—'
+    : slope < -10 ? `Inverted (${slope.toFixed(0)} bps)`
+    : slope < 30  ? `Flat (${slope.toFixed(0)} bps)`
+    : slope < 150 ? `Normal (${slope.toFixed(0)} bps)`
+    : `Steep (${slope.toFixed(0)} bps)`;
+  const sourceLabel = c.source === 'fred-live' ? 'FRED · live curve'
+    : c.source === 'fred-rescaled' ? 'FRED 10Y · rescaled snapshot'
+    : 'Snapshot only';
+  tt.innerHTML = '';
+  const name = document.createElement('div'); name.className = 'tt-name'; name.textContent = c.name; tt.appendChild(name);
+  const r1 = document.createElement('div'); r1.className = 'tt-row';
+  r1.innerHTML = `<span class="tt-label">10Y</span><span class="tt-val">${c.yield_10y == null ? '—' : c.yield_10y.toFixed(2) + '%'}</span>`;
+  tt.appendChild(r1);
+  const r2 = document.createElement('div'); r2.className = 'tt-row';
+  r2.innerHTML = `<span class="tt-label">2-10</span><span class="tt-val">${slopeLabel}</span>`;
+  tt.appendChild(r2);
+  const src = document.createElement('div'); src.className = 'tt-source'; src.textContent = sourceLabel; tt.appendChild(src);
+  // Position relative to map wrap
+  const wrap = document.getElementById('yields-map-wrap').getBoundingClientRect();
+  tt.style.display = 'block';
+  tt.style.left = (evt.clientX - wrap.left + 14) + 'px';
+  tt.style.top  = (evt.clientY - wrap.top  + 14) + 'px';
+}
+
+function yieldsHideTooltip() {
+  const tt = document.getElementById('yields-tooltip');
+  if (tt) tt.style.display = 'none';
+}
+
+async function yieldsSelectCountry(code) {
+  yieldsState.selected = code;
+  localStorage.setItem('yields_last', code);
+  yieldsRefreshSelectionMarks();
+  await yieldsRenderDetail();
+}
+
+async function yieldsLoadDetail(code) {
+  if (yieldsState.detailCache[code]) return yieldsState.detailCache[code];
+  const res = await apiFetch(`/api/yields/${code}`, { headers: { Authorization: `Bearer ${authToken}` } });
+  const data = await res.json();
+  yieldsState.detailCache[code] = data;
+  return data;
+}
+
+async function yieldsRenderDetail() {
+  const panel = document.getElementById('yields-detail');
+  if (!panel) return;
+  if (!yieldsState.selected) {
+    panel.classList.add('empty');
+    panel.textContent = 'Select a country on the map to view its yield curve.';
+    return;
+  }
+  panel.classList.remove('empty');
+  panel.textContent = '';
+
+  const allCodes = [yieldsState.selected, ...yieldsState.compare.filter(c => c !== yieldsState.selected)];
+  let primary;
+  let allDetails;
+  try {
+    allDetails = await Promise.all(allCodes.map(c => yieldsLoadDetail(c)));
+    primary = allDetails[0];
+  } catch (e) {
+    panel.textContent = 'Failed to load curve.';
+    return;
+  }
+
+  // Header
+  const header = document.createElement('div');
+  const name = document.createElement('div');
+  name.className = 'yields-detail-name';
+  name.textContent = primary.name;
+  const sub = document.createElement('div');
+  sub.className = 'yields-detail-sub';
+  sub.textContent = `Snapshot ${primary.as_of} · last fetch ${new Date(primary.last_update).toLocaleTimeString()}`;
+  const srcBadge = document.createElement('span');
+  srcBadge.className = 'yields-detail-source ' + primary.source;
+  srcBadge.textContent = primary.source.replace('-', ' ');
+  srcBadge.style.marginLeft = '10px';
+  name.appendChild(srcBadge);
+  header.appendChild(name);
+  header.appendChild(sub);
+  panel.appendChild(header);
+
+  // Curve chart
+  const curveWrap = document.createElement('div');
+  curveWrap.id = 'yields-curve-wrap';
+  const canvas = document.createElement('canvas');
+  canvas.id = 'yields-curve-chart';
+  curveWrap.appendChild(canvas);
+  panel.appendChild(curveWrap);
+
+  // Spreads
+  const spreads = document.createElement('div');
+  spreads.id = 'yields-spreads';
+  const spreadCards = [
+    { lbl: '2-10 Spread',  val: primary.spread_2_10,       suffix: '%', signed: true },
+    { lbl: '3M-10Y',       val: primary.spread_3m_10y,     suffix: '%', signed: true },
+    { lbl: 'Curve Shape',  val: primary.classification,    text: true },
+    { lbl: 'vs UST 10Y',   val: primary.spread_vs_ust_10y, suffix: '%', signed: true, hideIfNull: true },
+  ];
+  for (const card of spreadCards) {
+    if (card.hideIfNull && card.val == null) continue;
+    const div = document.createElement('div');
+    div.className = 'spread-card';
+    const lbl = document.createElement('div'); lbl.className = 'lbl'; lbl.textContent = card.lbl;
+    const val = document.createElement('div'); val.className = 'val';
+    if (card.text) {
+      val.textContent = card.val || '—';
+      if (card.val === 'Inverted') val.classList.add('red');
+      else if (card.val === 'Steep') val.classList.add('green');
+      else if (card.val === 'Flat')  val.classList.add('yellow');
+    } else {
+      if (card.val == null) {
+        val.textContent = '—';
+      } else {
+        const sign = card.val >= 0 ? '+' : '';
+        val.textContent = sign + card.val.toFixed(2) + (card.suffix || '');
+        if (card.signed) val.classList.add(card.val >= 0 ? 'green' : 'red');
+      }
+    }
+    div.appendChild(lbl); div.appendChild(val);
+    spreads.appendChild(div);
+  }
+  panel.appendChild(spreads);
+
+  // Tenor table (primary country only)
+  const table = document.createElement('table');
+  table.className = 'yields-table';
+  const thead = document.createElement('thead');
+  thead.innerHTML = '<tr><th>Tenor</th><th>Yield</th><th>Δ 1d</th><th>Δ 1w</th></tr>';
+  table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  for (let i = 0; i < primary.tenors.length; i++) {
+    const tr = document.createElement('tr');
+    const tdT = document.createElement('td'); tdT.textContent = primary.tenors[i];
+    const tdY = document.createElement('td'); tdY.textContent = primary.yields[i].toFixed(2) + '%';
+    const tdD1 = document.createElement('td');
+    const tdD7 = document.createElement('td');
+    const d1 = primary.changes_1d_bps?.[i];
+    const d7 = primary.changes_1w_bps?.[i];
+    yieldsFormatBps(tdD1, d1);
+    yieldsFormatBps(tdD7, d7);
+    tr.appendChild(tdT); tr.appendChild(tdY); tr.appendChild(tdD1); tr.appendChild(tdD7);
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  panel.appendChild(table);
+
+  yieldsDrawCurveChart(allDetails);
+}
+
+function yieldsFormatBps(td, v) {
+  if (v == null) {
+    td.textContent = '—';
+    td.className = 'bps-null';
+    return;
+  }
+  const sign = v >= 0 ? '+' : '';
+  td.textContent = sign + v.toFixed(1) + ' bps';
+  td.className = v > 0 ? 'bps-pos' : v < 0 ? 'bps-neg' : '';
+}
+
+function yieldsDrawCurveChart(details) {
+  const canvas = document.getElementById('yields-curve-chart');
+  if (!canvas) return;
+  if (yieldsState.curveChart) { yieldsState.curveChart.destroy(); yieldsState.curveChart = null; }
+  const ctx = canvas.getContext('2d');
+  const labels = details[0].tenors;
+  const datasets = details.map((d, i) => ({
+    label: d.code + ' ' + d.name,
+    data: d.yields,
+    borderColor: YIELDS_PALETTE[i % YIELDS_PALETTE.length],
+    backgroundColor: YIELDS_PALETTE[i % YIELDS_PALETTE.length] + '22',
+    tension: 0.25,
+    pointRadius: 3,
+    borderWidth: 2,
+  }));
+  yieldsState.curveChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: details.length > 1, position: 'top', labels: { color: '#e6edf3', font: { family: 'JetBrains Mono', size: 10 }, boxWidth: 10 } },
+        tooltip: { backgroundColor: '#1a1a1a', titleColor: '#e6edf3', bodyColor: '#e6edf3', borderColor: '#2a2a2a', borderWidth: 1 },
+      },
+      scales: {
+        x: { ticks: { color: '#7d8590', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: '#1a1a1a' } },
+        y: { ticks: { color: '#7d8590', font: { family: 'JetBrains Mono', size: 10 }, callback: v => v.toFixed(1) + '%' }, grid: { color: '#1a1a1a' } },
+      },
+    },
+  });
+}
+
+function yieldsBindToolbar() {
+  document.querySelectorAll('.yields-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.yields-mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      yieldsState.mode = btn.dataset.mode;
+      yieldsRenderLegend();
+      yieldsRefreshFills();
+    });
+  });
+  const cmpBtn = document.getElementById('yields-compare-add');
+  if (cmpBtn) cmpBtn.addEventListener('click', yieldsOpenCompareModal);
+}
+
+function yieldsBindCompareModal() {
+  const list = document.getElementById('yields-cmp-list');
+  if (!list) return;
+  list.innerHTML = '';
+  const sorted = Object.values(yieldsState.countries).sort((a, b) => a.name.localeCompare(b.name));
+  for (const c of sorted) {
+    const div = document.createElement('div');
+    div.className = 'yields-cmp-item';
+    div.dataset.code = c.code;
+    const left = document.createElement('span'); left.textContent = c.name; div.appendChild(left);
+    const y10 = document.createElement('span'); y10.className = 'y10';
+    y10.textContent = c.yield_10y == null ? '—' : c.yield_10y.toFixed(2) + '%';
+    div.appendChild(y10);
+    div.addEventListener('click', () => yieldsToggleCompare(c.code));
+    list.appendChild(div);
+  }
+}
+
+function yieldsToggleCompare(code) {
+  if (code === yieldsState.selected) return;       // primary cannot be a compare overlay
+  const idx = yieldsState.compare.indexOf(code);
+  if (idx >= 0) {
+    yieldsState.compare.splice(idx, 1);
+  } else {
+    if (yieldsState.compare.length >= YIELDS_COMPARE_MAX) {
+      yieldsState.compare.shift();                 // FIFO when at capacity
+    }
+    yieldsState.compare.push(code);
+  }
+  yieldsRefreshCompareList();
+  yieldsRefreshSelectionMarks();
+  yieldsRenderDetail();
+}
+
+function yieldsRefreshCompareList() {
+  document.querySelectorAll('.yields-cmp-item').forEach(el => {
+    el.classList.toggle('active', yieldsState.compare.includes(el.dataset.code));
+  });
+}
+
+function yieldsOpenCompareModal() {
+  yieldsRefreshCompareList();
+  document.getElementById('yields-compare-modal').classList.add('visible');
+}
+
+function yieldsCloseCompareModal() {
+  document.getElementById('yields-compare-modal').classList.remove('visible');
+}
+

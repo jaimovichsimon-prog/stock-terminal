@@ -10,6 +10,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 <!-- SUPABASE_CONFIG_INJECT -->
 <style>
   :root {
@@ -1332,6 +1334,76 @@
     padding: 0; margin-top: -4px;
   }
   .gate-overlay-secondary:hover { color: var(--text); }
+
+  /* ---- Global Yields page ---- */
+  #yields-page { padding: 16px 20px; }
+  .yields-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:14px; flex-wrap:wrap; }
+  .yields-header-title { font-size:14px; font-weight:700; color:var(--text); letter-spacing:.02em; }
+  .yields-header-meta { font-size:10px; color:var(--muted); font-family:'JetBrains Mono',monospace; }
+  .yields-toolbar { display:flex; gap:8px; flex-wrap:wrap; }
+  .yields-mode-btn { padding:6px 12px; background:var(--panel); border:1px solid var(--border2); color:var(--muted); font-family:'Inter',sans-serif; font-size:11px; font-weight:500; border-radius:6px; cursor:pointer; transition:all .15s; }
+  .yields-mode-btn:hover { color:var(--text); border-color:var(--accent); }
+  .yields-mode-btn.active { background:var(--accent-dim); color:var(--accent); border-color:var(--accent); }
+  #yields-compare-add { padding:6px 12px; background:transparent; border:1px dashed var(--border2); color:var(--muted); font-family:'Inter',sans-serif; font-size:11px; border-radius:6px; cursor:pointer; }
+  #yields-compare-add:hover { color:var(--accent); border-color:var(--accent); }
+  .yields-layout { display:grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap:16px; }
+  @media (max-width: 1100px) { .yields-layout { grid-template-columns: 1fr; } }
+  #yields-map-wrap { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:8px; min-height:520px; position:relative; }
+  #yields-map { width:100%; height:520px; }
+  #yields-map svg { width:100%; height:100%; display:block; }
+  .yields-country { fill:#1e2530; stroke:#0d1117; stroke-width:.5; transition:fill .12s; }
+  .yields-country.supported { cursor:pointer; }
+  .yields-country.supported:hover { stroke:var(--yellow); stroke-width:1.4; }
+  .yields-country.selected { stroke:var(--yellow); stroke-width:2; }
+  .yields-country.compared { stroke:var(--blue); stroke-width:1.6; }
+  #yields-map-legend { position:absolute; right:14px; bottom:14px; background:rgba(13,17,23,.92); border:1px solid var(--border); border-radius:6px; padding:8px 10px; font-size:10px; color:var(--muted); font-family:'JetBrains Mono',monospace; }
+  #yields-map-legend .legend-bar { display:flex; gap:0; height:8px; margin:5px 0 3px; border-radius:2px; overflow:hidden; }
+  #yields-map-legend .legend-bar > div { flex:1; }
+  #yields-map-legend .legend-labels { display:flex; justify-content:space-between; font-size:9px; }
+  #yields-tooltip { position:absolute; pointer-events:none; background:#0d1117; border:1px solid var(--border2); border-radius:6px; padding:8px 10px; font-size:11px; z-index:20; min-width:140px; box-shadow:0 4px 14px rgba(0,0,0,.45); }
+  #yields-tooltip .tt-name { font-weight:600; color:var(--text); margin-bottom:4px; }
+  #yields-tooltip .tt-row { display:flex; justify-content:space-between; gap:14px; font-family:'JetBrains Mono',monospace; }
+  #yields-tooltip .tt-label { color:var(--muted); }
+  #yields-tooltip .tt-val { color:var(--text); }
+  #yields-tooltip .tt-source { font-size:9px; color:var(--label); margin-top:4px; text-transform:uppercase; letter-spacing:.05em; }
+
+  #yields-detail { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:14px; min-height:520px; display:flex; flex-direction:column; gap:12px; }
+  #yields-detail.empty { align-items:center; justify-content:center; color:var(--muted); font-size:12px; text-align:center; }
+  .yields-detail-name { font-size:16px; font-weight:700; color:var(--text); }
+  .yields-detail-sub { font-size:10px; color:var(--muted); font-family:'JetBrains Mono',monospace; margin-top:2px; }
+  .yields-detail-source { display:inline-block; padding:2px 7px; border-radius:3px; font-size:9px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; }
+  .yields-detail-source.fred-live { background:var(--accent-dim); color:var(--accent); }
+  .yields-detail-source.fred-rescaled { background:var(--blue-dim); color:var(--blue); }
+  .yields-detail-source.snapshot { background:rgba(125,133,144,.15); color:var(--muted); }
+  #yields-curve-wrap { background:#0a0e15; border-radius:6px; padding:10px; height:240px; position:relative; }
+  #yields-curve-chart { max-height:220px; }
+  #yields-spreads { display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; }
+  .spread-card { background:#0a0e15; border:1px solid var(--border); border-radius:6px; padding:8px 10px; }
+  .spread-card .lbl { font-size:9px; color:var(--label); text-transform:uppercase; letter-spacing:.05em; }
+  .spread-card .val { font-size:14px; font-weight:600; color:var(--text); font-family:'JetBrains Mono',monospace; margin-top:2px; }
+  .spread-card .val.green { color:var(--green); }
+  .spread-card .val.red { color:var(--red); }
+  .spread-card .val.yellow { color:var(--yellow); }
+
+  .yields-table { width:100%; border-collapse:collapse; font-size:11px; font-family:'JetBrains Mono',monospace; }
+  .yields-table th { text-align:right; padding:6px 8px; color:var(--label); font-size:9px; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid var(--border); font-weight:600; }
+  .yields-table th:first-child, .yields-table td:first-child { text-align:left; }
+  .yields-table td { padding:5px 8px; color:var(--text); border-bottom:1px solid #0d1117; text-align:right; }
+  .yields-table td.bps-pos { color:var(--green); }
+  .yields-table td.bps-neg { color:var(--red); }
+  .yields-table td.bps-null { color:var(--label); }
+
+  /* Compare modal — simple country picker */
+  #yields-compare-modal { display:none; position:fixed; inset:0; background:rgba(7,10,15,.78); z-index:100; align-items:center; justify-content:center; padding:24px; }
+  #yields-compare-modal.visible { display:flex; }
+  #yields-compare-modal-inner { background:var(--panel); border:1px solid var(--border2); border-radius:10px; padding:18px; width:min(420px,100%); max-height:80vh; overflow:auto; }
+  #yields-compare-modal-inner h3 { font-size:13px; font-weight:600; margin-bottom:10px; color:var(--text); }
+  .yields-cmp-list { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .yields-cmp-item { padding:6px 9px; background:#0a0e15; border:1px solid var(--border); border-radius:5px; font-size:11px; cursor:pointer; color:var(--text); display:flex; justify-content:space-between; }
+  .yields-cmp-item:hover { border-color:var(--accent); }
+  .yields-cmp-item.active { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+  .yields-cmp-item .y10 { color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:10px; }
+  .yields-cmp-close { display:block; margin-top:14px; padding:7px 14px; background:var(--accent); color:var(--bg); border:none; border-radius:5px; cursor:pointer; font-size:11px; font-weight:600; margin-left:auto; }
 </style>
 </head>
 <body>
@@ -1345,6 +1417,7 @@
   <button class="nav-tab" data-page="watchlist">Watchlist</button>
   <button class="nav-tab" data-page="earnings">Earnings</button>
   <button class="nav-tab" data-page="screener">Screener</button>
+  <button class="nav-tab" data-page="yields">Global Yields</button>
   <button class="nav-tab" data-page="alerts">Alerts</button>
   <div id="nav-user-area">
     <button id="nav-signin-btn">Sign In</button>
@@ -2363,6 +2436,50 @@
       </tr></thead>
       <tbody id="screener-tbody"></tbody>
     </table>
+  </div>
+</div>
+
+<!-- Global Yields page -->
+<div id="yields-page" class="gated-page" style="display:none">
+<div class="gate-overlay">
+  <div class="gate-overlay-icon">🔒</div>
+  <div class="gate-overlay-title">Sign in to access global sovereign yield curves</div>
+  <div class="gate-overlay-text">Interactive world map of 40+ government bond markets — yield curves, 2-10 spreads, and live US Treasuries via FRED.</div>
+  <button class="gate-overlay-btn" onclick="openAuthModal('register')">Create free account</button>
+  <button class="gate-overlay-secondary" onclick="openAuthModal('login')">Already have an account? Sign in</button>
+</div>
+  <div class="yields-header">
+    <div>
+      <div class="yields-header-title">Global Sovereign Yield Curves</div>
+      <div class="yields-header-meta" id="yields-status">Loading…</div>
+    </div>
+    <div class="yields-toolbar">
+      <button class="yields-mode-btn active" data-mode="picker">Picker</button>
+      <button class="yields-mode-btn" data-mode="heatmap-10y">Heatmap · 10Y</button>
+      <button class="yields-mode-btn" data-mode="heatmap-slope">Heatmap · 2-10 slope</button>
+      <button id="yields-compare-add">+ Compare</button>
+    </div>
+  </div>
+  <div class="yields-layout">
+    <div id="yields-map-wrap">
+      <div id="yields-map"></div>
+      <div id="yields-map-legend" style="display:none">
+        <div id="yields-legend-title">10Y Yield (%)</div>
+        <div class="legend-bar" id="yields-legend-bar"></div>
+        <div class="legend-labels"><span id="yields-legend-min"></span><span id="yields-legend-max"></span></div>
+      </div>
+      <div id="yields-tooltip" style="display:none"></div>
+    </div>
+    <div id="yields-detail" class="empty">Select a country on the map to view its yield curve.</div>
+  </div>
+</div>
+
+<!-- Compare modal -->
+<div id="yields-compare-modal">
+  <div id="yields-compare-modal-inner">
+    <h3>Compare countries (max 4 overlays)</h3>
+    <div class="yields-cmp-list" id="yields-cmp-list"></div>
+    <button class="yields-cmp-close" onclick="yieldsCloseCompareModal()">Done</button>
   </div>
 </div>
 
