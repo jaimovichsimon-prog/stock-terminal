@@ -8,19 +8,20 @@ deployed as a single Docker container on Railway. No build toolchain. No React. 
 ## Architecture
 
 ### Backend
-- `main.py` — ~50-line entry point: creates app, includes routers, mounts static files, starts alert daemon
+- `main.py` — ~70-line entry point: creates app, includes routers, mounts static files, starts alert daemon + yields refresher
 - `config.py` — all env vars and constants; never hardcode values elsewhere
-- `database.py` — SQLAlchemy engine, SessionLocal, Base, get_db()
-- `models.py` — ORM models (User, PortfolioPosition, WatchlistItem, PasswordResetToken, PriceAlert, Transaction)
-- `routers/` — one file per domain (auth, user_data, market, portfolio, news, earnings, screener, analyze)
-- `services/` — business logic (email_service, claude_service, sentiment, alerts_daemon, cache)
+- Persistence: per-user data lives in **Supabase** (no SQLAlchemy models in this repo). Auth uses Supabase JWKS via `services/supabase_auth.py`
+- `routers/` — one file per domain (market, portfolio, news, earnings, screener, analyze, yields)
+- `services/` — business logic (email_service, claude_service, sentiment, alerts_daemon, cache, supabase_auth, yields_scraper)
 - `utils/` — pure functions with no side effects (market_data, indicators)
+- `static/data/` — bundled assets shipped with the app: `yields_snapshot.json` (40+ countries × 11 tenors, dated), `world-110m.json` (Natural Earth TopoJSON for the map)
+- `data/` — runtime-only writable directory (gitignored). `data/yields_history.json` accumulates daily yield snapshots for Δ1d / Δ1w computation
 
 ### Frontend
 - `index.html` — HTML structure and embedded CSS only; no inline JS
 - `static/js/api.js` — `apiFetch()` with AbortController timeout, `safeTicker()` sanitizer; loaded as regular script
-- `static/js/app.js` — all application JS (~2,890 lines); all tab logic, chart rendering, auth modal
-- Chart.js 4.4.0 (CDN), DOMPurify 3.1.6 (CDN), Google Fonts — do not upgrade Chart.js without testing all charts
+- `static/js/app.js` — all application JS (~3,700 lines); all tab logic, chart rendering, auth modal, yields map
+- Chart.js 4.4.0 (CDN), DOMPurify 3.1.6 (CDN), Supabase JS 2.45.4 (CDN), D3 v7 + topojson-client v3 (CDN), Google Fonts — do not upgrade Chart.js without testing all charts
 
 ## Deployment
 
@@ -31,7 +32,7 @@ No npm, no node. Frontend JS runs as regular scripts (not ES modules — see Kno
 ## Environment Variables (all defined in config.py with defaults)
 
 Required in production:
-- `JWT_SECRET` — random 32+ char string (never use the default)
+- `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` — auth + per-user persistence
 - `ANTHROPIC_API_KEY` — for news filtering, portfolio impact, AI analysis
 
 Optional:
@@ -40,12 +41,11 @@ Optional:
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` — email notifications
 - `NOTIFY_EMAIL` — destination for new-user signup alerts
 - `APP_URL` — used in password reset email links
-- `DB_DIR` — directory for `terminal.db` (Railway persistent volume: `/app/data`)
 
 ## Python Conventions
 
 - All exceptions MUST be logged: `logger.warning("context", exc_info=True)` — never `except Exception: pass`
-- Database mutations (PUT portfolio, PUT watchlist) must wrap in try/except with `db.rollback()` on failure
+- Per-user mutations go through Supabase client SDK; surface errors to the user, never silently swallow
 - New routes go in the appropriate `routers/` file, never in `main.py`
 - Ticker symbols: always uppercase + strip; validate with `re.compile(r'^[A-Z0-9.\-\^=]{1,10}$')`
   Valid examples: `AAPL`, `BRK.B`, `^GSPC`, `BTC-USD`, `CL=F` — the old `[A-Z]{1,5}` pattern is wrong
@@ -74,20 +74,23 @@ Optional:
 | Upcoming earnings | 4 hr | 1 |
 | Options chains | 2 min | 100 |
 | Sector lookups | 24 hr | 500 |
+| Yields (all 40+ countries) | 1 hr | 1 |
 
 ## External Data Sources
 
-- **yfinance** — price, fundamentals, options, earnings. Rate-limited; always cache aggressively.
-- **feedparser RSS** — 15 feeds, fetched on demand, cached 15 min
+- **yfinance** — price, fundamentals, options, earnings. Also US Treasury yields via `^IRX`/`^FVX`/`^TNX`/`^TYX` (`services/yields_scraper.py`). Rate-limited; always cache aggressively.
+- **feedparser RSS** — 24 feeds, fetched on demand, cached 15 min
 - **Anthropic Claude** — news filter + portfolio impact (`claude_service.py`), AI streaming analysis (`routers/analyze.py`)
 - **SMTP** — Gmail + App Password for signup/reset/alert emails (`email_service.py`)
+- **Bundled yields snapshot** — `static/data/yields_snapshot.json`, hand-curated 40+ country curves dated `2026-05-01`. Refresh manually when stale; non-US sovereigns have no free live feed
 
 ## Known Gotchas
 
-- SQLite `check_same_thread=False` is required because the background alert daemon shares the engine across threads
-- Railway persistent volume must be mounted at `/app/data`; set `DB_DIR=/app/data` in Railway env vars or the DB resets on every deploy
-- The alert daemon (`services/alerts_daemon.py`) is a daemon thread started at app startup; if alerts stop working, check Railway logs for daemon errors
+- The alert daemon (`services/alerts_daemon.py`) and yields refresher (`services/yields_scraper.py:start_yields_refresher`) are daemon threads started at app startup; if either stops working, check Railway logs for `INFO Yields refreshed` / alert daemon errors
 - Chart.js 4.4.0 is pinned; v4.5+ changed several API shapes that break the options surface chart
 - `app.js` uses regular `<script src="...">` not `<script type="module">` — ES modules would isolate scope and break all `onclick="..."` HTML attributes. Do not change to module type.
-- `get_user_watchlist` (in `routers/user_data.py`) and `get_public_watchlist` (in `routers/market.py`) must stay distinct names — they were previously the same name (`get_watchlist`), which caused Python to silently replace the auth-gated route with the public one, returning empty data for all logged-in users
 - `apiFetch()` is defined in `api.js` which loads before `app.js` — maintain this load order in `index.html`
+- **Page tabs are gated client-side only** (`body.guest` adds blur + gate-overlay). API endpoints under `/api/*` are public — do NOT add `Depends(require_user)` unless you genuinely need server-side auth for that route (Portfolio, News, Screener, Yields are all public APIs with client-side gating)
+- **Yields tab — non-US countries have no live feed**: yfinance only exposes US Treasury benchmarks (^IRX, ^FVX, ^TNX, ^TYX). Foreign sovereign yields require a paid data subscription (TradingEconomics, Bloomberg, ICE BofA). The snapshot file is the source of truth for those — refresh it manually when stale.
+- **Yields tab — D3 map width race**: when the tab first becomes visible (`display:none → block`), `clientWidth` can return a stale value. `yieldsRenderMap` schedules a `setTimeout(50ms)` re-measurement and uses a ResizeObserver. Don't switch to `requestAnimationFrame` — it doesn't fire on backgrounded preview tabs.
+- The `data/` directory is gitignored and writable at runtime. On Railway, mount a persistent volume there if you need `yields_history.json` to survive redeploys; otherwise foreign Δ1d/Δ1w resets each deploy.
