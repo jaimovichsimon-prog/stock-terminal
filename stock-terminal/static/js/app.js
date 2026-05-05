@@ -3456,9 +3456,9 @@ function yieldsOnHover(evt, feature, fadeIn) {
     : slope < 30  ? `Flat (${slope.toFixed(0)} bps)`
     : slope < 150 ? `Normal (${slope.toFixed(0)} bps)`
     : `Steep (${slope.toFixed(0)} bps)`;
-  const sourceLabel = c.source === 'fred-live' ? 'FRED · live curve'
+  const sourceLabel = c.source === 'fred-live' ? 'Live · yfinance'
     : c.source === 'fred-rescaled' ? 'FRED 10Y · rescaled snapshot'
-    : 'Snapshot only';
+    : 'Snapshot · no live feed available';
   tt.innerHTML = '';
   const name = document.createElement('div'); name.className = 'tt-name'; name.textContent = c.name; tt.appendChild(name);
   const r1 = document.createElement('div'); r1.className = 'tt-row';
@@ -3527,11 +3527,25 @@ async function yieldsRenderDetail() {
   sub.textContent = `Snapshot ${primary.as_of} · last fetch ${new Date(primary.last_update).toLocaleTimeString()}`;
   const srcBadge = document.createElement('span');
   srcBadge.className = 'yields-detail-source ' + primary.source;
-  srcBadge.textContent = primary.source.replace('-', ' ');
+  const SOURCE_LABELS = {
+    'fred-live':     'LIVE · YFINANCE',
+    'fred-rescaled': 'FRED RESCALED',
+    'snapshot':      'SNAPSHOT',
+  };
+  srcBadge.textContent = SOURCE_LABELS[primary.source] || primary.source;
   srcBadge.style.marginLeft = '10px';
   name.appendChild(srcBadge);
   header.appendChild(name);
   header.appendChild(sub);
+  // For non-US (snapshot), explain why deltas are not live
+  if (primary.source === 'snapshot' && primary.code !== 'US') {
+    const note = document.createElement('div');
+    note.className = 'yields-detail-sub';
+    note.style.color = 'var(--label)';
+    note.style.marginTop = '4px';
+    note.textContent = 'Live yield feeds for foreign sovereigns require a paid data subscription. Δ1d / Δ1w populate as the daemon accumulates daily snapshots over time.';
+    header.appendChild(note);
+  }
   panel.appendChild(header);
 
   // Curve chart
