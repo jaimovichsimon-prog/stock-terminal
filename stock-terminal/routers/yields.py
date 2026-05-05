@@ -73,7 +73,11 @@ def get_country_curve(country_code: str):
     if "US" in data["countries"]:
         us_10y = data["countries"]["US"]["yields"][tenors.index("10Y")]
 
-    changes = get_changes_bps(code, c["yields"], tenors)
+    changes = get_changes_bps(
+        code, c["yields"], tenors,
+        payload_deltas_1d=c.get("changes_1d_bps"),
+        payload_deltas_1w=c.get("changes_1w_bps"),
+    )
     metrics = derive_metrics(c, tenors, us_10y)
 
     return {

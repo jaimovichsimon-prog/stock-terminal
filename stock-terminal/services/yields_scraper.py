@@ -31,7 +31,7 @@ _SNAPSHOT_PATH     = _PROJECT_ROOT / "static" / "data" / "yields_snapshot.json"
 _HISTORY_PATH      = _PROJECT_ROOT / "data" / "yields_history.json"
 _HISTORY_RETENTION = timedelta(days=30)
 _FRED_URL          = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={series}"
-_HTTP_TIMEOUT      = 10.0
+_HTTP_TIMEOUT      = 25.0
 _FRED_USER_AGENT   = "Mozilla/5.0 stock-terminal/yields"
 
 # US Treasury constant-maturity series at FRED, aligned 1-to-1 with the snapshot
@@ -49,41 +49,93 @@ def _load_snapshot() -> dict:
     return _snapshot_cache
 
 
-def _fred_latest(series_id: str) -> Optional[float]:
-    """Returns the most recent non-null value from a FRED series, or None on failure."""
+def _fred_history(series_id: str) -> list:
+    """Returns up to ~30 most recent (date_iso, value) observations from a FRED series.
+
+    Empty list on failure. Skips FRED's '.' missing-value markers.
+    """
     try:
         url  = _FRED_URL.format(series=series_id)
         resp = httpx.get(url, timeout=_HTTP_TIMEOUT, headers={"User-Agent": _FRED_USER_AGENT})
         resp.raise_for_status()
-        # CSV header: observation_date,SERIES_ID
-        # Walk lines bottom-up looking for a numeric value (FRED uses "." for missing)
-        for line in reversed(resp.text.strip().splitlines()):
+        rows: list = []
+        for line in resp.text.strip().splitlines():
             parts = line.split(",")
             if len(parts) != 2:
                 continue
-            val = parts[1].strip()
-            if val and val != "." and val[0].isdigit():
-                return float(val)
-        return None
+            d, v = parts[0].strip(), parts[1].strip()
+            if v and v != "." and v[0].isdigit() and len(d) >= 8:
+                rows.append((d, float(v)))
+        return rows[-60:]   # keep recent window only
     except Exception:
         logger.warning("FRED fetch failed for %s", series_id, exc_info=True)
+        return []
+
+
+def _fred_latest(series_id: str) -> Optional[float]:
+    """Convenience: returns just the most recent value, or None."""
+    rows = _fred_history(series_id)
+    return rows[-1][1] if rows else None
+
+
+def _delta_bps_from_series(rows: list, target_days: int) -> Optional[float]:
+    """Given (date_iso, value) tuples and a target lookback in days, returns the
+    bps change between the latest value and the value closest to N days ago.
+    Returns None if history is too short or no candidate is within tolerance."""
+    if len(rows) < 2:
         return None
+    latest_date_str, latest_val = rows[-1]
+    try:
+        latest = datetime.fromisoformat(latest_date_str)
+    except ValueError:
+        return None
+    target = latest - timedelta(days=target_days)
+    # Find the row with date closest to target, within target_days * 1.5 tolerance
+    best = None
+    best_diff = None
+    for d_str, v in rows[:-1]:
+        try:
+            d = datetime.fromisoformat(d_str)
+        except ValueError:
+            continue
+        diff = abs((d - target).total_seconds())
+        if best_diff is None or diff < best_diff:
+            best, best_diff = (d_str, v), diff
+    if best is None:
+        return None
+    if best_diff > target_days * 86400 * 1.5:
+        return None
+    return round((latest_val - best[1]) * 100, 1)
 
 
-def _fetch_us_curve() -> Optional[list]:
-    """Returns 11 yields aligned with snapshot tenors, or None if fetch fails badly.
+def _fetch_us_curve_full() -> Optional[dict]:
+    """Returns {yields, changes_1d_bps, changes_1w_bps} for the US curve, or None.
 
-    FRED rate-limits parallel connections aggressively, so serialize with a small
-    inter-request delay. This runs at most once per hour on cache miss.
+    FRED rate-limits parallel connections aggressively, so serialize. This runs at
+    most once per hour on cache miss / scheduled refresh.
     """
-    out = []
+    yields: list = []
+    deltas_1d: list = []
+    deltas_1w: list = []
     for sid in _US_FRED_SERIES:
-        out.append(_fred_latest(sid))
+        rows = _fred_history(sid)
+        if rows:
+            yields.append(rows[-1][1])
+            deltas_1d.append(_delta_bps_from_series(rows, 1))
+            deltas_1w.append(_delta_bps_from_series(rows, 7))
+        else:
+            yields.append(None)
+            deltas_1d.append(None)
+            deltas_1w.append(None)
         time.sleep(0.15)
-    if sum(1 for v in out if v is not None) < 6:
+    if sum(1 for v in yields if v is not None) < 6:
         return None
     snap_us = _load_snapshot()["countries"]["US"]["yields"]
-    return [snap_us[i] if v is None else v for i, v in enumerate(out)]
+    return {
+        "yields":         [snap_us[i] if v is None else v for i, v in enumerate(yields)],
+        "changes_1d_bps": deltas_1d,
+        "changes_1w_bps": deltas_1w,
+    }
 
 
 def _fetch_foreign_10y() -> dict:
@@ -118,26 +170,35 @@ _REFRESHED:      Optional[dict] = None        # most recent FRED-enriched payloa
 _REFRESHER_RUNNING = False
 
 
-def _build_payload(us_live: Optional[list], foreign_live: dict) -> dict:
+def _build_payload(us_full: Optional[dict], foreign_live: dict) -> dict:
     snap = _load_snapshot()
     countries_out: dict = {}
     idx_10y = snap["tenors"].index("10Y")
+    n_tenors = len(snap["tenors"])
     for code, c in snap["countries"].items():
-        if code == "US" and us_live is not None:
-            yields = [round(y, 4) for y in us_live]
-            source = "fred-live"
+        if code == "US" and us_full is not None:
+            yields    = [round(y, 4) for y in us_full["yields"]]
+            deltas_1d = us_full["changes_1d_bps"]
+            deltas_1w = us_full["changes_1w_bps"]
+            source    = "fred-live"
         elif code in foreign_live:
-            yields = _rescale_curve(c["yields"], c["yields"][idx_10y], foreign_live[code])
-            source = "fred-rescaled"
+            yields    = _rescale_curve(c["yields"], c["yields"][idx_10y], foreign_live[code])
+            deltas_1d = [None] * n_tenors
+            deltas_1w = [None] * n_tenors
+            source    = "fred-rescaled"
         else:
-            yields = list(c["yields"])
-            source = "snapshot"
+            yields    = list(c["yields"])
+            deltas_1d = [None] * n_tenors
+            deltas_1w = [None] * n_tenors
+            source    = "snapshot"
         countries_out[code] = {
-            "code":   code,
-            "name":   c["name"],
-            "iso_n3": c["iso_n3"],
-            "yields": yields,
-            "source": source,
+            "code":           code,
+            "name":           c["name"],
+            "iso_n3":         c["iso_n3"],
+            "yields":         yields,
+            "changes_1d_bps": deltas_1d,
+            "changes_1w_bps": deltas_1w,
+            "source":         source,
         }
     return {
         "as_of":       snap["as_of"],
@@ -153,22 +214,33 @@ def fetch_all_yields() -> dict:
     with _REFRESHED_LOCK:
         if _REFRESHED is not None:
             return _REFRESHED
-    return _build_payload(us_live=None, foreign_live={})
+    return _build_payload(us_full=None, foreign_live={})
 
 
 def _refresh_once() -> None:
-    """Pulls live FRED data (slow, ~30-60s) and stores the enriched payload."""
+    """Pulls live FRED data and stores the enriched payload.
+
+    Two-phase: publish the US-only enriched payload as soon as US is fetched, then
+    optionally enrich with foreign 10Y. If foreign fails entirely, the US payload
+    still benefits users (live curve + Δ1d/Δ1w).
+    """
     global _REFRESHED
     try:
-        us_live      = _fetch_us_curve()
-        foreign_live = _fetch_foreign_10y()
-        payload      = _build_payload(us_live, foreign_live)
+        us_full = _fetch_us_curve_full()
+        # Phase 1: publish US data immediately (no foreign yet).
         with _REFRESHED_LOCK:
-            _REFRESHED = payload
-        _persist_history(payload)
-        logger.info("Yields refreshed: %d FRED-live, %d FRED-rescaled",
-                    sum(1 for c in payload["countries"].values() if c["source"] == "fred-live"),
-                    sum(1 for c in payload["countries"].values() if c["source"] == "fred-rescaled"))
+            _REFRESHED = _build_payload(us_full, foreign_live={})
+        _persist_history(_REFRESHED)
+        if us_full:
+            logger.info("Yields phase 1: US curve fetched from FRED (Δ1d/Δ1w live)")
+        # Phase 2: enrich with foreign 10Y. Best effort — if FRED times out a lot
+        # we just skip and stick with phase 1.
+        foreign_live = _fetch_foreign_10y()
+        if foreign_live:
+            with _REFRESHED_LOCK:
+                _REFRESHED = _build_payload(us_full, foreign_live)
+            _persist_history(_REFRESHED)
+            logger.info("Yields phase 2: %d foreign 10Y rescaled from FRED", len(foreign_live))
     except Exception:
         logger.warning("Yields FRED refresh failed", exc_info=True)
 
@@ -220,38 +292,51 @@ def _load_history() -> dict:
     return {}
 
 
-def get_changes_bps(code: str, current_yields: list, tenors: list) -> dict:
-    """Returns {1d: [...], 1w: [...]} in basis points, or None lists if no history."""
+def get_changes_bps(code: str, current_yields: list, tenors: list,
+                    payload_deltas_1d: Optional[list] = None,
+                    payload_deltas_1w: Optional[list] = None) -> dict:
+    """Returns {changes_1d_bps, changes_1w_bps} in basis points.
+
+    Prefers deltas baked into the payload (FRED-derived for US). Falls back to
+    the persisted history file for other countries (populated by the daemon
+    over time — first useful Δ1d after ~24h, Δ1w after a week).
+    """
+    n = len(current_yields)
+    if payload_deltas_1d and any(v is not None for v in payload_deltas_1d):
+        return {
+            "changes_1d_bps": payload_deltas_1d,
+            "changes_1w_bps": payload_deltas_1w if payload_deltas_1w else [None] * n,
+        }
+
     history = _load_history().get(code, [])
     now = datetime.now(timezone.utc)
-    target_1d = now - timedelta(days=1)
-    target_1w = now - timedelta(days=7)
 
-    def _closest(target: datetime) -> Optional[list]:
+    def _closest(days: int) -> Optional[list]:
         if not history:
             return None
-        # Find entry with timestamp closest to target, preferring strictly older
+        target = now - timedelta(days=days)
         best = min(history,
                    key=lambda e: abs((datetime.fromisoformat(e["ts"]) - target).total_seconds()))
-        # Reject if more than 36h off the 1d target or more than 4d off the 1w target
         age_hours = abs((datetime.fromisoformat(best["ts"]) - target).total_seconds()) / 3600
-        if target == target_1d and age_hours > 36:
+        # Reject candidates too far off the target (avoids reporting a 30-min-old
+        # snapshot as a "1d" delta and showing 0.0 bps).
+        if days == 1 and age_hours > 18:
             return None
-        if target == target_1w and age_hours > 96:
+        if days == 7 and age_hours > 72:
             return None
         return best["yields"]
 
-    snap_1d = _closest(target_1d)
-    snap_1w = _closest(target_1w)
+    snap_1d = _closest(1)
+    snap_1w = _closest(7)
 
-    def _delta_bps(now_y: list, then_y: Optional[list]) -> list:
-        if then_y is None or len(then_y) != len(now_y):
-            return [None] * len(now_y)
-        return [round((a - b) * 100, 1) for a, b in zip(now_y, then_y)]
+    def _delta_bps(then_y: Optional[list]) -> list:
+        if then_y is None or len(then_y) != n:
+            return [None] * n
+        return [round((a - b) * 100, 1) for a, b in zip(current_yields, then_y)]
 
     return {
-        "changes_1d_bps": _delta_bps(current_yields, snap_1d),
-        "changes_1w_bps": _delta_bps(current_yields, snap_1w),
+        "changes_1d_bps": _delta_bps(snap_1d),
+        "changes_1w_bps": _delta_bps(snap_1w),
     }
 
 
