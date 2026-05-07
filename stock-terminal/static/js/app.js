@@ -3128,13 +3128,13 @@ document.getElementById('nav-logout-btn').addEventListener('click', () => {
 // Password Reset
 // ---------------------------------------------------------------------------
 document.getElementById('auth-forgot-link')?.addEventListener('click', () => {
+  document.getElementById('auth-forgot-view').style.display = 'flex';
   document.getElementById('auth-main-fields').style.display = 'none';
-  document.getElementById('auth-forgot-view').classList.add('visible');
   document.getElementById('auth-reset-view').classList.remove('visible');
 });
 document.getElementById('auth-forgot-back')?.addEventListener('click', () => {
-  document.getElementById('auth-main-fields').style.display = '';
-  document.getElementById('auth-forgot-view').classList.remove('visible');
+  document.getElementById('auth-forgot-view').style.display = 'none';
+  document.getElementById('auth-main-fields').style.display = 'flex';
 });
 document.getElementById('forgot-submit-btn')?.addEventListener('click', async () => {
   const email = document.getElementById('forgot-email')?.value.trim();

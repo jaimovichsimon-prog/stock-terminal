@@ -1056,10 +1056,59 @@
   /* ── Auth Modal ──────────────────────────────────────────────────────────── */
   #auth-overlay {
     display: none; position: fixed; inset: 0;
-    background: transparent;
+    background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
     z-index: 1000; align-items: center; justify-content: center;
   }
   #auth-overlay.open { display: flex; }
+  #auth-modal {
+    background: var(--panel); border: 1px solid var(--border2);
+    border-radius: 16px; padding: 40px; width: 380px; max-width: 92vw;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    display: flex; flex-direction: column; gap: 18px; position: relative;
+  }
+  #auth-modal-logo {
+    font-size: 11px; font-weight: 800; color: var(--accent);
+    letter-spacing: 2px; text-transform: uppercase; text-align: center;
+  }
+  .auth-tabs {
+    display: flex; border-bottom: 1px solid var(--border);
+    margin: 0 -40px; padding: 0 40px; gap: 0;
+  }
+  .auth-tab {
+    flex: 1; background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--muted); font-size: 13px; font-weight: 600; padding: 10px 0;
+    cursor: pointer; transition: color 0.15s, border-color 0.15s;
+    margin-bottom: -1px;
+  }
+  .auth-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .auth-input-group { display: flex; flex-direction: column; gap: 8px; }
+  .auth-label { font-size: 11px; font-weight: 700; color: var(--label); text-transform: uppercase; letter-spacing: 0.8px; }
+  .auth-input {
+    background: var(--bg); border: 1px solid var(--border2); color: var(--text);
+    font-size: 14px; padding: 11px 14px; border-radius: 8px; outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s; width: 100%;
+  }
+  .auth-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,217,126,0.12); }
+  #auth-submit-btn {
+    width: 100%; padding: 13px; background: var(--accent); color: #000; border: none;
+    border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s; margin-top: 4px;
+  }
+  #auth-submit-btn:hover:not(:disabled) { background: #00c070; box-shadow: 0 0 20px rgba(0,217,126,0.3); }
+  #auth-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  #auth-error { font-size: 12px; min-height: 16px; color: var(--red); text-align: center; }
+  #auth-close {
+    position: absolute; top: 16px; right: 16px;
+    background: none; border: none; color: var(--muted); font-size: 20px;
+    cursor: pointer; line-height: 1; padding: 4px; transition: color 0.15s;
+  }
+  #auth-close:hover { color: var(--text); }
+  #auth-forgot-link {
+    font-size: 11px; color: var(--label); text-align: center;
+    cursor: pointer; background: none; border: none;
+    transition: color 0.15s;
+  }
+  #auth-forgot-link:hover { color: var(--muted); }
   /* ── Account modal ───────────────────────────────────────────────────────── */
   #account-overlay {
     display: none; position: fixed; inset: 0;
@@ -1101,70 +1150,6 @@
     cursor: pointer; line-height: 1; padding: 4px;
   }
   .account-modal-close:hover { color: var(--text); }
-  #auth-modal {
-    background: var(--panel); border: 1px solid var(--border2);
-    border-radius: 12px; padding: 32px; width: 380px;
-    box-shadow: 0 24px 80px rgba(0,0,0,.8);
-    position: relative;
-  }
-  .auth-subtitle {
-    font-size: 11px; color: var(--muted); margin: -14px 0 20px;
-    line-height: 1.5;
-  }
-  /* auth modal is always dismissable — no forced gate */
-  .auth-logo {
-    font-size: 11px; letter-spacing: .2em; color: var(--accent);
-    font-weight: 700; text-transform: uppercase; margin-bottom: 8px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .auth-logo::before {
-    content: "▪"; font-size: 16px;
-  }
-  .auth-tabs {
-    display: flex; gap: 0; margin-bottom: 24px;
-    border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
-  }
-  .auth-tab {
-    flex: 1; padding: 8px; background: transparent; border: none;
-    color: var(--muted); font-family: 'Inter', sans-serif;
-    font-size: 12px; font-weight: 600; letter-spacing: .08em;
-    cursor: pointer; transition: all .15s; text-transform: uppercase;
-  }
-  .auth-tab.active { background: var(--panel2); color: var(--text); }
-  .auth-field { margin-bottom: 14px; }
-  .auth-field label {
-    display: block; font-size: 10px; letter-spacing: .12em;
-    text-transform: uppercase; color: var(--label); margin-bottom: 6px;
-    font-weight: 600;
-  }
-  .auth-field input {
-    width: 100%; padding: 10px 12px; background: var(--bg);
-    border: 1px solid var(--border2); border-radius: 6px;
-    color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px;
-    outline: none; transition: border-color .15s; box-sizing: border-box;
-  }
-  .auth-field input:focus { border-color: var(--accent); }
-  #auth-submit-btn {
-    width: 100%; padding: 11px; margin-top: 6px;
-    background: var(--accent); border: none; border-radius: 8px;
-    color: #07090b; font-family: 'Inter', sans-serif; font-size: 13px;
-    font-weight: 700; cursor: pointer; transition: opacity .15s;
-    letter-spacing: .04em;
-  }
-  #auth-submit-btn:hover { opacity: .88; }
-  #auth-submit-btn:disabled { opacity: .5; cursor: not-allowed; }
-  #auth-error {
-    margin-top: 10px; font-size: 12px; color: var(--red);
-    text-align: center; min-height: 16px;
-  }
-  #auth-close {
-    position: absolute; top: 16px; right: 16px;
-    background: none; border: none; color: var(--muted);
-    font-size: 18px; cursor: pointer; line-height: 1;
-    transition: color .15s;
-  }
-  #auth-close:hover { color: var(--text); }
-
   /* ── AI Analysis panel ───────────────────────────────────────────────────── */
   #ai-panel {
     display: none; margin-bottom: 10px;
@@ -1527,14 +1512,8 @@
   .modal-cancel-btn { width: 100%; padding: 8px; margin-top: 8px; background: transparent; border: 1px solid var(--border2); border-radius: 8px; color: var(--muted); font-family: 'Inter',sans-serif; font-size: 12px; cursor: pointer; }
 
   /* Password reset in auth modal */
-  #auth-forgot-view { display: none; }
-  #auth-forgot-view.visible { display: block; }
   #auth-reset-view { display: none; }
-  #auth-reset-view.visible { display: block; }
-  .auth-back-btn { background: none; border: none; color: var(--muted); font-family: 'Inter',sans-serif; font-size: 11px; cursor: pointer; padding: 0; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; }
-  .auth-back-btn:hover { color: var(--text); }
-  .auth-forgot-link { display: block; text-align: right; font-size: 11px; color: var(--muted); cursor: pointer; margin-top: -8px; margin-bottom: 14px; background: none; border: none; font-family: 'Inter',sans-serif; }
-  .auth-forgot-link:hover { color: var(--accent); }
+  #auth-reset-view.visible { display: flex; flex-direction: column; gap: 14px; }
 
   /* Guest gate — when not signed in, blur gated pages and show overlay */
   .gated-page { position: relative; min-height: 480px; }
@@ -1852,54 +1831,44 @@
 <!-- Auth Modal -->
 <div id="auth-overlay">
   <div id="auth-modal">
-    <button id="auth-close">×</button>
-    <div class="auth-logo">Terminal Pro</div>
-    <p class="auth-subtitle">Sign in to save your portfolio, watchlist, and price alerts across devices.</p>
+    <button id="auth-close">✕</button>
+    <div id="auth-modal-logo">Terminal</div>
     <div class="auth-tabs">
       <button class="auth-tab active" data-auth="login">Sign In</button>
       <button class="auth-tab" data-auth="register">Create Account</button>
     </div>
-    <div id="auth-main-fields">
-      <div class="auth-field">
-        <label>Email</label>
-        <input id="auth-email" type="email" placeholder="you@example.com" autocomplete="email">
+    <div id="auth-main-fields" style="display:flex;flex-direction:column;gap:14px;">
+      <div class="auth-input-group">
+        <label class="auth-label" for="auth-email">Email</label>
+        <input id="auth-email" class="auth-input" type="email" placeholder="you@example.com" autocomplete="email">
       </div>
-      <div class="auth-field">
-        <label>Password</label>
-        <input id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password">
+      <div class="auth-input-group">
+        <label class="auth-label" for="auth-password">Password</label>
+        <input id="auth-password" class="auth-input" type="password" placeholder="••••••••" autocomplete="current-password">
       </div>
-      <button class="auth-forgot-link" id="auth-forgot-link">Forgot password?</button>
-      <button id="auth-submit-btn">Sign In</button>
       <div id="auth-error"></div>
+      <button id="auth-submit-btn">Sign In</button>
+      <button id="auth-forgot-link">Forgot password?</button>
     </div>
-
-    <!-- Forgot password view -->
-    <div id="auth-forgot-view">
-      <button class="auth-back-btn" id="auth-forgot-back">← Back to Sign In</button>
-      <div class="auth-field">
-        <label>Your email</label>
-        <input id="forgot-email" type="email" placeholder="you@example.com">
+    <div id="auth-forgot-view" style="display:none;flex-direction:column;gap:14px;">
+      <p style="font-size:13px;color:var(--muted);text-align:center;line-height:1.5;">Enter your email and we'll send you a reset link.</p>
+      <div class="auth-input-group">
+        <label class="auth-label">Email</label>
+        <input id="forgot-email" class="auth-input" type="email" placeholder="you@example.com">
       </div>
-      <button id="forgot-submit-btn" class="modal-submit-btn">Send Reset Link</button>
-      <div id="forgot-success" style="display:none;margin-top:12px;font-size:12px;color:var(--accent);text-align:center;">
-        Check your email for a reset link (valid 1 hour).
-      </div>
-      <div id="forgot-error" style="margin-top:8px;font-size:12px;color:var(--red);text-align:center;min-height:16px;"></div>
+      <div id="forgot-error" style="font-size:12px;color:var(--red);min-height:16px;text-align:center;"></div>
+      <div id="forgot-success" style="display:none;font-size:12px;color:var(--accent);text-align:center;">Reset link sent — check your inbox.</div>
+      <button id="forgot-submit-btn" style="width:100%;padding:12px;background:var(--accent);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">Send Reset Link</button>
+      <button id="auth-forgot-back" style="background:none;border:none;color:var(--label);font-size:12px;cursor:pointer;text-align:center;">Back to Sign In</button>
     </div>
-
-    <!-- Reset password view -->
-    <div id="auth-reset-view">
-      <div style="font-size:13px;color:var(--text);margin-bottom:16px;font-weight:600;">Set a new password</div>
-      <div class="auth-field">
-        <label>New password</label>
-        <input id="reset-password-input" type="password" placeholder="Min. 6 characters">
+    <div id="auth-reset-view" style="display:none;flex-direction:column;gap:14px;">
+      <p style="font-size:13px;color:var(--muted);text-align:center;line-height:1.5;">Enter a new password for your account.</p>
+      <div class="auth-input-group">
+        <label class="auth-label">New Password</label>
+        <input id="reset-password" class="auth-input" type="password" placeholder="New password">
       </div>
-      <div class="auth-field">
-        <label>Confirm password</label>
-        <input id="reset-password-confirm" type="password" placeholder="Repeat password">
-      </div>
-      <button id="reset-submit-btn" class="modal-submit-btn">Update Password</button>
-      <div id="reset-error" style="margin-top:8px;font-size:12px;color:var(--red);text-align:center;min-height:16px;"></div>
+      <div id="reset-error" style="font-size:12px;color:var(--red);min-height:16px;text-align:center;"></div>
+      <button id="reset-submit-btn" style="width:100%;padding:12px;background:var(--accent);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">Set New Password</button>
     </div>
   </div>
 </div>
