@@ -3,6 +3,11 @@ function openUpgradeModal(desc) {
   openAuthModal('register');
 }
 
+// Temporary stub — replaced by Task 3 implementation
+function dismissLanding() {
+  document.body.classList.remove('show-landing');
+}
+
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
