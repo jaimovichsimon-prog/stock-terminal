@@ -1681,7 +1681,7 @@
 <!-- Top bar: logo + search + user controls -->
 <div id="app-topbar">
   <span class="logo">Terminal</span>
-  <input id="ticker-input" type="text" placeholder="Ticker symbol…" autocomplete="off" spellcheck="false">
+  <input id="ticker-input" type="text" placeholder="Ticker symbol…" autocomplete="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')">
   <button id="search-btn">Search</button>
   <div class="topbar-right">
     <span id="nav-plan-badge" class="nav-plan-badge" style="display:none"></span>
