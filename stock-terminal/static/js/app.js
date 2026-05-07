@@ -3,11 +3,6 @@ function openUpgradeModal(desc) {
   openAuthModal('register');
 }
 
-// Temporary stub — replaced by Task 3 implementation
-function dismissLanding() {
-  document.body.classList.remove('show-landing');
-}
-
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
@@ -465,7 +460,7 @@ async function loadTicker(symbol, isRefresh = false) {
 // ---------------------------------------------------------------------------
 document.getElementById('search-btn').addEventListener('click', () => {
   const sym = document.getElementById('ticker-input').value.trim().toUpperCase();
-  if (sym) loadTicker(sym);
+  if (sym) { dismissLanding(); loadTicker(sym); }
 });
 
 document.getElementById('ticker-input').addEventListener('keydown', e => {
@@ -2922,6 +2917,31 @@ function _applySession(session) {
   document.body.classList.toggle('guest',  !authUser);
   renderUserPill();
   _updateGuestBanners();
+  if (authUser) {
+    dismissLanding();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Landing page — shown to new visitors; hidden once they engage with terminal
+// ---------------------------------------------------------------------------
+function showLanding() {
+  document.body.classList.add('show-landing');
+  localStorage.removeItem('dismissed_landing');
+}
+
+function dismissLanding() {
+  document.body.classList.remove('show-landing');
+  localStorage.setItem('dismissed_landing', '1');
+}
+
+function initLandingState() {
+  const dismissed = localStorage.getItem('dismissed_landing');
+  const hasSearched = !!document.getElementById('ticker-input').value.trim();
+  // Show landing if: not dismissed AND not logged in AND no ticker loaded
+  if (!dismissed && !authUser && !hasSearched) {
+    showLanding();
+  }
 }
 
 // Kept for backwards compat — the UI flow now goes through onAuthStateChange.
@@ -2983,6 +3003,9 @@ function _updateGuestBanners() {
 if (typeof sbClient !== 'undefined' && sbClient && sbClient.auth) {
   sbClient.auth.onAuthStateChange((event, session) => {
     _applySession(session);
+    if (event === 'INITIAL_SESSION') {
+      initLandingState();
+    }
     if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
       syncAfterLogin();
       loadAlerts();
