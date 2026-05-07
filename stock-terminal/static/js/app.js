@@ -3762,3 +3762,49 @@ function yieldsCloseCompareModal() {
   document.getElementById('yields-compare-modal').classList.remove('visible');
 }
 
+// ---------------------------------------------------------------------------
+// Account modal
+// ---------------------------------------------------------------------------
+function openAccountModal() {
+  const emailEl = document.getElementById('account-email-display');
+  const planBadge = document.getElementById('account-plan-badge');
+  const upgradeBtn = document.getElementById('account-upgrade-btn');
+  const billingBtn = document.getElementById('account-billing-btn');
+
+  if (emailEl && authUser) emailEl.textContent = authUser.email;
+
+  const tier = typeof userTier !== 'undefined' ? userTier : 'free';
+  if (planBadge) {
+    planBadge.textContent = tier === 'pro' ? 'Pro' : 'Free';
+    planBadge.className = 'account-plan-badge ' + (tier === 'pro' ? 'pro' : 'free');
+  }
+  if (upgradeBtn) upgradeBtn.style.display = tier === 'pro' ? 'none' : '';
+  if (billingBtn) billingBtn.style.display  = tier === 'pro' ? '' : 'none';
+
+  document.getElementById('account-overlay').classList.add('open');
+}
+
+function closeAccountModal() {
+  document.getElementById('account-overlay').classList.remove('open');
+}
+
+document.getElementById('account-overlay')?.addEventListener('click', function(e) {
+  if (e.target === document.getElementById('account-overlay')) closeAccountModal();
+});
+
+async function openBillingPortal() {
+  if (!authToken) return;
+  const btn = document.getElementById('account-billing-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+  try {
+    const res = await apiFetch('/api/billing/portal', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${authToken}` },
+    });
+    const { url } = await res.json();
+    window.location.href = url;
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Manage Billing'; }
+  }
+}
+
