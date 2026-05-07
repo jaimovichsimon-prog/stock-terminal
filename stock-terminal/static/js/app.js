@@ -797,14 +797,16 @@ function renderPfChart(chartData) {
 async function loadPortfolio() {
   if (pfPositions.length === 0) { renderPfTable(null); return; }
   const btn = document.getElementById('pf-load-btn');
-  btn.textContent = 'Loading...';
+  btn.textContent = `Loading ${pfPositions.length} positions…`;
   btn.disabled = true;
   try {
+    // Extend timeout — yfinance pulls + risk metrics can take 30-50s in Railway
+    // cold pods, especially with many positions or rate-limited Yahoo responses.
     const res = await apiFetch('/api/portfolio', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ positions: pfPositions }),
-    });
+    }, 60000);
     if (!res.ok) {
       let d = 'Failed'; try { d = (await res.json()).detail; } catch(e) {}
       alert('Portfolio error: ' + d); return;
@@ -820,7 +822,10 @@ async function loadPortfolio() {
     // Re-run news impact now that we have sector info for each holding
     if (newsLoaded) loadPortfolioNewsImpact();
   } catch(e) {
-    alert('Network error: ' + e.message);
+    const isTimeout = e.name === 'AbortError' || /abort/i.test(e.message || '');
+    alert(isTimeout
+      ? 'Request timed out — Yahoo Finance is slow right now. Hit Refresh Prices to try again.'
+      : 'Network error: ' + e.message);
   } finally {
     btn.textContent = 'Refresh Prices';
     btn.disabled = false;
