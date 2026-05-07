@@ -166,15 +166,20 @@ def get_portfolio_analysis(req: PortfolioRequest):
     chart_data = None
     if port_ret_series is not None and total_mv:
         try:
+            # Anchor both series at total_mv on the FIRST day of the window and
+            # let them compound forward independently. The end values diverge by
+            # the cumulative return spread (portfolio vs SPY) — that gap, in
+            # dollars, is the chart's primary signal.
             cum    = (1 + port_ret_series).cumprod()
-            pv     = cum / cum.iloc[-1] * total_mv
+            pv     = cum / cum.iloc[0] * total_mv
             dates  = [d.strftime("%Y-%m-%d") for d in pv.index]
             prices = [round(float(v), 2) for v in pv.values]
             spy_prices = None
             if spy_hist is not None and not spy_hist.empty:
                 spy_al = spy_hist["Close"].reindex(pv.index)
-                if spy_al.notna().any():
-                    spy_norm   = spy_al / spy_al.dropna().iloc[-1] * total_mv
+                first_spy = spy_al.dropna().iloc[0] if spy_al.notna().any() else None
+                if first_spy and first_spy > 0:
+                    spy_norm   = spy_al / first_spy * total_mv
                     spy_prices = [round(float(v), 2) if not math.isnan(float(v)) else None for v in spy_norm.values]
             chart_data = {"dates": dates, "portfolio": prices, "spy": spy_prices}
         except Exception:
