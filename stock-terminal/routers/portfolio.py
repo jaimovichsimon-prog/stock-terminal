@@ -166,12 +166,17 @@ def get_portfolio_analysis(req: PortfolioRequest):
     chart_data = None
     if port_ret_series is not None and total_mv:
         try:
-            # Anchor both series at total_mv on the FIRST day of the window and
-            # let them compound forward independently. The end values diverge by
-            # the cumulative return spread (portfolio vs SPY) — that gap, in
-            # dollars, is the chart's primary signal.
+            # Portfolio is anchored at total_mv on the LAST day (= what the user
+            # actually holds today). Walking back: each prior day = total_mv ÷
+            # cumulative return up to that day. The implicit "value 1Y ago" is
+            # pv.iloc[0] = total_mv / cum.iloc[-1].
+            #
+            # SPY is anchored at the SAME starting dollar value, then compounds
+            # forward independently with its own returns. End-to-end gap on the
+            # right edge = alpha vs SPY in dollars.
             cum    = (1 + port_ret_series).cumprod()
-            pv     = cum / cum.iloc[0] * total_mv
+            pv     = cum / cum.iloc[-1] * total_mv
+            initial_value = float(pv.iloc[0])
             dates  = [d.strftime("%Y-%m-%d") for d in pv.index]
             prices = [round(float(v), 2) for v in pv.values]
             spy_prices = None
@@ -179,7 +184,7 @@ def get_portfolio_analysis(req: PortfolioRequest):
                 spy_al = spy_hist["Close"].reindex(pv.index)
                 first_spy = spy_al.dropna().iloc[0] if spy_al.notna().any() else None
                 if first_spy and first_spy > 0:
-                    spy_norm   = spy_al / first_spy * total_mv
+                    spy_norm   = spy_al / first_spy * initial_value
                     spy_prices = [round(float(v), 2) if not math.isnan(float(v)) else None for v in spy_norm.values]
             chart_data = {"dates": dates, "portfolio": prices, "spy": spy_prices}
         except Exception:
