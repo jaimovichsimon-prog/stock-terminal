@@ -1,6 +1,11 @@
-// Temporary stub — replaced by subscriptions plan implementation
+// Stub — subscriptions backend not yet built.
 function openUpgradeModal(desc) {
-  openAuthModal('register');
+  if (!authUser) { openAuthModal('register'); return; }
+  var el = document.getElementById('upgrade-toast');
+  if (!el) return;
+  el.textContent = 'Subscription plans coming soon.';
+  el.style.opacity = '1';
+  setTimeout(function() { el.style.opacity = '0'; }, 3000);
 }
 
 // ---------------------------------------------------------------------------
@@ -3815,13 +3820,10 @@ async function openBillingPortal() {
 var userTier = 'free';
 
 function _renderPlanBadge() {
+  // Grant all logged-in users full access until subscriptions backend ships.
   document.body.classList.remove('free-user', 'pro-user');
-  if (authUser) document.body.classList.add('free-user'); // stub: always free until subscriptions plan
-  const badge = document.getElementById('nav-plan-badge');
-  if (badge) {
-    badge.textContent = 'FREE';
-    badge.className = 'nav-plan-badge free';
-    badge.style.display = authUser ? 'inline' : 'none';
-  }
+  if (authUser) document.body.classList.add('pro-user');
+  var badge = document.getElementById('nav-plan-badge');
+  if (badge) badge.style.display = 'none';
 }
 
