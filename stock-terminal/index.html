@@ -52,7 +52,8 @@
   body.show-landing #app-body     { display: none !important; }
 
   /* Nav in landing mode */
-  body.show-landing #app-nav { display: none; }
+  body.show-landing #app-nav    { display: none; }
+  body.show-landing #app-topbar { display: none; }
 
   /* Landing hero */
   .landing-hero {
@@ -514,6 +515,58 @@
   }
   .nav-tab:hover { color: var(--text); }
   .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); text-shadow: 0 0 12px rgba(0,217,126,0.3); }
+
+  /* ── App top bar ─────────────────────────────────────────────────────────── */
+  #app-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 20px; border-bottom: 1px solid var(--border);
+    background: var(--panel); gap: 12px;
+  }
+  #app-topbar .logo {
+    font-size: 11px; font-weight: 800; color: var(--accent);
+    letter-spacing: 2.5px; text-transform: uppercase; flex-shrink: 0;
+  }
+  #app-topbar .topbar-right {
+    display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+  }
+  .nav-plan-badge {
+    font-size: 9px; font-weight: 800; letter-spacing: 1.5px;
+    padding: 2px 6px; border-radius: 4px;
+  }
+  .nav-plan-badge.pro  { background: var(--accent); color: #000; }
+  .nav-plan-badge.free { background: var(--panel2); color: var(--muted); border: 1px solid var(--border2); }
+  #nav-upgrade-btn {
+    background: transparent; border: 1px solid var(--accent); color: var(--accent);
+    font-size: 11px; font-weight: 700; padding: 5px 14px; border-radius: 6px;
+    cursor: pointer; letter-spacing: 0.5px; transition: background 0.15s, color 0.15s;
+  }
+  #nav-upgrade-btn:hover { background: var(--accent); color: #000; }
+  body.guest #nav-upgrade-btn { display: none; }
+  #app-nav {
+    display: flex; align-items: center; gap: 0;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    overflow-x: auto;
+  }
+  .tab-pro-badge {
+    font-size: 8px; font-weight: 800; letter-spacing: 1px;
+    background: var(--accent-dim); color: var(--accent);
+    border: 1px solid rgba(0,217,126,0.25); border-radius: 3px;
+    padding: 1px 4px; vertical-align: middle; margin-left: 4px;
+  }
+  body.authed .tab-pro-badge { display: none; }
+  .nav-account-link {
+    background: none; border: none; color: var(--muted); font-size: 11px;
+    cursor: pointer; padding: 4px 8px; border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .nav-account-link:hover { color: var(--text); background: var(--panel2); }
+  .nav-logout-btn {
+    background: none; border: none; color: var(--label); font-size: 11px;
+    cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: color 0.15s;
+  }
+  .nav-logout-btn:hover { color: var(--red); }
 
   /* ---- Watchlist page ---- */
   #watchlist-page { padding: 16px 18px; display: none; }
@@ -1559,25 +1612,34 @@
 </head>
 <body>
 
-<!-- Top Nav -->
-<div id="top-nav">
-  <div class="nav-logo">&#9632; TERMINAL</div>
+<!-- Top bar: logo + search + user controls -->
+<div id="app-topbar">
+  <span class="logo">Terminal</span>
+  <input id="ticker-input" type="text" placeholder="Ticker symbol…" autocomplete="off" spellcheck="false">
+  <button id="search-btn">Search</button>
+  <div class="topbar-right">
+    <span id="nav-plan-badge" class="nav-plan-badge" style="display:none"></span>
+    <button id="nav-upgrade-btn" onclick="openUpgradeModal('Upgrade to Pro to unlock advanced analytics.')">Upgrade</button>
+    <div id="nav-user-pill">
+      <div id="nav-avatar" class="user-avatar nav-avatar"></div>
+      <span id="nav-user-email" class="nav-user-email"></span>
+      <button id="nav-account-btn" class="nav-account-link" onclick="openAccountModal()">Account</button>
+      <button id="nav-logout-btn" class="nav-logout-btn" title="Sign out">Sign Out</button>
+    </div>
+    <button id="nav-signin-btn">Sign In</button>
+  </div>
+</div>
+
+<!-- Tab navigation row -->
+<div id="app-nav">
   <button class="nav-tab active" data-page="terminal">Terminal</button>
   <button class="nav-tab" data-page="portfolio">Portfolio</button>
   <button class="nav-tab" data-page="news">News</button>
   <button class="nav-tab" data-page="watchlist">Watchlist</button>
   <button class="nav-tab" data-page="earnings">Earnings</button>
-  <button class="nav-tab" data-page="screener">Screener</button>
+  <button class="nav-tab" data-page="screener">Screener <span class="tab-pro-badge">PRO</span></button>
   <button class="nav-tab" data-page="yields">Global Yields</button>
-  <button class="nav-tab" data-page="alerts">Alerts</button>
-  <div id="nav-user-area">
-    <button id="nav-signin-btn">Sign In</button>
-    <div id="nav-user-pill">
-      <div class="user-avatar" id="nav-avatar"></div>
-      <span id="nav-user-email"></span>
-      <button id="nav-logout-btn" title="Sign out">×</button>
-    </div>
-  </div>
+  <button class="nav-tab" data-page="alerts">Alerts <span class="tab-pro-badge">PRO</span></button>
 </div>
 
 <!-- Landing nav (visible only in landing mode) -->
@@ -1756,10 +1818,8 @@
 <div id="terminal-page">
 <div id="terminal-split-wrap"><div id="terminal-main">
 
-<!-- Search -->
+<!-- Compare toggle (ticker input + search btn moved to #app-topbar) -->
 <div id="search-bar">
-  <input id="ticker-input" type="text" placeholder="Enter ticker symbol..." maxlength="10" autocomplete="off" spellcheck="false">
-  <button id="search-btn">Search</button>
   <button id="compare-toggle-btn" title="Add a second asset to compare side by side">＋ Add Asset</button>
 </div>
 
