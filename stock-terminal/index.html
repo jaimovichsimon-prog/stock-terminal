@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stock Terminal</title>
+<meta name="description" content="Real-time stock data, AI-curated news, portfolio analytics, global yield curves, and sector screener. Free to start.">
+<meta property="og:title" content="Terminal — Professional Market Intelligence">
+<meta property="og:description" content="The market terminal for serious investors. Free to start.">
+<meta name="theme-color" content="#070a0f">
+<title>Terminal — Professional Market Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -2388,9 +2392,12 @@
   </div>
 
   <!-- Empty state -->
-  <div id="pf-empty">
-    <div class="em-title">No positions yet</div>
-    <div class="em-sub">ADD A POSITION ABOVE TO GET STARTED</div>
+  <div id="pf-empty" style="text-align:center;padding:48px 24px;color:var(--muted);">
+    <div style="font-size:40px;margin-bottom:16px;">📊</div>
+    <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px;">Your portfolio is empty</div>
+    <div style="font-size:12px;line-height:1.7;max-width:320px;margin:0 auto 20px;">
+      Add your first position using the form below. P&amp;L, sector exposure, beta, and Sharpe ratio update automatically.
+    </div>
   </div>
 
   <!-- Positions Table -->
@@ -2672,7 +2679,13 @@
   </div>
 
   <!-- Watchlist table -->
-  <div id="wl-empty" class="wl-empty hidden">No tickers in watchlist. Add one above.</div>
+  <div id="wl-empty" class="wl-empty hidden" style="text-align:center;padding:48px 24px;color:var(--muted);">
+    <div style="font-size:40px;margin-bottom:16px;">👀</div>
+    <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px;">Your watchlist is empty</div>
+    <div style="font-size:12px;line-height:1.7;max-width:300px;margin:0 auto;">
+      Search for a ticker and click "Add to Watchlist" to start tracking it here.
+    </div>
+  </div>
   <div id="wl-table-wrap" class="wl-table-wrap hidden">
     <table class="wl-table">
       <thead>
