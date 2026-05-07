@@ -1579,6 +1579,26 @@
   }
   .gate-overlay-secondary:hover { color: var(--text); }
 
+  /* Pro gate — for logged-in free users hitting Pro features */
+  .pro-gate-overlay {
+    position: absolute; inset: 0; z-index: 10;
+    background: rgba(7,10,15,0.85); backdrop-filter: blur(3px);
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 40px 24px; text-align: center; border-radius: 8px;
+  }
+  body.authed.free-user .pro-gate-overlay { display: flex; }
+  body.authed.pro-user  .pro-gate-overlay { display: none; }
+  body.guest            .pro-gate-overlay { display: none; }
+  .pro-gate-icon  { font-size: 32px; line-height: 1; }
+  .pro-gate-title { font-size: 14px; font-weight: 700; color: var(--text); }
+  .pro-gate-text  { font-size: 12px; color: var(--muted); max-width: 340px; line-height: 1.6; }
+  .pro-gate-btn {
+    background: var(--accent); color: #000; border: none;
+    font-size: 13px; font-weight: 700; padding: 10px 24px; border-radius: 7px;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .pro-gate-btn:hover { background: #00c070; }
+
   /* ---- Global Yields page ---- */
   #yields-page { padding: 16px 20px; }
   .yields-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:14px; flex-wrap:wrap; }
@@ -2505,7 +2525,13 @@
       <div id="pf-chart-wrap"><canvas id="pf-chart"></canvas></div>
     </div>
     <!-- Monte Carlo Simulation -->
-    <div id="pf-mc-panel" class="panel" style="display:none">
+    <div id="pf-mc-panel" class="panel" style="display:none;position:relative">
+<div class="pro-gate-overlay" style="border-radius:8px;">
+  <div class="pro-gate-icon">🎲</div>
+  <div class="pro-gate-title">Monte Carlo requires Pro</div>
+  <div class="pro-gate-text">10,000-path projection with CAPM drift, percentile bands, and median outcome.</div>
+  <button class="pro-gate-btn" onclick="openUpgradeModal('Upgrade to Pro to run Monte Carlo simulations.')">Upgrade to Pro</button>
+</div>
       <div class="pf-mc-header">
         <span class="panel-title" style="margin-bottom:0;border-bottom:none;padding-bottom:0">Monte Carlo Simulation</span>
         <div class="pf-mc-tf-group">
@@ -2744,6 +2770,12 @@
   <button class="gate-overlay-btn" onclick="openAuthModal('register')">Create free account</button>
   <button class="gate-overlay-secondary" onclick="openAuthModal('login')">Already have an account? Sign in</button>
 </div>
+<div class="pro-gate-overlay">
+  <div class="pro-gate-icon">⚡</div>
+  <div class="pro-gate-title">Price Alerts require Pro</div>
+  <div class="pro-gate-text">Set price triggers and receive email notifications when a ticker crosses your level.</div>
+  <button class="pro-gate-btn" onclick="openUpgradeModal('Upgrade to Pro to set price alerts.')">Upgrade to Pro</button>
+</div>
   <div class="alerts-header">
     <h2>Price Alerts</h2>
     <button id="add-alert-btn">+ New Alert</button>
@@ -2791,6 +2823,12 @@
   <div class="gate-overlay-text">Filter the entire S&amp;P 500 by sector, valuation, growth, profitability, and momentum to find your next idea.</div>
   <button class="gate-overlay-btn" onclick="openAuthModal('register')">Create free account</button>
   <button class="gate-overlay-secondary" onclick="openAuthModal('login')">Already have an account? Sign in</button>
+</div>
+<div class="pro-gate-overlay">
+  <div class="pro-gate-icon">⚡</div>
+  <div class="pro-gate-title">Screener requires Pro</div>
+  <div class="pro-gate-text">Screen all 11 GICS sectors by momentum, valuation, and relative performance.</div>
+  <button class="pro-gate-btn" onclick="openUpgradeModal('Upgrade to Pro to access the full sector screener.')">Upgrade to Pro</button>
 </div>
   <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px;letter-spacing:.02em">Stock Screener</div>
   <div class="screener-filters">

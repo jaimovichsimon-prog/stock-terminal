@@ -2917,6 +2917,7 @@ function _applySession(session) {
   document.body.classList.toggle('guest',  !authUser);
   renderUserPill();
   _updateGuestBanners();
+  _renderPlanBadge();
   if (authUser) {
     dismissLanding();
   }
@@ -3805,6 +3806,22 @@ async function openBillingPortal() {
     window.location.href = url;
   } catch (err) {
     if (btn) { btn.disabled = false; btn.textContent = 'Manage Billing'; }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Plan badge + body tier class (stub — subscriptions plan wires up the real tier)
+// ---------------------------------------------------------------------------
+var userTier = 'free';
+
+function _renderPlanBadge() {
+  document.body.classList.remove('free-user', 'pro-user');
+  if (authUser) document.body.classList.add('free-user'); // stub: always free until subscriptions plan
+  const badge = document.getElementById('nav-plan-badge');
+  if (badge) {
+    badge.textContent = 'FREE';
+    badge.className = 'nav-plan-badge free';
+    badge.style.display = authUser ? 'inline' : 'none';
   }
 }
 
