@@ -1580,6 +1580,120 @@
   </div>
 </div>
 
+<!-- Landing nav (visible only in landing mode) -->
+<nav id="landing-nav">
+  <div class="landing-nav-logo">Terminal</div>
+  <div class="landing-nav-actions">
+    <button class="landing-nav-signin" onclick="openAuthModal('login')">Sign In</button>
+    <button class="landing-nav-start" onclick="openAuthModal('register')">Get Started Free</button>
+  </div>
+</nav>
+
+<!-- Landing page (shown to new visitors before terminal search) -->
+<div id="landing-page">
+  <div class="landing-hero">
+    <div class="landing-badge">Professional-Grade Market Intelligence</div>
+    <h1 class="landing-headline">The Terminal for <em>Serious</em> Investors</h1>
+    <p class="landing-subheadline">
+      Real-time stock data, AI-curated news, portfolio analytics, global yield curves,
+      and a sector screener — all in one dark-mode terminal.
+    </p>
+    <div class="landing-cta-row">
+      <button class="landing-btn-primary" onclick="openAuthModal('register')">Start Free — No Card Required</button>
+      <button class="landing-btn-secondary" onclick="dismissLanding()">Explore the Terminal</button>
+    </div>
+  </div>
+
+  <div class="landing-features">
+    <div class="landing-feature-card">
+      <div class="landing-feature-icon">📊</div>
+      <div class="landing-feature-title">Real-Time Terminal</div>
+      <div class="landing-feature-desc">Price, fundamentals, technicals, analyst ratings, and options chain for any ticker symbol.</div>
+      <div class="landing-feature-tier free">Free</div>
+    </div>
+    <div class="landing-feature-card">
+      <div class="landing-feature-icon">📰</div>
+      <div class="landing-feature-title">AI-Curated News</div>
+      <div class="landing-feature-desc">Headlines from 24 sources, ranked by Claude for relevance to your watchlist and holdings.</div>
+      <div class="landing-feature-tier free">Free</div>
+    </div>
+    <div class="landing-feature-card">
+      <div class="landing-feature-icon">💼</div>
+      <div class="landing-feature-title">Portfolio Tracker</div>
+      <div class="landing-feature-desc">Log positions, track P&amp;L, visualize sector exposure, and run correlation analysis.</div>
+      <div class="landing-feature-tier free">Free</div>
+    </div>
+    <div class="landing-feature-card">
+      <div class="landing-feature-icon">🌍</div>
+      <div class="landing-feature-title">Global Yields Map</div>
+      <div class="landing-feature-desc">Interactive yield curve explorer for 40+ countries across 11 tenor buckets.</div>
+      <div class="landing-feature-tier free">Free</div>
+    </div>
+    <div class="landing-feature-card">
+      <div class="landing-feature-icon">🎲</div>
+      <div class="landing-feature-title">Monte Carlo Projections</div>
+      <div class="landing-feature-desc">10,000-path Monte Carlo simulation for your portfolio with CAPM drift and full percentile bands.</div>
+      <div class="landing-feature-tier pro">Pro</div>
+    </div>
+    <div class="landing-feature-card">
+      <div class="landing-feature-icon">🤖</div>
+      <div class="landing-feature-title">AI Streaming Analysis</div>
+      <div class="landing-feature-desc">Ask Claude to analyze any ticker — thesis, risks, catalysts, and positioning — streamed live.</div>
+      <div class="landing-feature-tier pro">Pro</div>
+    </div>
+    <div class="landing-feature-card">
+      <div class="landing-feature-icon">🔍</div>
+      <div class="landing-feature-title">Sector Screener</div>
+      <div class="landing-feature-desc">Screen all 11 GICS sectors by momentum, valuation, and relative performance metrics.</div>
+      <div class="landing-feature-tier pro">Pro</div>
+    </div>
+    <div class="landing-feature-card">
+      <div class="landing-feature-icon">🔔</div>
+      <div class="landing-feature-title">Price Alerts</div>
+      <div class="landing-feature-desc">Set price triggers and receive email notifications the moment a ticker crosses your level.</div>
+      <div class="landing-feature-tier pro">Pro</div>
+    </div>
+  </div>
+
+  <!-- Pricing -->
+  <div class="landing-pricing-header">
+    <h2>Simple Pricing</h2>
+    <p>Start free, upgrade when you need the power tools.</p>
+  </div>
+  <div class="landing-pricing-grid">
+    <div class="pricing-card">
+      <div class="pricing-card-name">Free</div>
+      <div class="pricing-card-price">$0<small>/mo</small></div>
+      <ul class="pricing-card-features">
+        <li class="included">Stock terminal (any ticker)</li>
+        <li class="included">Watchlist</li>
+        <li class="included">Portfolio tracker (basic)</li>
+        <li class="included">AI-curated news</li>
+        <li class="included">Earnings calendar</li>
+        <li class="included">Global yields map</li>
+        <li class="excluded">Monte Carlo projections</li>
+        <li class="excluded">AI streaming analysis</li>
+        <li class="excluded">Sector screener</li>
+        <li class="excluded">Price alerts</li>
+      </ul>
+      <button class="pricing-card-btn free-btn" onclick="openAuthModal('register')">Get Started Free</button>
+    </div>
+    <div class="pricing-card pro-card">
+      <div class="pricing-card-name">Pro</div>
+      <div class="pricing-card-price">$19<small>/mo</small></div>
+      <ul class="pricing-card-features">
+        <li class="included">Everything in Free</li>
+        <li class="included">Monte Carlo projections</li>
+        <li class="included">AI streaming analysis</li>
+        <li class="included">Full sector screener</li>
+        <li class="included">Price alerts (email)</li>
+        <li class="included">Unlimited watchlist</li>
+      </ul>
+      <button class="pricing-card-btn pro-btn" onclick="openUpgradeModal('Upgrade to Pro to unlock advanced analytics, AI analysis, and more.')">Upgrade to Pro</button>
+    </div>
+  </div>
+</div>
+
 <!-- Gate overlay (shown when not authenticated) -->
 <div id="app-gate"></div>
 

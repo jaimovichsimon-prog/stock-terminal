@@ -1,3 +1,8 @@
+// Temporary stub — replaced by subscriptions plan implementation
+function openUpgradeModal(desc) {
+  openAuthModal('register');
+}
+
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
