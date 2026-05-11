@@ -2959,6 +2959,18 @@ function setAuth() {
   loadTransactions();
 }
 
+function _requireSbClient(errEl) {
+  if (typeof sbClient !== 'undefined' && sbClient && sbClient.auth) return true;
+  if (errEl) {
+    errEl.style.color = '';
+    errEl.textContent =
+      "Couldn't load the authentication service. This is usually caused by an ad-blocker " +
+      "or strict privacy extension blocking cdn.jsdelivr.net. Please disable it for this " +
+      "site, or try a different browser, and reload the page.";
+  }
+  return false;
+}
+
 function clearAuth() {
   if (typeof sbClient !== 'undefined' && sbClient && sbClient.auth) {
     sbClient.auth.signOut().catch(() => {});
@@ -3088,6 +3100,7 @@ document.getElementById('auth-submit-btn').addEventListener('click', async () =>
   const password = document.getElementById('auth-password').value;
 
   if (!email || !password) { errorEl.textContent = 'Please fill in all fields.'; return; }
+  if (!_requireSbClient(errorEl)) return;
 
   btn.disabled = true;
   btn.textContent = authMode === 'login' ? 'Signing in…' : 'Creating account…';
@@ -3146,6 +3159,7 @@ document.getElementById('forgot-submit-btn')?.addEventListener('click', async ()
   const errEl = document.getElementById('forgot-error');
   const succEl = document.getElementById('forgot-success');
   if (!email) { if (errEl) errEl.textContent = 'Enter your email.'; return; }
+  if (!_requireSbClient(errEl)) return;
   const btn = document.getElementById('forgot-submit-btn');
   btn.disabled = true; btn.textContent = 'Sending…';
   if (errEl) errEl.textContent = '';
@@ -3163,6 +3177,7 @@ document.getElementById('reset-submit-btn')?.addEventListener('click', async () 
   const errEl = document.getElementById('reset-error');
   if (pw1 !== pw2) { if (errEl) errEl.textContent = 'Passwords do not match.'; return; }
   if (!pw1 || pw1.length < 6) { if (errEl) errEl.textContent = 'Min. 6 characters.'; return; }
+  if (!_requireSbClient(errEl)) return;
   const btn = document.getElementById('reset-submit-btn');
   btn.disabled = true; btn.textContent = 'Updating…';
   try {
