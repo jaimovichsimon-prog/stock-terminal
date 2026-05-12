@@ -2345,7 +2345,7 @@ async function ecLoadLive() {
   const btn = document.getElementById('ec-live-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
   try {
-    const res  = await apiFetch('/api/earnings/upcoming');
+    const res  = await apiFetch('/api/earnings/upcoming', {}, 60000);
     const data = await res.json();
     const earnings = data.earnings || [];
     const container = document.getElementById('ec-live-results');
@@ -2378,8 +2378,9 @@ async function ecLoadLive() {
       <tbody>${rows}</tbody>
     </table>`;
   } catch(e) {
+    console.error('[live earnings]', e);
     const container = document.getElementById('ec-live-results');
-    if (container) container.innerHTML = '<p style="color:var(--red);text-align:center;padding:20px">Failed to load live data. Check the API.</p>';
+    if (container) container.innerHTML = `<p style="color:var(--red);text-align:center;padding:20px">Failed to load live data: ${e && e.message ? e.message : 'unknown error'}</p>`;
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '↻ Refresh'; }
   }
