@@ -1404,14 +1404,14 @@ function renderEarnings(earnings) {
   const tbody = document.getElementById('earnings-tbody');
   if (!panel || !tbody) return;
   if (earnings.length === 0) { panel.classList.add('hidden'); return; }
-  panel.classList.remove('hidden');
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  tbody.innerHTML = earnings.map(e => {
+  const rows = earnings.map(e => {
     const d       = e.earnings_date ? new Date(e.earnings_date + 'T00:00:00') : null;
     const daysAway = d ? Math.round((d - today) / 86400000) : null;
+    if (daysAway != null && daysAway < 0) return null;
     let daysCls = '', daysLabel = '—';
     if (daysAway != null) {
       daysLabel = daysAway === 0 ? 'TODAY' : daysAway === 1 ? 'Tomorrow' : `${daysAway}d`;
@@ -1425,7 +1425,11 @@ function renderEarnings(earnings) {
       <td class="${daysCls}">${daysLabel}</td>
       <td>${e.eps_estimate != null ? '$' + e.eps_estimate.toFixed(2) : '—'}</td>
     </tr>`;
-  }).join('');
+  }).filter(Boolean);
+
+  if (rows.length === 0) { panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+  tbody.innerHTML = rows.join('');
 }
 
 // Hook earnings load into portfolio refresh
@@ -1434,6 +1438,10 @@ loadPortfolio = async function() {
   await _origLoadPortfolio();
   loadEarnings();
 };
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && pfPositions.length > 0) loadEarnings();
+});
 
 // ---------------------------------------------------------------------------
 // Options Analytics
